@@ -4,3 +4,5 @@ package-lock.json
 .mana-temp/
 # tooling and scaffold live in kittycatgit/mana-template
 .claude/
+.mana-blocked
+.inbox.log

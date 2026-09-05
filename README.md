@@ -51,6 +51,21 @@ The loop:
    `--fix` applies it and republishes.
 5. Merge the branch when it is right.
 
+A site behind a Cloudflare challenge or a login wall is not a failed build — the run has
+no browser and nobody to solve it. It stops, says which recon target defeated it, and the
+issue is labelled `needs-human` for someone to work interactively.
+
+To run the inbox on a timer instead of by hand:
+
+```bash
+cp scripts/com.kittycatgit.mana-inbox.plist ~/Library/LaunchAgents/
+launchctl load ~/Library/LaunchAgents/com.kittycatgit.mana-inbox.plist
+```
+
+It checks every 15 minutes while you are logged in, one build per tick, logging to
+`.inbox.log`. It must be a LaunchAgent — a LaunchDaemon runs as root and cannot reach the
+keychain Claude Code authenticates from. `launchctl unload` the same path stops it.
+
 Only comments from a maintainer are ever passed to the agent. A requester's report is a
 report; it becomes an instruction when a maintainer repeats it, which is both the approval
 step and what stops a stranger steering a process that holds a shell.
