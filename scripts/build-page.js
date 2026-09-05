@@ -100,7 +100,24 @@ const repoUrl = (() => {
 })();
 const requestUrl = repoUrl ? `${repoUrl}/issues/new?template=new-source.yml` : "";
 
-const sources = data.sources ?? [];
+// A source/<id> branch publishes a preview for reviewing that one source, so the
+// catalogue it serves must hold only that source — not everything already on main.
+const only = process.env.MANA_ONLY ?? "";
+let sources = data.sources ?? [];
+if (only) {
+  sources = sources.filter((s) => s.id === only || s.path === only || s.name === only);
+  data.sources = sources;
+  fs.writeFileSync(sourcesPath, JSON.stringify(data, null, 2), "utf-8");
+  const keep = new Set(sources.map((s) => s.path));
+  const bundles = path.join(distDir, "sources");
+  if (fs.existsSync(bundles)) {
+    for (const entry of fs.readdirSync(bundles)) {
+      const base = entry.replace(/\.mana$/, "");
+      if (!keep.has(base)) fs.rmSync(path.join(bundles, entry), { recursive: true, force: true });
+    }
+  }
+  process.stdout.write(`[mana-dev] preview limited to ${only}\n`);
+}
 
 const RATING = ["Safe", "Mixed", "Explicit"];
 const LANG = /** @type {Record<string,string>} */ ({

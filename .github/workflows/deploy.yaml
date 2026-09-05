@@ -27,7 +27,11 @@ jobs:
       # package-lock.json is gitignored, so there is nothing for `npm ci` to read.
       - run: npm install --no-audit --no-fund
 
+      # On a source/<id> branch, publish only that source so the preview install URL
+      # holds the one thing under review rather than the whole catalogue.
       - run: npm run lint && npm run typecheck && npm run build
+        env:
+          MANA_ONLY: ${{ startsWith(github.ref_name, 'source/') && replace(github.ref_name, 'source/', '') || '' }}
 
       - uses: peaceiris/actions-gh-pages@v4
         with:
