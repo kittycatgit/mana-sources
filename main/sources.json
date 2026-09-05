@@ -1,0 +1,27 @@
+{
+  "repositoryName": "mana-sources",
+  "sources": [
+    {
+      "id": "tailspace",
+      "name": "Tailspace",
+      "version": "1.0.0",
+      "description": "Pulls furry comics from tailspace.com",
+      "website": "https://tailspace.com",
+      "rating": 2,
+      "supportedLanguages": [
+        "en_US"
+      ],
+      "thumbnail": "assets/icon.png",
+      "developers": [
+        {
+          "name": "Demon",
+          "github": "https://github.com/kittycatgit"
+        }
+      ],
+      "path": "Tailspace",
+      "environment": "source",
+      "intents": 2104328,
+      "hash": "7fde29887fde29887fde29887fde29887fde29887fde29887fde29887fde2988"
+    }
+  ]
+}
