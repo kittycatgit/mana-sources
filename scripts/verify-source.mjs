@@ -60,12 +60,23 @@ const MAX_SECTION_ITEMS = 20;
 const PUBLICATION_STATUS = { 1: "ONGOING", 2: "COMPLETED", 3: "CANCELLED", 4: "HIATUS" };
 const CONTENT_RATING = { 0: "SAFE", 1: "SUGGESTIVE", 2: "MATURE", 3: "EXPLICIT" };
 
-/** Fetches a handful of URLs and reports the ones that do not come back as images. */
-async function checkImageUrls(urls) {
+/**
+ * Fetches a handful of URLs and reports the ones that do not come back as images.
+ *
+ * A source with `willRequestImage` is telling the app how to ask for its images — most
+ * often a referer a CDN refuses to serve without. Fetching bare would report 403 on a
+ * source that works perfectly in the app, so the handler is applied here too.
+ */
+async function checkImageUrls(urls, target) {
   const broken = [];
   for (const url of urls) {
     try {
-      const response = await fetch(url);
+      const request = target?.willRequestImage ? await target.willRequestImage(url) : undefined;
+      const headers = {};
+      for (const [key, value] of Object.entries(request?.headers ?? {})) {
+        headers[key] = String(value);
+      }
+      const response = await fetch(request?.url ?? url, { headers });
       const type = response.headers.get("content-type") ?? "";
       if (!response.ok || !type.startsWith("image/")) {
         broken.push(`${url} -> HTTP ${response.status} ${type}`);
@@ -399,7 +410,7 @@ async function verify(name, probe, verbose) {
 
   if (sampled.length > 0) {
     await step(results, "images", async () => {
-      const broken = await checkImageUrls(sampled);
+      const broken = await checkImageUrls(sampled, target);
       assert(broken.length === 0, `unreachable image(s):\n      ${broken.join("\n      ")}`);
       return `${sampled.length} sampled, all served`;
     });

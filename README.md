@@ -14,6 +14,7 @@ Or open the [install page](https://kittycatgit.github.io/mana-sources/main/).
 
 | Name | Version | Language | Rating |
 | ---- | ------- | -------- | ------ |
+| Hiperdex | 1.0.0 | English | Explicit |
 | Tailspace | 1.1.0 | English | Explicit |
 
 See [CHANGELOG.md](CHANGELOG.md) for what changed.
