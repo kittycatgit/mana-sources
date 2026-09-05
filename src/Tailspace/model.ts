@@ -9,7 +9,6 @@ import {
 export const BASE_URL = "https://tailspace.com";
 export const IMAGE_BASE_URL = "https://pics.tailspace.com";
 
-export const HOME_ROUTE = "routes/pages/home";
 export const BROWSE_ROUTE = "routes/pages/browse/BrowsePage";
 export const COMIC_ROUTE = "routes/pages/comic/ComicPage";
 
@@ -26,9 +25,9 @@ export const SortID = {
 } as const;
 
 export const ListID = {
-  Featured: "featured",
-  Updated: "updated",
   Popular: "popular",
+  Updated: "updated",
+  Quality: "quality",
 } as const;
 
 export const CATEGORY_OPTIONS: Option[] = [

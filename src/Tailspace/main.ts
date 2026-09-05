@@ -35,7 +35,7 @@ import {
   listResults,
   pageOf,
   resolveSortId,
-  sectionById,
+  resolveSection,
   toPageSections,
   withQuery,
   type SectionSpec,
@@ -45,7 +45,6 @@ import {
   BROWSE_ROUTE,
   COMIC_ROUTE,
   FilterID,
-  HOME_ROUTE,
   IMAGE_BASE_URL,
   ListID,
   SEARCH_FIELDS,
@@ -59,7 +58,7 @@ import {
 const info: SourceInfo = {
   id: "tailspace",
   name: "Tailspace",
-  version: "1.0.0",
+  version: "1.1.0",
   description: "Pulls furry comics from tailspace.com",
   website: BASE_URL,
   rating: CatalogRating.EXPLICIT,
@@ -95,23 +94,25 @@ class TailspaceSource implements ChapterSource, SearchProvider, PageLinkResolver
   private sections(): SectionSpec[] {
     return [
       {
-        id: ListID.Featured,
-        title: "Featured",
+        id: ListID.Popular,
+        title: "Popular",
         style: SectionStyle.SimpleHero,
-        viewMore: false,
-        load: () => this.featured(),
+        limit: 10,
+        load: (page) => this.browse({ page, sort: SORT_QUERY[SortID.Popularity] }),
       },
       {
         id: ListID.Updated,
         title: "Recently Updated",
         style: SectionStyle.DetailedVerticalListGrouped,
+        limit: 15,
         load: (page) => this.browse({ page, sort: SORT_QUERY[SortID.Updated] }),
       },
       {
-        id: ListID.Popular,
-        title: "Popular",
+        id: ListID.Quality,
+        title: "Top Rated",
         style: SectionStyle.DetailedTripleRowPaged,
-        load: (page) => this.browse({ page, sort: SORT_QUERY[SortID.Popularity] }),
+        limit: 15,
+        load: (page) => this.browse({ page, sort: SORT_QUERY[SortID.Quality] }),
       },
     ];
   }
@@ -138,10 +139,7 @@ class TailspaceSource implements ChapterSource, SearchProvider, PageLinkResolver
   }
 
   async resolvePageSection(_link: PageLink, sectionID: string): Promise<ResolvedPageSection> {
-    const spec = sectionById(this.sections(), sectionID);
-    if (!spec) return { items: [] };
-    const { results } = await spec.load(1);
-    return { items: results };
+    return resolveSection(this.sections(), sectionID);
   }
 
   async search(request: SearchRequest): Promise<PagedSearchResult> {
@@ -233,12 +231,6 @@ class TailspaceSource implements ChapterSource, SearchProvider, PageLinkResolver
     }
 
     return { pages };
-  }
-
-  private async featured(): Promise<PagedSearchResult> {
-    const home = await this.route(`${BASE_URL}/_root.data`, HOME_ROUTE);
-    const highlight = toHighlight(readRecord(home["featuredComic"]));
-    return { results: highlight ? [highlight] : [], isLastPage: true };
   }
 
   private async browse(query: BrowseQuery): Promise<PagedSearchResult> {
