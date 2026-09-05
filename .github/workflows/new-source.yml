@@ -1,0 +1,127 @@
+name: Build requested source
+
+# Adding a label needs triage or write access, so the trigger is itself the approval
+# gate — anyone can open an issue, only a maintainer can start a run.
+on:
+  issues:
+    types: [labeled]
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
+# One run at a time. Two approvals in quick succession would otherwise race for the
+# same working tree and the same spend.
+concurrency:
+  group: new-source
+  cancel-in-progress: false
+
+jobs:
+  build:
+    if: github.event.label.name == 'approved'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+      - uses: actions/checkout@v7
+
+      # The issue body is attacker-controlled. It arrives through env, never through
+      # ${{ }} interpolation into a shell — that substitution happens before the shell
+      # runs, so a body containing a quote and a semicolon would execute as commands.
+      # Only a URL that survives validation leaves this step.
+      - name: Read the requested URL
+        id: request
+        env:
+          ISSUE_BODY: ${{ github.event.issue.body }}
+        run: |
+          node <<'NODE' >> "$GITHUB_OUTPUT"
+          const body = process.env.ISSUE_BODY ?? "";
+          const match = body.match(/https:\/\/[^\s<>"')\]]+/);
+          const url = (match?.[0] ?? "").replace(/[.,]+$/, "");
+
+          const fail = (why) => {
+            console.log(`ok=false`);
+            console.log(`reason=${why}`);
+            process.exit(0);
+          };
+
+          if (!url) fail("no https:// URL found in the issue");
+          if (url.length > 200) fail("URL is unreasonably long");
+          if (!/^https:\/\/[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+(\/[^\s]*)?$/i.test(url)) {
+            fail("URL is not a plain https host — no credentials, ports or IPs");
+          }
+          const host = url.slice("https://".length).split("/")[0].toLowerCase();
+          if (/^(localhost|127\.|10\.|192\.168\.|169\.254\.|172\.(1[6-9]|2[0-9]|3[01])\.)/.test(host)) {
+            fail("URL points at a private address");
+          }
+          console.log(`ok=true`);
+          console.log(`url=${url}`);
+          NODE
+
+      - name: Reject an unusable request
+        if: steps.request.outputs.ok != 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REASON: ${{ steps.request.outputs.reason }}
+        run: |
+          gh issue comment "${{ github.event.issue.number }}" \
+            --body "Could not start: $REASON. Edit the issue and re-apply the \`approved\` label."
+          gh issue edit "${{ github.event.issue.number }}" --remove-label approved
+          exit 1
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+
+      - run: npm install --no-audit --no-fund
+
+      - run: npm install -g @anthropic-ai/claude-code@2.1.261
+
+      # The skill is gitignored in this repository, so CI has to fetch the method it
+      # is meant to follow. Cloned outside the tree to keep the working copy clean —
+      # new-from-url refuses to start on a dirty tree.
+      - name: Fetch the mana-extension skill
+        run: |
+          git clone --depth 1 -q https://github.com/kittycatgit/mana-template "$RUNNER_TEMP/template"
+          mkdir -p .claude
+          cp -R "$RUNNER_TEMP/template/.claude/skills" .claude/
+          test -f .claude/skills/mana-extension/SKILL.md
+
+      - name: Configure git
+        run: |
+          git config user.name "Samip Mainali"
+          git config user.email "204405496+kittycatgit@users.noreply.github.com"
+
+      - name: Build the source
+        id: build
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          GH_TOKEN: ${{ github.token }}
+          URL: ${{ steps.request.outputs.url }}
+        run: npm run new-from-url -- "$URL" 2>&1 | tee "$RUNNER_TEMP/run.log"
+
+      - name: Report back
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          OUTCOME: ${{ steps.build.outcome }}
+          URL: ${{ steps.request.outputs.url }}
+        run: |
+          {
+            if [ "$OUTCOME" = "success" ]; then
+              echo "Built \`$URL\`. Every gate passed; the pull request is linked above."
+              echo
+              echo "Read the section styles and tiles in the PR body before merging."
+            else
+              echo "Could not build \`$URL\` — no pull request was opened."
+              echo
+              echo "Last 50 lines:"
+              echo
+              echo '```'
+              tail -n 50 "$RUNNER_TEMP/run.log" 2>/dev/null || echo "(no output captured)"
+              echo '```'
+            fi
+          } > "$RUNNER_TEMP/comment.md"
+          gh issue comment "${{ github.event.issue.number }}" --body-file "$RUNNER_TEMP/comment.md"
+          gh issue edit "${{ github.event.issue.number }}" --remove-label approved

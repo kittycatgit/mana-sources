@@ -1,0 +1,26 @@
+name: Request a source
+description: Ask for a comic site to be added to this repository
+title: "Source request: "
+labels: ["source-request"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        One site per request. A maintainer reviews it before anything runs.
+  - type: input
+    id: url
+    attributes:
+      label: Site URL
+      description: The site's home page, https only.
+      placeholder: https://example.com
+    validations:
+      required: true
+  - type: textarea
+    id: notes
+    attributes:
+      label: Anything worth knowing
+      description: >-
+        Optional. A login wall, a region block, a page that behaves oddly.
+        This is read by a human only — it is never passed to the build.
+    validations:
+      required: false
