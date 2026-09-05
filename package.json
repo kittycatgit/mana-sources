@@ -15,7 +15,8 @@
     "new-source": "node scripts/new-source.mjs",
     "format": "oxfmt src/",
     "format:check": "oxfmt --check src/",
-    "new-from-url": "node scripts/new-from-url.mjs"
+    "new-from-url": "node scripts/new-from-url.mjs",
+    "inbox": "node scripts/inbox.mjs"
   },
   "mana": {
     "src": "src/",

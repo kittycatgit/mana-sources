@@ -28,6 +28,20 @@ npm run lint && npm run format && npm run typecheck && npm run build
 npm run verify <Name>
 ```
 
+### Requests from other people
+
+Anyone can open a **Source request** issue with a site URL. Nothing runs until a
+maintainer adds the `approved` label. Then, on a maintainer's machine:
+
+```bash
+npm run inbox          # show what is waiting
+npm run inbox -- --run # build them
+```
+
+Each approved request is built, gets a pull request, and the issue is commented and
+closed. Builds run locally against your own Claude Code login — there is no server, no
+API key, and nothing listening for inbound connections.
+
 ### From a URL
 
 ```bash
