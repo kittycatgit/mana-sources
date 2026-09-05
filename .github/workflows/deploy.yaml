@@ -29,9 +29,13 @@ jobs:
 
       # On a source/<id> branch, publish only that source so the preview install URL
       # holds the one thing under review rather than the whole catalogue.
-      - run: npm run lint && npm run typecheck && npm run build
-        env:
-          MANA_ONLY: ${{ startsWith(github.ref_name, 'source/') && replace(github.ref_name, 'source/', '') || '' }}
+      # Actions expressions have no replace(), so strip the prefix in the shell.
+      - run: |
+          if [[ "$GITHUB_REF_NAME" == source/* ]]; then
+            export MANA_ONLY="${GITHUB_REF_NAME#source/}"
+            echo "preview limited to $MANA_ONLY"
+          fi
+          npm run lint && npm run typecheck && npm run build
 
       - uses: peaceiris/actions-gh-pages@v4
         with:
