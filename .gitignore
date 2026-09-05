@@ -18,3 +18,4 @@ scripts/clear-site.mjs
 scripts/gates.mjs
 scripts/request-url.mjs
 scripts/*.plist
+.playwright-mcp/
