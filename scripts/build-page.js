@@ -215,23 +215,6 @@ function seal() {
 </svg>`;
 }
 
-/** The source icons, orbiting the seal. Clicking one drops to its row. */
-function orbit(list) {
-  if (!list.length) return "";
-  const dots = list
-    .map((s, i) => {
-      const angle = (i / list.length) * 360 + 18;
-      const icon = s.path
-        ? `<img src="sources/${s.path}/${s.thumbnail ?? "icon.png"}" alt="" onerror="this.remove()">`
-        : "";
-      return `<a class="orbiter" style="--a:${angle}deg" href="#src-${encodeURIComponent(s.name)}" title="${escapeHtml(s.name)}">
-      <span class="disc">${icon}</span><span class="name">${escapeHtml(s.name)}</span>
-    </a>`;
-    })
-    .join("");
-  return `<div class="orbit" aria-hidden="true">${dots}</div>`;
-}
-
 const html = `<!doctype html>
 <html lang="en">
 <head>
@@ -272,39 +255,6 @@ const html = `<!doctype html>
     width: min(600px, 92vw); height: min(600px, 92vw);
     left: 50%; top: 50%; transform: translate(-50%, -50%);
   }
-  /* Sources orbiting the seal. The ring turns; each icon counter-turns at the same
-     rate so it stays upright, and pauses on hover so it can be clicked. */
-  .orbit {
-    position: absolute; left: 50%; top: 50%; width: 0; height: 0; z-index: 1;
-    animation: spin 90s linear infinite;
-  }
-  .orbit:hover { animation-play-state: paused; }
-  .orbiter {
-    position: absolute; text-decoration: none;
-    transform: rotate(var(--a)) translate(min(250px, 40vw)) rotate(calc(-1 * var(--a)));
-  }
-  .orbiter .disc {
-    display: grid; place-items: center;
-    width: 52px; height: 52px; margin: -26px; border-radius: 14px; overflow: hidden;
-    background: var(--surface); border: 1px solid var(--line);
-    box-shadow: 0 8px 26px -10px rgba(0,0,0,.9);
-    animation: spin 90s linear infinite reverse;
-    transition: transform .25s, border-color .25s, box-shadow .25s;
-  }
-  .orbiter img { width: 100%; height: 100%; object-fit: cover; display: block; }
-  .orbiter .name {
-    position: absolute; left: 50%; top: 34px; transform: translateX(-50%);
-    padding: 4px 8px; border-radius: 3px; white-space: nowrap;
-    background: var(--surface); border: 1px solid var(--line); color: var(--paper);
-    font: 500 11px/1 "JetBrains Mono", ui-monospace, monospace;
-    opacity: 0; transition: opacity .2s; pointer-events: none;
-  }
-  .orbiter:hover .disc {
-    transform: scale(1.14); border-color: var(--ember);
-    box-shadow: 0 0 0 1px var(--ember), 0 0 30px -4px var(--ember);
-  }
-  .orbiter:hover .name { opacity: 1; }
-
   .spin-slow { animation: spin 300s linear infinite; transform-origin: 0 0; }
   .spin-fast { animation: spin 120s linear infinite reverse; transform-origin: 0 0; }
   .spin-core { animation: spin 200s linear infinite; transform-origin: 0 0; }
@@ -317,8 +267,7 @@ const html = `<!doctype html>
   }
   /* must exclude the seal: this selector outranks .seal and would un-absolute it */
   .masthead > *:not(.seal) { position: relative; z-index: 2; }
-  /* tall enough that the full orbit fits: overflow is hidden on .top */
-  .masthead { z-index: 1; padding: 168px 0 154px; }
+  .masthead { z-index: 1; padding: 132px 0 118px; }
   .mark {
     display: inline-block; margin-bottom: 24px; padding: 6px 11px;
     border: 1px solid var(--line); border-radius: 2px;
@@ -420,12 +369,11 @@ const html = `<!doctype html>
   :focus-visible { outline: 2px solid var(--amber); outline-offset: 3px; }
 
   @media (prefers-reduced-motion: reduce) {
-    .spin-slow, .spin-fast, .spin-core, .orbit, .orbiter .disc { animation: none; }
+    .spin-slow, .spin-fast, .spin-core { animation: none; }
   }
-  @media (max-width: 560px) { .orbiter .disc { width: 40px; height: 40px; margin: -20px; } }
   @media (max-width: 560px) {
     .seal { opacity: .22; }
-    .masthead { padding: 128px 0 116px; }
+    .masthead { padding: 96px 0 84px; }
   }
 </style>
 </head>
@@ -434,7 +382,6 @@ const html = `<!doctype html>
 <div class="top">
   <div class="wrap masthead">
     ${seal()}
-    ${orbit(sources)}
     <span class="mark">Mana</span>
     <h1>${escapeHtml(repoDisplayName).replace(/-/g, "<em>-</em>")}</h1>
     <p class="lede">Add this once in Mana and everything below comes with it. Anything added later turns up on its own.</p>
