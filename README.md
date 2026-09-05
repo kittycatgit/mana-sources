@@ -78,9 +78,17 @@ It checks every 15 minutes while you are logged in, one build per tick, logging 
 `.inbox.log`. It must be a LaunchAgent — a LaunchDaemon runs as root and cannot reach the
 keychain Claude Code authenticates from. `launchctl unload` the same path stops it.
 
-Only comments from a maintainer are ever passed to the agent. A requester's report is a
-report; it becomes an instruction when a maintainer repeats it, which is both the approval
-step and what stops a stranger steering a process that holds a shell.
+**Only the repository owner can approve or steer a build.** Not a collaborator, not an
+organisation member, not whoever opened the issue or a pull request:
+
+- A label is checked against the events timeline — who *applied* it, not just that it is
+  present. A label put on by anyone else is removed and the issue is commented.
+- `--fix` reads only comments authored by the owner. A requester's report is a report; it
+  becomes an instruction when the owner restates it in their own words.
+- Both checks fail closed: an API error, a missing event, an unrecognised actor all count
+  as not approved.
+
+That is what stops a stranger steering a process that holds a shell on the build machine.
 
 ### From a URL
 
