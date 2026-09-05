@@ -36,6 +36,41 @@ const RESET = "[0m";
 
 class Skip extends Error {}
 
+/** SectionStyle is a numeric enum in the bundle; these are its names. */
+const SECTION_STYLE = [
+  "SimpleSingleRow",
+  "SimpleDoubleRow",
+  "SimpleTripleRow",
+  "SimpleHero",
+  "SimpleHeroPaged",
+  "DetailedSingleRowPaged",
+  "DetailedDoubleRowPaged",
+  "DetailedTripleRowPaged",
+  "DetailedVerticalList",
+  "DetailedVerticalListGrouped",
+  "Grid",
+];
+
+const PUBLICATION_STATUS = { 1: "ONGOING", 2: "COMPLETED", 3: "CANCELLED", 4: "HIATUS" };
+const CONTENT_RATING = { 0: "SAFE", 1: "SUGGESTIVE", 2: "MATURE", 3: "EXPLICIT" };
+
+/** Fetches a handful of URLs and reports the ones that do not come back as images. */
+async function checkImageUrls(urls) {
+  const broken = [];
+  for (const url of urls) {
+    try {
+      const response = await fetch(url);
+      const type = response.headers.get("content-type") ?? "";
+      if (!response.ok || !type.startsWith("image/")) {
+        broken.push(`${url} -> HTTP ${response.status} ${type}`);
+      }
+    } catch (error) {
+      broken.push(`${url} -> ${firstLine(error)}`);
+    }
+  }
+  return broken;
+}
+
 function parseArgs(argv) {
   const args = { names: [], probe: undefined, verbose: false, all: false };
   for (let i = 0; i < argv.length; i++) {
@@ -165,7 +200,7 @@ function checkChapters(chapters) {
 async function verify(name, probe, verbose) {
   const bundlePath = path.join(DIST_SOURCES, `${name}.mana`);
   if (!fs.existsSync(bundlePath)) {
-    throw new Error(`${bundlePath} not found — run "bun run build" first`);
+    throw new Error(`${bundlePath} not found — run "npm run build" first`);
   }
 
   const target = loadTarget(bundlePath);
@@ -173,6 +208,8 @@ async function verify(name, probe, verbose) {
 
   const results = [];
   const meta = { name, info: target.info, intents: undefined };
+  /** What a user would actually see, gathered for --verbose and the image check. */
+  const preview = { sections: [], search: [], content: undefined, chapters: [], pages: [] };
 
   await step(results, "info", async () => {
     assert(target.info?.id, "info.id missing");
@@ -224,6 +261,7 @@ async function verify(name, probe, verbose) {
       for (const section of sections) {
         await step(results, `resolvePageSection(${section.id})`, async () => {
           const resolved = await target.resolvePageSection({ id: "home" }, section.id);
+          preview.sections.push({ section, items: resolved?.items ?? [] });
           return checkHighlights(resolved?.items, section.id);
         });
       }
@@ -233,6 +271,7 @@ async function verify(name, probe, verbose) {
   const searched = await step(results, "search", async () => {
     const page = await target.search({ page: 1, query: probe.query ?? "" });
     assert(typeof page?.isLastPage === "boolean", "isLastPage missing");
+    preview.search = page.results ?? [];
     return checkHighlights(page.results, "search");
   });
 
@@ -247,6 +286,7 @@ async function verify(name, probe, verbose) {
   } else {
     await step(results, "getContent", async () => {
       const content = await target.getContent(contentId);
+      preview.content = content;
       assert(content?.title, "content.title is empty");
       assert(content?.cover !== undefined, "content.cover missing");
       return `"${content.title}"${content.cover ? "" : " (no cover)"}`;
@@ -256,6 +296,7 @@ async function verify(name, probe, verbose) {
     if (target.getChapters) {
       chapters = await step(results, "getChapters", async () => {
         const found = await target.getChapters(contentId);
+        preview.chapters = found ?? [];
         checkChapters(found);
         return found;
       });
@@ -279,6 +320,7 @@ async function verify(name, probe, verbose) {
           }
           throw error;
         }
+        preview.pages = data?.pages ?? [];
         assert(Array.isArray(data?.pages), "pages is not an array");
         assert(data.pages.length > 0, "0 pages returned");
         for (const page of data.pages) {
@@ -289,7 +331,79 @@ async function verify(name, probe, verbose) {
     }
   }
 
-  return { meta, results, verbose };
+  // Shape checks pass happily on a cover URL that 404s, which is a blank grid for the
+  // user. Sample a few of the URLs the source actually produced and fetch them.
+  const sampled = [
+    ...preview.sections.flatMap((entry) => entry.items.slice(0, 1).map((item) => item.cover)),
+    preview.search[0]?.cover,
+    preview.content?.cover,
+    preview.pages[0]?.url,
+  ].filter((url) => typeof url === "string" && url.startsWith("http"));
+
+  if (sampled.length > 0) {
+    await step(results, "images", async () => {
+      const broken = await checkImageUrls(sampled);
+      assert(broken.length === 0, `unreachable image(s):\n      ${broken.join("\n      ")}`);
+      return `${sampled.length} sampled, all served`;
+    });
+  }
+
+  return { meta, results, verbose, preview };
+}
+
+/** Prints what the app would put in front of the user, for a human to judge. */
+function renderPreview(preview) {
+  const line = (text) => process.stdout.write(`${text}\n`);
+  const tile = (item, indent) => {
+    line(`${indent}${item.title}`);
+    if (item.subtitle) line(`${indent}${DIM}${item.subtitle}${RESET}`);
+  };
+
+  if (preview.sections.length > 0) {
+    line(`\n  ${DIM}home page${RESET}`);
+    const ids = new Map();
+    for (const { section, items } of preview.sections) {
+      const style = SECTION_STYLE[section.style] ?? `style ${section.style}`;
+      const more = section.viewMoreLink ? "view more" : "no view more";
+      line(`    ${section.title}  ${DIM}${style}, ${items.length} items, ${more}${RESET}`);
+      for (const item of items.slice(0, 3)) tile(item, "      ");
+      for (const item of items) ids.set(item.id, (ids.get(item.id) ?? 0) + 1);
+    }
+    const repeated = [...ids.values()].filter((n) => n > 1).length;
+    if (repeated > 0) {
+      line(`    ${DIM}${repeated} title(s) appear in more than one section${RESET}`);
+    }
+  }
+
+  if (preview.search.length > 0) {
+    line(`\n  ${DIM}search${RESET}`);
+    for (const item of preview.search.slice(0, 3)) tile(item, "    ");
+  }
+
+  const content = preview.content;
+  if (content) {
+    line(`\n  ${DIM}title view${RESET}`);
+    line(`    ${content.title}`);
+    const status = PUBLICATION_STATUS[content.status] ?? content.status ?? "unset";
+    const rating = CONTENT_RATING[content.contentRating] ?? content.contentRating ?? "unset";
+    line(`    ${DIM}${status} · ${rating} · ${content.tags?.length ?? 0} tags${RESET}`);
+    const summary = (content.summary ?? "").replace(/\s+/g, " ").trim();
+    line(`    ${DIM}summary: ${summary ? `${summary.slice(0, 160)}${summary.length > 160 ? "…" : ""}` : "(empty)"}${RESET}`);
+    if (content.tags?.length) {
+      line(`    ${DIM}tags: ${content.tags.slice(0, 8).map((t) => t.title).join(", ")}${RESET}`);
+    }
+  }
+
+  if (preview.chapters.length > 0) {
+    const first = preview.chapters[0];
+    line(`\n  ${DIM}chapters${RESET}`);
+    line(`    ${preview.chapters.length} chapter(s); first: ${first.title ?? `#${first.number}`} ${DIM}(${new Date(first.date).toISOString().slice(0, 10)})${RESET}`);
+  }
+
+  if (preview.pages.length > 0) {
+    line(`\n  ${DIM}pages${RESET}`);
+    line(`    ${preview.pages.length} page(s); first: ${preview.pages[0].url ?? "(raw)"}`);
+  }
 }
 
 function report(name, results) {
@@ -335,8 +449,9 @@ async function main() {
   for (const name of names) {
     const probe = loadProbe(name, args.probe);
     try {
-      const { results } = await verify(name, probe, args.verbose);
+      const { results, preview } = await verify(name, probe, args.verbose);
       const counts = report(name, results);
+      if (args.verbose) renderPreview(preview);
       totals.pass += counts.pass;
       totals.fail += counts.fail;
       totals.skip += counts.skip;
