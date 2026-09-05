@@ -31,16 +31,29 @@ npm run verify <Name>
 ### Requests from other people
 
 Anyone can open a **Source request** issue with a site URL. Nothing runs until a
-maintainer adds the `approved` label. Then, on a maintainer's machine:
+maintainer labels it. Builds happen on a maintainer's machine against their own Claude
+Code login — no server, no API key, nothing listening for inbound connections.
 
 ```bash
-npm run inbox          # show what is waiting
-npm run inbox -- --run # build them
+npm run inbox            # what is waiting
+npm run inbox -- --run   # build the `approved` ones
+npm run inbox -- --fix   # apply the `needs-fix` ones
 ```
 
-Each approved request is built, gets a pull request, and the issue is commented and
-closed. Builds run locally against your own Claude Code login — there is no server, no
-API key, and nothing listening for inbound connections.
+The loop:
+
+1. Someone opens an issue with a URL.
+2. A maintainer adds **`approved`**; `--run` builds it on a `source/<id>` branch.
+3. That branch publishes **its own install URL**, posted back on the issue. The requester
+   adds it in Mana and reports what is wrong — the extension is testable before it reaches
+   the catalogue on `main`.
+4. A maintainer restates the fix **in their own comment** and adds **`needs-fix`**;
+   `--fix` applies it and republishes.
+5. Merge the branch when it is right.
+
+Only comments from a maintainer are ever passed to the agent. A requester's report is a
+report; it becomes an instruction when a maintainer repeats it, which is both the approval
+step and what stops a stranger steering a process that holds a shell.
 
 ### From a URL
 

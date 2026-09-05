@@ -2,14 +2,16 @@ name: Build & Deploy
 
 on:
   push:
-    branches: [main]
+    # A source branch publishes to its own directory, so a requester can add it in Mana
+    # and try the extension before it reaches the live catalogue on main.
+    branches: [main, "source/**"]
   workflow_dispatch:
 
 permissions:
   contents: write
 
 concurrency:
-  group: pages
+  group: pages-${{ github.ref_name }}
   cancel-in-progress: true
 
 jobs:
