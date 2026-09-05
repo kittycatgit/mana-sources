@@ -51,9 +51,21 @@ The loop:
    `--fix` applies it and republishes.
 5. Merge the branch when it is right.
 
-A site behind a Cloudflare challenge or a login wall is not a failed build — the run has
-no browser and nobody to solve it. It stops, says which recon target defeated it, and the
-issue is labelled `needs-human` for someone to work interactively.
+Builds have a headless browser (`@playwright/mcp`, registered in `.mcp.json`) for sites
+that render client-side. It cannot clear a challenge — an automated browser is what a
+challenge scores against — so a challenged site pauses instead of failing:
+
+1. The build stops and comments on the issue saying a challenge is in the way.
+2. On the build machine: `npm run clear-site -- https://thesite.com`. A real browser
+   opens, you click once, you close it.
+3. Re-apply `approved`. The next run reuses the same browser profile, so the clearance
+   you just earned is still valid, and the build carries on headlessly.
+
+The clearance is tied to the browser that earned it, which is why this works and a bought
+token does not — and why it expires after a few hours, so re-label near when you clear.
+
+A site that a click cannot fix is labelled `needs-human` instead, and wants the
+`recon/<id>.md` handoff below.
 
 To run the inbox on a timer instead of by hand:
 
