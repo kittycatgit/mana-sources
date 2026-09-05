@@ -120,7 +120,7 @@ function sourceRow(s) {
   const langs = (s.supportedLanguages ?? []).map((l) => LANG[l] ?? l).join(" / ");
   const host = s.website ? s.website.replace(/^https?:\/\//, "").replace(/\/$/, "") : "";
 
-  return `<li class="source">
+  return `<li class="source" id="src-${encodeURIComponent(s.name)}">
   <div class="icon-slot">${icon}</div>
   <div class="body">
     <h3>${escapeHtml(s.name)} <span class="ver">v${escapeHtml(String(s.version ?? "?"))}</span></h3>
@@ -215,13 +215,30 @@ function seal() {
 </svg>`;
 }
 
+/** The source icons, orbiting the seal. Clicking one drops to its row. */
+function orbit(list) {
+  if (!list.length) return "";
+  const dots = list
+    .map((s, i) => {
+      const angle = (i / list.length) * 360 + 18;
+      const icon = s.path
+        ? `<img src="sources/${s.path}/${s.thumbnail ?? "icon.png"}" alt="" onerror="this.remove()">`
+        : "";
+      return `<a class="orbiter" style="--a:${angle}deg" href="#src-${encodeURIComponent(s.name)}" title="${escapeHtml(s.name)}">
+      <span class="disc">${icon}</span><span class="name">${escapeHtml(s.name)}</span>
+    </a>`;
+    })
+    .join("");
+  return `<div class="orbit" aria-hidden="true">${dots}</div>`;
+}
+
 const html = `<!doctype html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>${escapeHtml(repoDisplayName)}</title>
-<meta name="description" content="Content sources for the Mana app.">
+<meta name="description" content="Sources for Mana. Add the repository once and they all come with it.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=Archivo+Black&family=JetBrains+Mono:wght@400;500;700&display=swap">
@@ -255,6 +272,39 @@ const html = `<!doctype html>
     width: min(600px, 92vw); height: min(600px, 92vw);
     left: 50%; top: 50%; transform: translate(-50%, -50%);
   }
+  /* Sources orbiting the seal. The ring turns; each icon counter-turns at the same
+     rate so it stays upright, and pauses on hover so it can be clicked. */
+  .orbit {
+    position: absolute; left: 50%; top: 50%; width: 0; height: 0; z-index: 1;
+    animation: spin 90s linear infinite;
+  }
+  .orbit:hover { animation-play-state: paused; }
+  .orbiter {
+    position: absolute; text-decoration: none;
+    transform: rotate(var(--a)) translate(min(250px, 40vw)) rotate(calc(-1 * var(--a)));
+  }
+  .orbiter .disc {
+    display: grid; place-items: center;
+    width: 52px; height: 52px; margin: -26px; border-radius: 14px; overflow: hidden;
+    background: var(--surface); border: 1px solid var(--line);
+    box-shadow: 0 8px 26px -10px rgba(0,0,0,.9);
+    animation: spin 90s linear infinite reverse;
+    transition: transform .25s, border-color .25s, box-shadow .25s;
+  }
+  .orbiter img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .orbiter .name {
+    position: absolute; left: 50%; top: 34px; transform: translateX(-50%);
+    padding: 4px 8px; border-radius: 3px; white-space: nowrap;
+    background: var(--surface); border: 1px solid var(--line); color: var(--paper);
+    font: 500 11px/1 "JetBrains Mono", ui-monospace, monospace;
+    opacity: 0; transition: opacity .2s; pointer-events: none;
+  }
+  .orbiter:hover .disc {
+    transform: scale(1.14); border-color: var(--ember);
+    box-shadow: 0 0 0 1px var(--ember), 0 0 30px -4px var(--ember);
+  }
+  .orbiter:hover .name { opacity: 1; }
+
   .spin-slow { animation: spin 300s linear infinite; transform-origin: 0 0; }
   .spin-fast { animation: spin 120s linear infinite reverse; transform-origin: 0 0; }
   .spin-core { animation: spin 200s linear infinite; transform-origin: 0 0; }
@@ -267,7 +317,8 @@ const html = `<!doctype html>
   }
   /* must exclude the seal: this selector outranks .seal and would un-absolute it */
   .masthead > *:not(.seal) { position: relative; z-index: 2; }
-  .masthead { z-index: 1; padding: 132px 0 116px; }
+  /* tall enough that the full orbit fits: overflow is hidden on .top */
+  .masthead { z-index: 1; padding: 168px 0 154px; }
   .mark {
     display: inline-block; margin-bottom: 24px; padding: 6px 11px;
     border: 1px solid var(--line); border-radius: 2px;
@@ -312,7 +363,16 @@ const html = `<!doctype html>
   h2::after { content: ""; flex: 1; height: 1px; background: var(--line); }
 
   ul.sources { list-style: none; margin: 0; padding: 0; }
-  .source { display: flex; gap: 18px; align-items: flex-start; padding: 24px 0; border-bottom: 1px solid var(--line); }
+  .source {
+    display: flex; gap: 18px; align-items: flex-start;
+    padding: 24px 12px 24px 0; border-bottom: 1px solid var(--line);
+    scroll-margin-top: 24px; border-radius: 4px;
+    transition: background .3s, padding-left .2s;
+  }
+  .source:hover { background: rgba(232,89,12,.045); padding-left: 12px; }
+  .source:target { background: rgba(232,89,12,.09); }
+  .source:hover .icon-slot { border-color: var(--ember); }
+  .icon-slot { transition: border-color .25s; }
   .icon-slot {
     flex: none; width: 56px; height: 56px; border-radius: 4px; overflow: hidden;
     background: var(--surface); border: 1px solid var(--line);
@@ -359,10 +419,13 @@ const html = `<!doctype html>
            font: 400 11px "JetBrains Mono", ui-monospace, monospace; letter-spacing: .1em; text-transform: uppercase; }
   :focus-visible { outline: 2px solid var(--amber); outline-offset: 3px; }
 
-  @media (prefers-reduced-motion: reduce) { .spin-slow, .spin-fast, .spin-core { animation: none; } }
+  @media (prefers-reduced-motion: reduce) {
+    .spin-slow, .spin-fast, .spin-core, .orbit, .orbiter .disc { animation: none; }
+  }
+  @media (max-width: 560px) { .orbiter .disc { width: 40px; height: 40px; margin: -20px; } }
   @media (max-width: 560px) {
     .seal { opacity: .22; }
-    .masthead { padding: 96px 0 84px; }
+    .masthead { padding: 128px 0 116px; }
   }
 </style>
 </head>
@@ -371,9 +434,10 @@ const html = `<!doctype html>
 <div class="top">
   <div class="wrap masthead">
     ${seal()}
+    ${orbit(sources)}
     <span class="mark">Mana</span>
     <h1>${escapeHtml(repoDisplayName).replace(/-/g, "<em>-</em>")}</h1>
-    <p class="lede">Comic sources for Mana. Add the repository once; new sources arrive with it.</p>
+    <p class="lede">Add this once in Mana and everything below comes with it. Anything added later turns up on its own.</p>
 
     <div class="install">
       <div class="install-label">Discover <b>&rsaquo;</b> Repositories <b>&rsaquo;</b> Add Repo</div>
