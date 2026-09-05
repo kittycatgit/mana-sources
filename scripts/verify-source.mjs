@@ -56,6 +56,9 @@ const SECTION_STYLE = [
 const HERO_STYLES = new Set([3, 4]);
 const MIN_HERO_ITEMS = 3;
 const MAX_SECTION_ITEMS = 20;
+/** Two sections sharing more than this fraction of the smaller one are the same row twice. */
+const MAX_SECTION_OVERLAP = 2 / 3;
+const MIN_OVERLAP_ITEMS = 5;
 
 const PUBLICATION_STATUS = { 1: "ONGOING", 2: "COMPLETED", 3: "CANCELLED", 4: "HIATUS" };
 const CONTENT_RATING = { 0: "SAFE", 1: "SUGGESTIVE", 2: "MATURE", 3: "EXPLICIT" };
@@ -266,12 +269,14 @@ async function verify(name, probe, verbose) {
 
   let sections = [];
   if (target.getSectionsForPage && target.resolvePageSection) {
-    sections =
-      (await step(results, "getSectionsForPage", async () => {
-        const found = await target.getSectionsForPage({ id: "home" });
-        assert(Array.isArray(found) && found.length > 0, "no sections returned");
-        return found;
-      })) ?? [];
+    // The step's return value is its printed detail, so anything a step needs to hand
+    // onwards is stashed here instead — returning the array printed a blank detail.
+    await step(results, "getSectionsForPage", async () => {
+      const found = await target.getSectionsForPage({ id: "home" });
+      assert(Array.isArray(found) && found.length > 0, "no sections returned");
+      sections = found;
+      return `${found.length} sections`;
+    });
 
     if (Array.isArray(sections)) {
       if (target.willResolveSectionsForPage) {
@@ -316,16 +321,28 @@ async function verify(name, probe, verbose) {
 
     let chapters;
     if (target.getChapters) {
-      chapters = await step(results, "getChapters", async () => {
+      await step(results, "getChapters", async () => {
         const found = await target.getChapters(contentId);
         preview.chapters = found ?? [];
-        checkChapters(found);
-        return found;
+        const detail = checkChapters(found);
+        chapters = found;
+        return detail;
       });
     }
 
+    // `new-source` seeds `"chapterId": ""`, and `??` accepts an empty string — which used
+    // to drop getChapterData entirely with no line printed to say so.
     const chapterId =
-      probe.chapterId ?? (Array.isArray(chapters) ? chapters[0]?.chapterId : undefined);
+      probe.chapterId || (Array.isArray(chapters) ? chapters[0]?.chapterId : undefined);
+
+    if (!chapterId) {
+      results.push({
+        name: "getChapterData",
+        status: "skip",
+        detail: "no chapterId in probe and no chapters to take one from",
+        ms: 0,
+      });
+    }
 
     if (chapterId) {
       await step(results, "getChapterData", async () => {
@@ -386,6 +403,19 @@ async function verify(name, probe, verbose) {
           if (headA.length > 0 && headA.join("\u0000") === headB.join("\u0000")) {
             problems.push(
               `"${a.section.title}" and "${b.section.title}" open with the same titles in the same order — they are running the same query.`,
+            );
+            continue;
+          }
+
+          // Reordering the same titles clears the check above and is still two rows of
+          // the same thing: a site's "recently added" and its "latest updates" hold the
+          // same series, because a series arrives with its chapters.
+          const idsA = new Set(a.items.map((item) => item.id));
+          const shared = b.items.filter((item) => idsA.has(item.id)).length;
+          const smaller = Math.min(a.items.length, b.items.length);
+          if (smaller >= MIN_OVERLAP_ITEMS && shared / smaller > MAX_SECTION_OVERLAP) {
+            problems.push(
+              `"${a.section.title}" and "${b.section.title}" share ${shared} of ${smaller} titles — they are near-duplicates. Give one of them a query the other cannot answer.`,
             );
           }
         }
