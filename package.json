@@ -14,7 +14,8 @@
     "verify": "node scripts/verify-source.mjs",
     "new-source": "node scripts/new-source.mjs",
     "format": "oxfmt src/",
-    "format:check": "oxfmt --check src/"
+    "format:check": "oxfmt --check src/",
+    "new-from-url": "node scripts/new-from-url.mjs"
   },
   "mana": {
     "src": "src/",
