@@ -20,7 +20,7 @@ See [CHANGELOG.md](CHANGELOG.md) for what changed.
 
 ## Development
 
-Scaffolding lives in [mana-template](https://github.com/kittycatgit/mana-template).
+Scaffolding and the build skill live in a separate private repository.
 
 ```bash
 npm install
@@ -102,7 +102,7 @@ evidence. On success it pushes a branch and opens a PR with the verbose output i
 on any failure it rolls back to `main` (`--keep` to inspect instead). It never commits to
 `main`.
 
-Needs the skill in `.claude/skills/` (gitignored here — copy it from
-[mana-template](https://github.com/kittycatgit/mana-template)) and `gh` authenticated.
+Needs the skill in `.claude/skills/` (gitignored here — it lives in a separate private
+repository) and `gh` authenticated.
 
 Pushing to `main` builds and republishes the install page.
