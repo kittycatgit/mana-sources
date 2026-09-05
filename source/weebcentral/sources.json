@@ -1,0 +1,49 @@
+{
+  "repositoryName": "mana-sources",
+  "sources": [
+    {
+      "id": "tailspace",
+      "name": "Tailspace",
+      "version": "1.1.0",
+      "description": "Pulls furry comics from tailspace.com",
+      "website": "https://tailspace.com",
+      "rating": 2,
+      "supportedLanguages": [
+        "en_US"
+      ],
+      "thumbnail": "assets/icon.png",
+      "developers": [
+        {
+          "name": "Demon",
+          "github": "https://github.com/kittycatgit"
+        }
+      ],
+      "path": "Tailspace",
+      "environment": "source",
+      "intents": 2104328,
+      "hash": "7c6c90837c6c90837c6c90837c6c90837c6c90837c6c90837c6c90837c6c9083"
+    },
+    {
+      "id": "weebcentral",
+      "name": "Weebcentral",
+      "version": "1.0.0",
+      "description": "Pulls manga, manhwa and manhua from weebcentral.com",
+      "website": "https://weebcentral.com",
+      "rating": 1,
+      "supportedLanguages": [
+        "en_US"
+      ],
+      "thumbnail": "assets/icon.png",
+      "developers": [
+        {
+          "name": "Demon",
+          "github": "https://github.com/kittycatgit"
+        }
+      ],
+      "path": "Weebcentral",
+      "environment": "source",
+      "intents": 2104328,
+      "hash": "666c1f82666c1f82666c1f82666c1f82666c1f82666c1f82666c1f82666c1f82"
+    }
+  ]
+}
