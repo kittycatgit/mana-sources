@@ -1,0 +1,37 @@
+{
+  "name": "mana-sources",
+  "version": "1.0.0",
+  "description": "Mana content sources",
+  "homepage": "https://kittycatgit.github.io/mana-sources",
+  "author": "Demon",
+  "scripts": {
+    "dev": "mana-dev serve --watch",
+    "build": "mana-dev build",
+    "postbuild": "node scripts/build-page.js",
+    "lint": "oxlint src/",
+    "lint:fix": "oxlint --fix src/",
+    "typecheck": "tsc --noEmit",
+    "verify": "node scripts/verify-source.mjs",
+    "new-source": "node scripts/new-source.mjs",
+    "format": "oxfmt src/",
+    "format:check": "oxfmt --check src/"
+  },
+  "mana": {
+    "src": "src/",
+    "out": "dist/",
+    "target": "es2020",
+    "minify": true,
+    "platform": "web"
+  },
+  "devDependencies": {
+    "@mana-app/dev": "^0.1.14",
+    "@mana-app/types": "^0.0.25",
+    "oxfmt": "^0.50.0",
+    "oxlint": "^1.65.0",
+    "typescript": "^7.0.2"
+  },
+  "dependencies": {
+    "cheerio": "^1.2.0",
+    "fflate": "^0.8.3"
+  }
+}

@@ -1,0 +1,6 @@
+node_modules/
+dist/
+package-lock.json
+.mana-temp/
+# tooling and scaffold live in kittycatgit/mana-template
+.claude/
