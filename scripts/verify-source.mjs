@@ -51,6 +51,11 @@ const SECTION_STYLE = [
   "Grid",
 ];
 
+/** Styles that render as a carousel — one tile gets repeated across the width. */
+const HERO_STYLES = new Set([3, 4]);
+const MIN_HERO_ITEMS = 3;
+const MAX_SECTION_ITEMS = 20;
+
 const PUBLICATION_STATUS = { 1: "ONGOING", 2: "COMPLETED", 3: "CANCELLED", 4: "HIATUS" };
 const CONTENT_RATING = { 0: "SAFE", 1: "SUGGESTIVE", 2: "MATURE", 3: "EXPLICIT" };
 
@@ -134,10 +139,14 @@ async function step(results, name, fn) {
     return detail;
   } catch (error) {
     const status = isCloudflare(error) || error instanceof Skip ? "skip" : "fail";
+    const message = String(error?.message ?? error);
     results.push({
       name,
       status,
-      detail: String(error?.message ?? error).split("\n")[0],
+      detail: message.split("\n")[0],
+      // A failure with several causes loses all but the first without this, which
+      // leaves a caller — or an agent reading the output — nothing to act on.
+      rest: message.split("\n").slice(1),
       ms: Date.now() - started,
     });
     return undefined;
@@ -331,6 +340,52 @@ async function verify(name, probe, verbose) {
     }
   }
 
+  // Every rule here encodes a break that shipped green: shapes were fine and the home
+  // page was still wrong in the app. Keep adding to it rather than re-learning by hand.
+  if (preview.sections.length > 0) {
+    await step(results, "home page", async () => {
+      const problems = [];
+
+      for (const { section, items } of preview.sections) {
+        if (HERO_STYLES.has(section.style) && items.length < MIN_HERO_ITEMS) {
+          problems.push(
+            `"${section.title}" is a hero with ${items.length} item(s) — the app repeats a single cover across the carousel. Give it a listing to take several from, or pick a non-hero style.`,
+          );
+        }
+        if (items.length > MAX_SECTION_ITEMS) {
+          problems.push(
+            `"${section.title}" returns ${items.length} items — set \`limit\` on the section so the home row stays short. \`load\` keeps returning full pages for view-more.`,
+          );
+        }
+        if (items.length === 0) {
+          problems.push(`"${section.title}" returned nothing.`);
+        }
+      }
+
+      // Two sections showing the same tiles in the same order are one query wearing
+      // two titles — usually a copied `load` that never had its sort changed.
+      for (let i = 0; i < preview.sections.length; i++) {
+        for (let j = i + 1; j < preview.sections.length; j++) {
+          const a = preview.sections[i];
+          const b = preview.sections[j];
+          const headA = a.items.slice(0, 5).map((item) => item.id);
+          const headB = b.items.slice(0, 5).map((item) => item.id);
+          if (headA.length > 0 && headA.join("\u0000") === headB.join("\u0000")) {
+            problems.push(
+              `"${a.section.title}" and "${b.section.title}" open with the same titles in the same order — they are running the same query.`,
+            );
+          }
+        }
+      }
+
+      assert(
+        problems.length === 0,
+        `${problems.length} problem(s) on the home page\n${problems.join("\n")}`,
+      );
+      return `${preview.sections.length} sections, none repeating or overlong`;
+    });
+  }
+
   // Shape checks pass happily on a cover URL that 404s, which is a blank grid for the
   // user. Sample a few of the URLs the source actually produced and fetch them.
   const sampled = [
@@ -418,6 +473,9 @@ function report(name, results) {
     console.log(
       `  ${color}${mark}${RESET} ${result.name.padEnd(32)} ${DIM}${detail} (${result.ms}ms)${RESET}`,
     );
+    for (const line of result.rest ?? []) {
+      if (line.trim()) console.log(`      ${DIM}${line.trim()}${RESET}`);
+    }
   }
   return counts;
 }
