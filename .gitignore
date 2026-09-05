@@ -7,3 +7,14 @@ package-lock.json
 .mana-blocked
 .inbox.log
 .browser-profile/
+
+# Pipeline tooling lives in the private template repo, not in the public catalogue.
+# These stay on disk here so the scripts run, but are never published.
+.mcp.json
+recon/
+scripts/inbox.mjs
+scripts/new-from-url.mjs
+scripts/clear-site.mjs
+scripts/gates.mjs
+scripts/request-url.mjs
+scripts/*.plist
