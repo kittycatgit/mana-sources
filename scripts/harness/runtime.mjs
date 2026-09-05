@@ -165,6 +165,133 @@ export class NetworkClient {
   }
 }
 
+
+/**
+ * Stand-in for the host's auxiliary WKWebView.
+ *
+ * On a device `WebViewPage` opens a real WebView carrying the app's cookie jar, which is
+ * how a source reaches a site the user has already cleared a Cloudflare challenge for.
+ * Node has no WebView and no DOM, so this fetches the page over HTTP and exposes a
+ * read-only `document` backed by cheerio — enough to exercise the parsing a source does
+ * inside `evaluate`, which is the part worth testing off-device.
+ *
+ * What it deliberately does not do is pretend: anything beyond reading the loaded
+ * document throws by name rather than returning undefined, so a source that depends on
+ * real browser behaviour fails here loudly instead of passing and breaking in the app.
+ */
+class HarnessWebViewPageInstance {
+  constructor(timeout) {
+    this.timeout = timeout;
+    this.html = "";
+    this.url = "";
+  }
+
+  async goto(url, options = {}) {
+    const controller = new AbortController();
+    const ms = (options.timeout ?? this.timeout) * 1000;
+    const timer = setTimeout(() => controller.abort(), ms);
+    try {
+      const response = await fetch(url, {
+        redirect: "follow",
+        signal: controller.signal,
+        headers: {
+          "user-agent":
+            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 " +
+            "(KHTML, like Gecko) Chrome/131.0 Safari/537.36",
+          accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        },
+      });
+      this.html = await response.text();
+      this.url = response.url || url;
+    } finally {
+      clearTimeout(timer);
+    }
+
+    // The harness has no way to solve a challenge; report it the way the client does so
+    // verify records SKIP rather than a misleading FAIL.
+    if (/just a moment|cf-browser-verification|challenges\.cloudflare\.com/i.test(this.html.slice(0, 4096))) {
+      throw new CloudflareError(this.url);
+    }
+  }
+
+  async evaluate(fn, ...args) {
+    return this.evaluateScript(`(${fn.toString()}).apply(null, args)`, args);
+  }
+
+  async evaluateScript(script, args = []) {
+    if (!this.html) throw new Error("WebViewPage: evaluate called before goto");
+    const { load } = await import("cheerio");
+    const $ = load(this.html);
+    const document = buildDocumentShim($, this.url);
+    const run = new Function(
+      "document",
+      "window",
+      "location",
+      "args",
+      `"use strict"; return (async () => { ${script.startsWith("return") ? script : `return ${script}`} })();`,
+    );
+    return run(document, { document, location: { href: this.url } }, { href: this.url }, args);
+  }
+
+  async close() {}
+}
+
+/** A read-only DOM over cheerio: the subset a source realistically reads. */
+function buildDocumentShim($, url) {
+  const wrap = (node) => {
+    if (!node || node.length === 0) return null;
+    const el = $(node);
+    return {
+      get textContent() {
+        return el.text();
+      },
+      get innerHTML() {
+        return el.html() ?? "";
+      },
+      get outerHTML() {
+        return $.html(el);
+      },
+      getAttribute: (name) => el.attr(name) ?? null,
+      querySelector: (selector) => wrap(el.find(selector).first()),
+      querySelectorAll: (selector) => el.find(selector).toArray().map((n) => wrap(n)),
+    };
+  };
+
+  const unsupported = (name) => () => {
+    throw new Error(
+      `WebViewPage shim: document.${name} is not available off-device. ` +
+        `Keep what runs inside evaluate() to reading the loaded document.`,
+    );
+  };
+
+  return {
+    get documentElement() {
+      return wrap($("html").first());
+    },
+    get body() {
+      return wrap($("body").first());
+    },
+    get title() {
+      return $("title").first().text();
+    },
+    get URL() {
+      return url;
+    },
+    querySelector: (selector) => wrap($(selector).first()),
+    querySelectorAll: (selector) => $(selector).toArray().map((n) => wrap(n)),
+    getElementById: (id) => wrap($(`#${id}`).first()),
+    addEventListener: unsupported("addEventListener"),
+    createElement: unsupported("createElement"),
+    write: unsupported("write"),
+  };
+}
+
+export const WebViewPage = {
+  async create(options = {}) {
+    return new HarnessWebViewPageInstance(options.timeout ?? 30);
+  },
+};
+
 /** In-memory stand-in for the app's key-value stores. */
 export class ManaStore {
   constructor(seed = {}) {

@@ -22,6 +22,7 @@ import {
   ManaStore,
   NetworkClient,
   NetworkError,
+  WebViewPage,
   decodeIntents,
 } from "./harness/runtime.mjs";
 
@@ -98,6 +99,7 @@ function loadTarget(bundlePath) {
     CloudflareError,
     ObjectStore: store,
     SecureStore: new ManaStore(),
+    WebViewPage,
     console,
     setTimeout,
     clearTimeout,
