@@ -173,26 +173,44 @@ for (const s of sources) {
 const built = new Date().toISOString().slice(0, 10);
 const count = sources.length;
 
-/** The Eight Trigrams seal: concentric rings and radial ticks, drawn not decorated. */
+/**
+ * The seal: an Uzumaki spiral at the core, nine tails sweeping out of it, inside a
+ * ticked ring. Drawn from maths rather than traced, so it stays crisp at any size.
+ */
 function seal() {
-  const ticks = Array.from({ length: 72 }, (_, i) => {
-    const a = (i / 72) * Math.PI * 2;
-    const long = i % 6 === 0;
-    const r1 = long ? 236 : 244;
-    return `<line x1="${(Math.cos(a) * r1).toFixed(1)}" y1="${(Math.sin(a) * r1).toFixed(1)}" x2="${(Math.cos(a) * 256).toFixed(1)}" y2="${(Math.sin(a) * 256).toFixed(1)}" stroke-width="${long ? 2 : 1}"/>`;
+  const pt = (r, a) => `${(Math.cos(a) * r).toFixed(1)} ${(Math.sin(a) * r).toFixed(1)}`;
+
+  // Archimedean spiral, three turns, the clan mark at the centre of the seal.
+  const spiral = (() => {
+    const steps = 260;
+    let d = "";
+    for (let i = 0; i <= steps; i++) {
+      const t = (i / steps) * Math.PI * 6;
+      const r = 8 + t * 7.4;
+      d += (i ? " L " : "M ") + pt(r, t - Math.PI / 2);
+    }
+    return `<path d="${d}" stroke-width="5" stroke-linecap="round"/>`;
+  })();
+
+  // Nine tails, evenly spaced, each curling the same way out of the spiral.
+  const tails = Array.from({ length: 9 }, (_, i) => {
+    const a = (i / 9) * Math.PI * 2 - Math.PI / 2;
+    const curl = 0.42;
+    return `<path d="M ${pt(150, a)} C ${pt(212, a + curl * 0.45)}, ${pt(268, a + curl * 0.95)}, ${pt(302, a + curl * 1.7)}" stroke-width="7" stroke-linecap="round"/>`;
   }).join("");
-  const spokes = Array.from({ length: 8 }, (_, i) => {
-    const a = (i / 8) * Math.PI * 2 + Math.PI / 8;
-    return `<line x1="${(Math.cos(a) * 96).toFixed(1)}" y1="${(Math.sin(a) * 96).toFixed(1)}" x2="${(Math.cos(a) * 214).toFixed(1)}" y2="${(Math.sin(a) * 214).toFixed(1)}" stroke-width="1"/>`;
+
+  const ticks = Array.from({ length: 90 }, (_, i) => {
+    const a = (i / 90) * Math.PI * 2;
+    const long = i % 10 === 0;
+    return `<line x1="${pt(long ? 322 : 332, a).replace(" ", '" y1="')}" x2="${pt(344, a).replace(" ", '" y2="')}" stroke-width="${long ? 2.5 : 1}"/>`;
   }).join("");
-  return `<svg class="seal" viewBox="-280 -280 560 560" aria-hidden="true">
-  <g fill="none" stroke="currentColor">
-    <g class="ring-out">${ticks}<circle r="256" stroke-width="1.5"/><circle r="232" stroke-width="1"/></g>
-    <circle r="214" stroke-width="2.5"/>
-    <g class="ring-mid">${spokes}<circle r="176" stroke-width="1"/></g>
-    <circle r="140" stroke-width="1"/>
-    <circle r="96" stroke-width="3"/>
-    <circle r="62" stroke-width="1"/>
+
+  return `<svg class="seal" viewBox="-380 -380 760 760" aria-hidden="true">
+  <g fill="none" stroke="currentColor" stroke-linejoin="round">
+    <g class="spin-slow">${ticks}<circle r="344" stroke-width="1.5"/><circle r="318" stroke-width="1"/></g>
+    <g class="spin-fast">${tails}</g>
+    <circle r="150" stroke-width="2.5"/>
+    <g class="spin-core">${spiral}</g>
   </g>
 </svg>`;
 }
@@ -233,22 +251,23 @@ const html = `<!doctype html>
   .top { position: relative; overflow: hidden; border-bottom: 1px solid var(--line); }
   .masthead { position: relative; }
   .seal {
-    position: absolute; color: var(--ember); opacity: .42;
-    width: 560px; height: 560px; right: -170px; top: 50%; transform: translateY(-50%);
-    pointer-events: none;
+    position: absolute; color: var(--ember); opacity: .26; pointer-events: none;
+    width: min(600px, 92vw); height: min(600px, 92vw);
+    left: 50%; top: 50%; transform: translate(-50%, -50%);
   }
-  .ring-out { animation: spin 240s linear infinite; transform-origin: 0 0; }
-  .ring-mid { animation: spin 160s linear infinite reverse; transform-origin: 0 0; }
+  .spin-slow { animation: spin 300s linear infinite; transform-origin: 0 0; }
+  .spin-fast { animation: spin 120s linear infinite reverse; transform-origin: 0 0; }
+  .spin-core { animation: spin 200s linear infinite; transform-origin: 0 0; }
   @keyframes spin { to { transform: rotate(360deg); } }
   .top::after {
     content: ""; position: absolute; inset: 0; pointer-events: none;
     background:
-      radial-gradient(70% 90% at 78% 50%, rgba(232,89,12,.10), transparent 70%),
-      linear-gradient(100deg, var(--ink) 30%, rgba(7,5,6,.72) 55%, rgba(7,5,6,.25) 100%);
+      radial-gradient(50% 60% at 50% 50%, rgba(232,89,12,.09), transparent 72%),
+      linear-gradient(180deg, rgba(7,5,6,.55), rgba(7,5,6,.35) 45%, var(--ink));
   }
   /* must exclude the seal: this selector outranks .seal and would un-absolute it */
   .masthead > *:not(.seal) { position: relative; z-index: 2; }
-  .masthead { z-index: 1; padding: 84px 0 64px; }
+  .masthead { z-index: 1; padding: 132px 0 116px; }
   .mark {
     display: inline-block; margin-bottom: 24px; padding: 6px 11px;
     border: 1px solid var(--line); border-radius: 2px;
@@ -340,10 +359,10 @@ const html = `<!doctype html>
            font: 400 11px "JetBrains Mono", ui-monospace, monospace; letter-spacing: .1em; text-transform: uppercase; }
   :focus-visible { outline: 2px solid var(--amber); outline-offset: 3px; }
 
-  @media (prefers-reduced-motion: reduce) { .ring-out, .ring-mid { animation: none; } }
+  @media (prefers-reduced-motion: reduce) { .spin-slow, .spin-fast, .spin-core { animation: none; } }
   @media (max-width: 560px) {
-    .seal { width: 380px; height: 380px; right: -150px; opacity: .3; }
-    .masthead { padding: 56px 0 44px; }
+    .seal { opacity: .22; }
+    .masthead { padding: 96px 0 84px; }
   }
 </style>
 </head>
