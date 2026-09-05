@@ -4,7 +4,7 @@
     {
       "id": "tailspace",
       "name": "Tailspace",
-      "version": "1.0.0",
+      "version": "1.1.0",
       "description": "Pulls furry comics from tailspace.com",
       "website": "https://tailspace.com",
       "rating": 2,
@@ -21,7 +21,7 @@
       "path": "Tailspace",
       "environment": "source",
       "intents": 2104328,
-      "hash": "47966ba847966ba847966ba847966ba847966ba847966ba847966ba847966ba8"
+      "hash": "48de9ac848de9ac848de9ac848de9ac848de9ac848de9ac848de9ac848de9ac8"
     }
   ]
 }

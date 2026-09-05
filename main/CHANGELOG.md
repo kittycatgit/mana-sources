@@ -4,7 +4,14 @@ Notable changes to the extensions in this repository, grouped by extension —
 each one versions independently (see `info.version` in its `main.ts`). Dates
 are UTC. Format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## Tailspace (current: v1.0.0)
+## Tailspace (current: v1.1.0)
+
+### 2026-09-05 — Home page
+
+- Home sections are Popular (hero), Recently Updated and Top Rated, each capped to what a
+  home row should show rather than the site's full 60-result page.
+- Dropped the Featured hero. It held the site's single featured comic, and a one-item
+  `SimpleHero` repeats that cover across the whole carousel.
 
 ### 2026-09-05
 
