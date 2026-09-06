@@ -12,8 +12,19 @@ import {
 } from "@mana-app/types";
 
 export const BASE_URL = "https://madaradex.org";
+export const CDN_URL = "https://cdn.madaradex.org";
 export const TITLE_ROUTE = "title";
 export const POST_TYPE = "wp-manga";
+
+export const AJAX_PATH = "/wp-admin/admin-ajax.php";
+
+/** The `madaradex-shield` handshake that mints the token cdn.madaradex.org checks. */
+export const SHIELD_ACTION = "mdx_auth_refresh";
+export const SHIELD_FINGERPRINT_COOKIE = "mdx_fp";
+export const SHIELD_TOKEN_COOKIE = "mdx_auth";
+
+/** Used when the issued cookie carries no `Max-Age`; the site's own is a little over six hours. */
+export const SHIELD_TOKEN_MS = 3_600_000;
 
 /** How long a fetched title page is reused for, covering the `getContent`/`getChapters` pair. */
 export const TITLE_CACHE_MS = 60_000;

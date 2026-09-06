@@ -11,6 +11,7 @@ import {
   type ChapterPage,
   type ChapterSource,
   type Content,
+  type Cookie,
   type Highlight,
   type NetworkRequest,
   type Option,
@@ -32,7 +33,7 @@ import {
 import { load, type Cheerio, type CheerioAPI } from "cheerio";
 import type { AnyNode } from "domhandler";
 
-import { HTML_ACCEPT, buildClient } from "./client.ts";
+import { HTML_ACCEPT, JSON_ACCEPT, buildClient } from "./client.ts";
 import {
   FilterReader,
   buildSearchForm,
@@ -45,8 +46,10 @@ import {
   type SectionSpec,
 } from "./forms/index.ts";
 import {
+  AJAX_PATH,
   ANY,
   BASE_URL,
+  CDN_URL,
   CONTENT_TYPE_BY_TAG,
   FilterID,
   ListID,
@@ -54,6 +57,10 @@ import {
   POST_TYPE,
   READING_MODE_BY_TYPE,
   SEARCH_FIELDS,
+  SHIELD_ACTION,
+  SHIELD_FINGERPRINT_COOKIE,
+  SHIELD_TOKEN_COOKIE,
+  SHIELD_TOKEN_MS,
   SORT_OPTIONS,
   STATUS_BY_LABEL,
   SortID,
@@ -65,7 +72,7 @@ import {
 const info: SourceInfo = {
   id: "madaradex",
   name: "Madaradex",
-  version: "1.0.0",
+  version: "1.0.1",
   description: "Pulls manga, manhwa and manhua from madaradex.org",
   website: BASE_URL,
   rating: CatalogRating.EXPLICIT,
@@ -87,6 +94,9 @@ class MadaradexSource implements ChapterSource, SearchProvider, PageLinkResolver
   private client: NetworkClient | undefined;
   private genreOptions: Option[] | undefined;
   private titleCache: { contentId: string; at: number; document: CheerioAPI } | undefined;
+  private fingerprint: string | undefined;
+  private shieldGrant: { cookies: Cookie[]; expires: number } | undefined;
+  private shieldRefresh: Promise<Cookie[]> | undefined;
 
   private get http(): NetworkClient {
     this.client ??= buildClient({
@@ -286,10 +296,59 @@ class MadaradexSource implements ChapterSource, SearchProvider, PageLinkResolver
     //
     // Sending `origin` alongside it puts the 403 back: the CDN reads an origin as a
     // cross-site XHR and refuses, where a bare referer reads as an <img> on the page.
-    return {
-      url: imageURL,
-      headers: { referer: `${BASE_URL}/` },
-    };
+    const request: NetworkRequest = { url: imageURL, headers: { referer: `${BASE_URL}/` } };
+    if (!imageURL.startsWith(CDN_URL)) return request;
+
+    const cookies = await this.shieldCookies();
+    return cookies.length === 0 ? request : { ...request, cookies };
+  }
+
+  /**
+   * The `madaradex-shield` plugin now gates the CDN on the pair of cookies the reader page
+   * sets from its own inline script, and the referer alone is no longer enough: `mdx_fp`, a
+   * fingerprint the page mints client-side, and `mdx_auth`, the short-lived token
+   * `admin-ajax.php` hands back in exchange for it. All three have to be present — the CDN
+   * answers 403 to any two of them.
+   *
+   * The refresh is shared, because the app asks for every page of a chapter at once and an
+   * uncached grant would otherwise mint a token per image.
+   */
+  private async shieldCookies(): Promise<Cookie[]> {
+    const grant = this.shieldGrant;
+    if (grant && Date.now() < grant.expires) return grant.cookies;
+
+    this.shieldRefresh ??= this.refreshShield().finally(() => {
+      this.shieldRefresh = undefined;
+    });
+    return this.shieldRefresh;
+  }
+
+  private async refreshShield(): Promise<Cookie[]> {
+    // The fingerprint outlives the token it authorises, exactly as the site's 30-day cookie
+    // does, so a refresh reuses the one the earlier grant was issued against.
+    const fingerprint = (this.fingerprint ??= randomFingerprint());
+
+    const response = await this.http.post(`${BASE_URL}${AJAX_PATH}`, {
+      headers: {
+        accept: JSON_ACCEPT,
+        "content-type": "application/x-www-form-urlencoded; charset=UTF-8",
+      },
+      body: { action: SHIELD_ACTION },
+      cookies: [{ name: SHIELD_FINGERPRINT_COOKIE, value: fingerprint }],
+    });
+
+    const setCookie = headerOf(response.headers, "set-cookie");
+    const token = cookieValue(setCookie, SHIELD_TOKEN_COOKIE);
+    // A site that has dropped the plugin stops issuing the token; the referer alone is then
+    // what it was before, so this reports no cookies rather than failing the whole read.
+    if (token === "") return [];
+
+    const cookies: Cookie[] = [
+      { name: SHIELD_FINGERPRINT_COOKIE, value: fingerprint },
+      { name: SHIELD_TOKEN_COOKIE, value: token },
+    ];
+    this.shieldGrant = { cookies, expires: Date.now() + tokenLifetime(setCookie) };
+    return cookies;
   }
 
   private async browse(query: BrowseQuery): Promise<PagedSearchResult> {
@@ -482,6 +541,37 @@ function staffItem(name: string, role: string): StaffItem | undefined {
   const trimmed = name.trim();
   if (trimmed === "") return undefined;
   return additionalInfo.staff.item({ id: `${role}:${trimmed}`, title: trimmed, subtitle: role });
+}
+
+// -- shield ------------------------------------------------------------------
+
+/** Opaque to the server — the site's own script fills it with 16 random bytes in hex. */
+function randomFingerprint(): string {
+  let value = "";
+  while (value.length < 32) value += Math.floor(Math.random() * 16).toString(16);
+  return value;
+}
+
+function headerOf(headers: Record<string, unknown>, name: string): string {
+  for (const [key, value] of Object.entries(headers)) {
+    if (key.toLowerCase() !== name) continue;
+    return Array.isArray(value) ? value.map(String).join("; ") : String(value ?? "");
+  }
+  return "";
+}
+
+function cookieValue(setCookie: string, name: string): string {
+  return new RegExp(`(?:^|[;,\\s])${name}=([^;,\\s]+)`).exec(setCookie)?.[1] ?? "";
+}
+
+/**
+ * Four fifths of the token's own `Max-Age`, so a grant is replaced before the CDN starts
+ * refusing it — `willRequestImage` never sees the response and cannot retry on a 403.
+ */
+function tokenLifetime(setCookie: string): number {
+  const seconds = Number.parseInt(/max-age=(\d+)/i.exec(setCookie)?.[1] ?? "", 10);
+  const window = Number.isFinite(seconds) && seconds > 0 ? seconds * 1000 : SHIELD_TOKEN_MS;
+  return Math.floor(window * 0.8);
 }
 
 // -- parsing -----------------------------------------------------------------

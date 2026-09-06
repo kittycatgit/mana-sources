@@ -66,6 +66,39 @@ function asArray(value) {
 }
 
 /**
+ * `Headers.entries()` folds repeated Set-Cookie into one comma-joined string, which cuts a
+ * cookie's own `expires=Sun, 06 Sep` in half. The host hands sources the array instead, so
+ * a source reading a token back out of `set-cookie` sees what it sees on device.
+ */
+function responseHeaders(headers) {
+  const entries = Object.fromEntries(headers.entries());
+  const setCookie = headers.getSetCookie();
+  if (setCookie.length > 0) entries["set-cookie"] = setCookie;
+  return entries;
+}
+
+/**
+ * The app encodes an object body by the request's content-type — form-encoded for
+ * `application/x-www-form-urlencoded`, JSON otherwise. `fetch` does neither and would send
+ * the literal `[object Object]`, which fails a source whose POST works on device.
+ */
+function encodeBody(body, headers) {
+  if (body === undefined || body === null || typeof body === "string") return body;
+  if (typeof body !== "object" || body instanceof URLSearchParams) return body;
+
+  const type = String(
+    Object.entries(headers).find(([key]) => key.toLowerCase() === "content-type")?.[1] ?? "",
+  );
+  if (!type.toLowerCase().includes("application/x-www-form-urlencoded")) {
+    return JSON.stringify(body);
+  }
+
+  const form = new URLSearchParams();
+  for (const [key, value] of Object.entries(body)) form.append(key, String(value));
+  return form.toString();
+}
+
+/**
  * Reads the private fields `NetworkClientBuilder` sets. The builder ships in
  * `@mana-app/types` and calls `new NetworkClient(this)`, so the field names
  * here are the actual contract, not a guess.
@@ -120,7 +153,7 @@ export class NetworkClient {
       raw = await fetch(target, {
         method: prepared.method ?? "GET",
         headers,
-        body: prepared.body,
+        body: encodeBody(prepared.body, headers),
         redirect: "follow",
         signal: controller.signal,
       });
@@ -132,7 +165,7 @@ export class NetworkClient {
     const response = {
       data,
       status: raw.status,
-      headers: Object.fromEntries(raw.headers.entries()),
+      headers: responseHeaders(raw.headers),
       request: prepared,
     };
 
