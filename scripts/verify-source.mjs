@@ -25,6 +25,7 @@ import {
   WebViewPage,
   decodeIntents,
 } from "./harness/runtime.mjs";
+import { assisted, closeBrowser } from "./harness/browser.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const DIST_SOURCES = path.join(ROOT, "dist", "sources");
@@ -531,6 +532,16 @@ async function main() {
       totals.fail++;
     }
   }
+
+  // Worth saying plainly: these checks only passed because the request went round through
+  // a browser. The source did nothing different, but the app will be on its own.
+  if (assisted.length > 0) {
+    console.log(
+      `\n${YELLOW}${assisted.length} request(s) cleared a challenge through your browser${RESET}`,
+    );
+    for (const url of assisted) console.log(`  ${DIM}${url}${RESET}`);
+  }
+  closeBrowser();
 
   console.log(
     `\n${GREEN}${totals.pass} passed${RESET}, ${RED}${totals.fail} failed${RESET}, ${YELLOW}${totals.skip} skipped${RESET}`,
