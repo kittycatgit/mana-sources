@@ -1,0 +1,32 @@
+{
+  "repositoryName": "Demon | Mana Sources",
+  "thumbnail": "https://avatars.githubusercontent.com/u/204405496",
+  "sources": [
+    {
+      "id": "imhentai",
+      "name": "Imhentai",
+      "version": "1.0.0",
+      "description": "Pulls doujinshi, manga and western galleries from imhentai.xxx",
+      "website": "https://imhentai.xxx",
+      "rating": 2,
+      "supportedLanguages": [
+        "en_US",
+        "ja_JP",
+        "es_ES",
+        "fr_FR",
+        "ko_KR"
+      ],
+      "thumbnail": "Imhentai.png",
+      "developers": [
+        {
+          "name": "Demon",
+          "github": "https://github.com/kittycatgit"
+        }
+      ],
+      "path": "Imhentai",
+      "environment": "source",
+      "intents": 2104328,
+      "hash": "2e5158942e5158942e5158942e5158942e5158942e5158942e5158942e515894"
+    }
+  ]
+}
