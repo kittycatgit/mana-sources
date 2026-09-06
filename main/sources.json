@@ -3,6 +3,28 @@
   "thumbnail": "https://avatars.githubusercontent.com/u/204405496",
   "sources": [
     {
+      "id": "hiperdex",
+      "name": "Hiperdex",
+      "version": "1.0.0",
+      "description": "Pulls manga, manhwa and manhua from hiperdex.com",
+      "website": "https://hiperdex.com",
+      "rating": 2,
+      "supportedLanguages": [
+        "en_US"
+      ],
+      "thumbnail": "Hiperdex.png",
+      "developers": [
+        {
+          "name": "Demon",
+          "github": "https://github.com/kittycatgit"
+        }
+      ],
+      "path": "Hiperdex",
+      "environment": "source",
+      "intents": 2104332,
+      "hash": "5b834b315b834b315b834b315b834b315b834b315b834b315b834b315b834b31"
+    },
+    {
       "id": "tailspace",
       "name": "Tailspace",
       "version": "1.1.0",
@@ -22,7 +44,7 @@
       "path": "Tailspace",
       "environment": "source",
       "intents": 2104328,
-      "hash": "1378ee371378ee371378ee371378ee371378ee371378ee371378ee371378ee37"
+      "hash": "1e45ded51e45ded51e45ded51e45ded51e45ded51e45ded51e45ded51e45ded5"
     }
   ]
 }
