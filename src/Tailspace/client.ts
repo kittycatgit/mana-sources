@@ -5,10 +5,15 @@ export const HTML_ACCEPT =
 export const JSON_ACCEPT = "application/json, text/javascript, */*; q=0.01";
 export const ACCEPT_LANGUAGE = "en-US,en;q=0.9";
 
+// Markers only an interstitial carries. The bare hostname `challenges.cloudflare.com` is
+// deliberately not here: sites embed Turnstile on their own forms, so it sits in the
+// <head> of pages that answer 200 with the whole document — imhentai does exactly that,
+// and matching it reported every request to the site as blocked. Check anything added
+// here against a good page from the site as well as a challenged one.
 const CHALLENGE_PATTERNS: readonly RegExp[] = [
-  /challenges\.cloudflare\.com/i,
   /cf-browser-verification/i,
   /__cf_chl_/i,
+  /cf_chl_opt/i,
   /<title>\s*Just a moment/i,
   /\.open\(\s*["']POST["']\s*,\s*["']\/_v["']\)/,
 ];
