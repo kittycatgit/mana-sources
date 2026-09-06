@@ -79,60 +79,7 @@ function escapeHtml(str) {
 
 /** Escapes text, then renders markdown `code` spans -- the only inline markdown a changelog entry needs. @param {string} text */
 function renderInline(text) {
-  return escapeHtml(text).replace(
-    /`([^`]+)`/g,
-    '<code class="px-1 py-0.5 rounded bg-zinc-800 text-zinc-300 text-[11px] font-mono">$1</code>',
-  );
-}
-
-/** @param {ReturnType<typeof parseChangelog>} extensions */
-function changelogSection(extensions) {
-  if (!extensions.length) return "";
-
-  const blocks = extensions
-    .map(
-      (ext, i) => `
-<details class="group rounded-xl border border-zinc-800 bg-zinc-900 overflow-hidden"${i === 0 ? " open" : ""}>
-  <summary class="cursor-pointer select-none list-none flex items-center justify-between gap-3 px-4 py-3 hover:bg-zinc-800/50 transition-colors">
-    <div class="flex items-center gap-2">
-      <span class="text-sm font-semibold text-zinc-100">${escapeHtml(ext.name)}</span>
-      <span class="text-[10px] font-mono text-zinc-500 bg-zinc-800 px-1.5 py-0.5 rounded border border-zinc-700">v${escapeHtml(ext.version)}</span>
-    </div>
-    <svg class="w-4 h-4 text-zinc-500 transition-transform group-open:rotate-180" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
-  </summary>
-  <div class="px-4 pb-4 space-y-4 border-t border-zinc-800 pt-3">
-    ${ext.entries
-      .map(
-        (entry) => `
-    <div>
-      <p class="text-xs font-medium text-zinc-400 mb-1.5">${escapeHtml(entry.heading)}</p>
-      <ul class="space-y-1">
-        ${entry.items
-          .map(
-            (item) =>
-              `<li class="text-xs text-zinc-500 leading-relaxed pl-3 relative before:content-['—'] before:absolute before:left-0 before:text-zinc-700">${renderInline(item)}</li>`,
-          )
-          .join("\n        ")}
-      </ul>
-    </div>`,
-      )
-      .join("\n")}
-  </div>
-</details>`,
-    )
-    .join("\n");
-
-  return `
-    <!-- changelog -->
-    <div class="space-y-3">
-      <div class="flex items-center justify-between">
-        <h1 class="text-base font-semibold text-zinc-100">Changelog</h1>
-        <a href="CHANGELOG.md" class="text-[11px] text-zinc-500 hover:text-zinc-300 transition-colors">View raw</a>
-      </div>
-      <div class="space-y-2.5">
-        ${blocks}
-      </div>
-    </div>`;
+  return escapeHtml(text).replace(/`([^`]+)`/g, "<code>$1</code>");
 }
 
 let changelogExtensions = /** @type {ReturnType<typeof parseChangelog>} */ ([]);
@@ -144,242 +91,379 @@ try {
 
 const repoDisplayName = data.repositoryName ?? pkg.name ?? "Extensions";
 const homepage = pkg.homepage ?? "";
-const sourcesUrl = homepage
-  ? homepage.replace(/\/?$/, "/main")
-  : "https://your-pages-url/main";
+const sourcesUrl = homepage ? homepage.replace(/\/?$/, "/main") : "https://your-pages-url/main";
 
-const sources = data.sources ?? [];
+/** github.io Pages URL -> the repository it is served from, so requests can link home. */
+const repoUrl = (() => {
+  const m = /^https?:\/\/([^.]+)\.github\.io\/([^/]+)/.exec(homepage);
+  return m ? `https://github.com/${m[1]}/${m[2]}` : "";
+})();
+const requestUrl = repoUrl ? `${repoUrl}/issues/new?template=new-source.yml` : "";
 
-// ── helpers ────────────────────────────────────────────────────────────────
-
-/** @param {number} rating */
-function ratingBadge(rating) {
-  if (rating === 2)
-    return `<span class="inline-flex items-center gap-1 text-[10px] font-medium px-2 py-0.5 rounded-full bg-red-950 text-red-400 border border-red-900">
-      <svg class="w-2.5 h-2.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-      NSFW</span>`;
-  if (rating === 1)
-    return `<span class="inline-flex items-center gap-1 text-[10px] font-medium px-2 py-0.5 rounded-full bg-yellow-950 text-yellow-400 border border-yellow-900">
-      <svg class="w-2.5 h-2.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-      Mixed</span>`;
-  return `<span class="inline-flex items-center gap-1 text-[10px] font-medium px-2 py-0.5 rounded-full bg-emerald-950 text-emerald-400 border border-emerald-900">
-    <svg class="w-2.5 h-2.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
-    Safe</span>`;
+// A source/<id> branch publishes a preview for reviewing that one source, so the
+// catalogue it serves must hold only that source — not everything already on main.
+const only = process.env.MANA_ONLY ?? "";
+let sources = data.sources ?? [];
+if (only) {
+  sources = sources.filter((s) => s.id === only || s.path === only || s.name === only);
+  data.sources = sources;
+  fs.writeFileSync(sourcesPath, JSON.stringify(data, null, 2), "utf-8");
+  const keep = new Set(sources.map((s) => s.path));
+  const bundles = path.join(distDir, "sources");
+  if (fs.existsSync(bundles)) {
+    for (const entry of fs.readdirSync(bundles)) {
+      const base = entry.replace(/\.mana$/, "");
+      if (!keep.has(base)) fs.rmSync(path.join(bundles, entry), { recursive: true, force: true });
+    }
+  }
+  process.stdout.write(`[mana-dev] preview limited to ${only}\n`);
 }
 
-const LANG_MAP = /** @type {Record<string,string>} */({
+const RATING = ["Safe", "Mixed", "Explicit"];
+const LANG = /** @type {Record<string,string>} */ ({
   en_US: "EN", en: "EN", ja_JP: "JA", ja: "JA", ko_KR: "KO", ko: "KO",
   zh_CN: "ZH", zh: "ZH", fr_FR: "FR", fr: "FR", de_DE: "DE", de: "DE",
   es_ES: "ES", es: "ES", pt_BR: "PT", pt: "PT", it_IT: "IT", it: "IT",
   ru_RU: "RU", ru: "RU", universal: "ALL",
 });
 
-/** @param {string[]} langs */
-function langBadges(langs) {
-  return (langs ?? []).map(l =>
-    `<span class="text-[10px] font-mono font-semibold px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-400 border border-zinc-700">${LANG_MAP[l] ?? l}</span>`
-  ).join("");
-}
-
-// ── card ───────────────────────────────────────────────────────────────────
-
-const BOOK_SVG = `<svg class="w-6 h-6" stroke="#71717a" viewBox="0 0 24 24" fill="none" stroke-width="1.5"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/></svg>`;
-
 /** @param {any} s */
-function sourceCard(s) {
-  const devNames = (s.developers ?? []).map(/** @param {{name:string}} d */ d => d.name).join(", ");
-  const iconFile = s.thumbnail ?? "icon.png";
-  const thumbSrc = s.path ? `sources/${s.path}/${iconFile}` : "";
-  const thumb = thumbSrc
-    ? `<img src="${thumbSrc}" alt="${s.name}" class="w-full h-full object-cover rounded-lg" onerror="imgErr(this)" />`
-    : BOOK_SVG;
+function sourceRow(s) {
+  const src = /^https?:\/\//.test(s.thumbnail ?? "") ? s.thumbnail : `assets/${s.thumbnail}`;
+  const icon = s.thumbnail
+    ? `<img class="icon" src="${src}" alt="" onerror="this.remove()">`
+    : "";
+  const rating = RATING[s.rating ?? 0] ?? "Safe";
+  const langs = (s.supportedLanguages ?? []).map((l) => LANG[l] ?? l).join(" / ");
+  const host = s.website ? s.website.replace(/^https?:\/\//, "").replace(/\/$/, "") : "";
 
-  return `
-<div class="group relative flex flex-col bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden hover:border-zinc-600 hover:shadow-lg hover:shadow-black/40 transition-all duration-200">
-  <div class="flex items-start gap-3.5 p-4 pb-3">
-    <div class="w-12 h-12 rounded-lg bg-zinc-800 border border-zinc-700/50 flex items-center justify-center shrink-0 overflow-hidden">
-      ${thumb}
-    </div>
-    <div class="flex-1 min-w-0">
-      <div class="flex items-center gap-2 flex-wrap">
-        <h2 class="font-semibold text-sm text-zinc-100 leading-tight">${s.name}</h2>
-        <span class="text-[10px] font-mono text-zinc-500 bg-zinc-800 px-1.5 py-0.5 rounded border border-zinc-700">v${s.version ?? "?"}</span>
-      </div>
-      ${devNames ? `<p class="text-[11px] text-zinc-500 mt-0.5">${devNames}</p>` : ""}
+  return `<li class="source" id="src-${encodeURIComponent(s.name)}">
+  <div class="icon-slot">${icon}</div>
+  <div class="body">
+    <h3>${escapeHtml(s.name)} <span class="ver">v${escapeHtml(String(s.version ?? "?"))}</span></h3>
+    ${s.description ? `<p>${escapeHtml(s.description)}</p>` : ""}
+    <div class="meta">
+      <span class="r${s.rating ?? 0}"><i class="dot"></i>${rating}</span>
+      ${langs ? `<span style="color:var(--muted)">${langs}</span>` : ""}
+      ${host ? `<a href="${s.website}" target="_blank" rel="noopener">${escapeHtml(host)} &nearr;</a>` : ""}
     </div>
   </div>
-
-  ${s.description ? `
-  <div class="px-4 pb-3">
-    <p class="text-xs text-zinc-400 leading-relaxed line-clamp-2">${s.description}</p>
-  </div>` : ""}
-
-  <div class="px-4 pb-4 flex flex-wrap items-center gap-1.5 mt-auto">
-    ${ratingBadge(s.rating ?? 0)}
-    ${langBadges(s.supportedLanguages ?? [])}
-    ${s.website ? `
-    <a href="${s.website}" target="_blank" rel="noopener"
-       class="ml-auto inline-flex items-center gap-1 text-[11px] text-zinc-500 hover:text-zinc-300 transition-colors">
-      <svg class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 010 20M12 2a15.3 15.3 0 000 20"/></svg>
-      Site
-    </a>` : ""}
-  </div>
-</div>`;
+</li>`;
 }
 
-// ── page ───────────────────────────────────────────────────────────────────
+/** @param {ReturnType<typeof parseChangelog>} extensions */
+function changelog(extensions) {
+  if (!extensions.length) return "";
+  const blocks = extensions
+    .map(
+      (ext) => `<details>
+  <summary>${escapeHtml(ext.name)} <span class="ver">${escapeHtml(ext.version)}</span></summary>
+  ${ext.entries
+    .map(
+      (entry) => `<div class="entry">
+    <h4>${escapeHtml(entry.heading)}</h4>
+    <ul>${entry.items.map((i) => `<li>${renderInline(i)}</li>`).join("")}</ul>
+  </div>`,
+    )
+    .join("")}
+</details>`,
+    )
+    .join("\n");
+  return `<section>
+  <h2>Changes</h2>
+  ${blocks}
+</section>`;
+}
 
-// Copy source icons into dist/sources/<path>/ so they're reachable
+// Icons go in ONE shared dist/assets/ folder, named after the source, and `thumbnail`
+// in sources.json becomes that bare filename. Mana resolves a source's thumbnail against
+// <repo>/assets/, not against the source's own directory — leave it as "assets/icon.png"
+// beside the bundle and the app looks in the wrong place and shows nothing.
+const assetsDir = path.join(distDir, "assets");
 for (const s of sources) {
   if (!s.path) continue;
-  const iconFile = s.thumbnail ?? "icon.png";
-  const srcIcon = path.join(cwd, "src", s.path, iconFile);
-  if (fs.existsSync(srcIcon)) {
-    const destPath = path.join(distDir, "sources", s.path, iconFile);
-    fs.mkdirSync(path.dirname(destPath), { recursive: true });
-    fs.copyFileSync(srcIcon, destPath);
+  const declared = s.thumbnail ?? "assets/icon.png";
+  if (/^https?:\/\//.test(declared)) continue;
+  const srcIcon = path.join(cwd, "src", s.path, declared);
+  if (!fs.existsSync(srcIcon)) {
+    process.stderr.write(`[mana-dev] ${s.name}: no icon at src/${s.path}/${declared}\n`);
+    continue;
   }
+  const ext = path.extname(declared) || ".png";
+  const flat = `${s.path}${ext}`;
+  fs.mkdirSync(assetsDir, { recursive: true });
+  fs.copyFileSync(srcIcon, path.join(assetsDir, flat));
+  s.thumbnail = flat;
+}
+fs.writeFileSync(sourcesPath, JSON.stringify(data, null, 2), "utf-8");
+
+const built = new Date().toISOString().slice(0, 10);
+const count = sources.length;
+
+/**
+ * The seal: an Uzumaki spiral at the core, nine tails sweeping out of it, inside a
+ * ticked ring. Drawn from maths rather than traced, so it stays crisp at any size.
+ */
+function seal() {
+  const pt = (r, a) => `${(Math.cos(a) * r).toFixed(1)} ${(Math.sin(a) * r).toFixed(1)}`;
+
+  // Archimedean spiral, three turns, the clan mark at the centre of the seal.
+  const spiral = (() => {
+    const steps = 260;
+    let d = "";
+    for (let i = 0; i <= steps; i++) {
+      const t = (i / steps) * Math.PI * 6;
+      const r = 8 + t * 7.4;
+      d += (i ? " L " : "M ") + pt(r, t - Math.PI / 2);
+    }
+    return `<path d="${d}" stroke-width="5" stroke-linecap="round"/>`;
+  })();
+
+  // Nine tails, evenly spaced, each curling the same way out of the spiral.
+  const tails = Array.from({ length: 9 }, (_, i) => {
+    const a = (i / 9) * Math.PI * 2 - Math.PI / 2;
+    const curl = 0.42;
+    return `<path d="M ${pt(150, a)} C ${pt(212, a + curl * 0.45)}, ${pt(268, a + curl * 0.95)}, ${pt(302, a + curl * 1.7)}" stroke-width="7" stroke-linecap="round"/>`;
+  }).join("");
+
+  const ticks = Array.from({ length: 90 }, (_, i) => {
+    const a = (i / 90) * Math.PI * 2;
+    const long = i % 10 === 0;
+    return `<line x1="${pt(long ? 322 : 332, a).replace(" ", '" y1="')}" x2="${pt(344, a).replace(" ", '" y2="')}" stroke-width="${long ? 2.5 : 1}"/>`;
+  }).join("");
+
+  return `<svg class="seal" viewBox="-380 -380 760 760" aria-hidden="true">
+  <g fill="none" stroke="currentColor" stroke-linejoin="round">
+    <g class="spin-slow">${ticks}<circle r="344" stroke-width="1.5"/><circle r="318" stroke-width="1"/></g>
+    <g class="spin-fast">${tails}</g>
+    <circle r="150" stroke-width="2.5"/>
+    <g class="spin-core">${spiral}</g>
+  </g>
+</svg>`;
 }
 
-const cards = sources.map(sourceCard).join("\n");
-const count = sources.length;
-const built = new Date().toISOString().replace("T", " ").slice(0, 16) + " UTC";
-
-const html = `<!DOCTYPE html>
-<html lang="en" class="dark">
+const html = `<!doctype html>
+<html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>${repoDisplayName}</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script>
-    function imgErr(el) {
-      el.outerHTML = '<svg class="w-6 h-6" stroke="#71717a" viewBox="0 0 24 24" fill="none" stroke-width="1.5"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/></svg>';
-    }
-  </script>
-  <script>
-    tailwind.config = {
-      darkMode: "class",
-      theme: {
-        extend: {
-          fontFamily: { sans: ["Inter","ui-sans-serif","system-ui","sans-serif"] },
-        },
-      },
-    };
-  </script>
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" />
-  <style>
-    body { font-family: "Inter", ui-sans-serif, system-ui, sans-serif; }
-    .line-clamp-2 { display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden; }
-    .truncate { overflow:hidden;text-overflow:ellipsis;white-space:nowrap; }
-    #copy-btn.copied { color:#4ade80; }
-  </style>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>${escapeHtml(repoDisplayName)}</title>
+<meta name="description" content="Sources for Mana. Add the repository once and they all come with it.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=Archivo+Black&family=JetBrains+Mono:wght@400;500;700&display=swap">
+<style>
+  :root {
+    --ink: #070506;
+    --paper: #f4ece3;
+    --muted: #8e7d72;
+    --line: #241a16;
+    --surface: #100b09;
+    --ember: #e8590c;
+    --amber: #f0a500;
+    --blood: #6d1414;
+    --safe: #6aa84f; --mixed: #f0a500; --explicit: #d8453a;
+    color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--ink); color: var(--paper);
+    font: 400 15px/1.6 Archivo, ui-sans-serif, system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  a { color: inherit; }
+  .wrap { max-width: 760px; margin: 0 auto; padding: 0 24px; }
+
+  /* ── masthead ─────────────────────────────────────────────────────────── */
+  .top { position: relative; overflow: hidden; border-bottom: 1px solid var(--line); }
+  .masthead { position: relative; }
+  .seal {
+    position: absolute; color: var(--ember); opacity: .26; pointer-events: none;
+    width: min(600px, 92vw); height: min(600px, 92vw);
+    left: 50%; top: 50%; transform: translate(-50%, -50%);
+  }
+  .spin-slow { animation: spin 300s linear infinite; transform-origin: 0 0; }
+  .spin-fast { animation: spin 120s linear infinite reverse; transform-origin: 0 0; }
+  .spin-core { animation: spin 200s linear infinite; transform-origin: 0 0; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .top::after {
+    content: ""; position: absolute; inset: 0; pointer-events: none;
+    background:
+      radial-gradient(50% 60% at 50% 50%, rgba(232,89,12,.09), transparent 72%),
+      linear-gradient(180deg, rgba(7,5,6,.55), rgba(7,5,6,.35) 45%, var(--ink));
+  }
+  /* must exclude the seal: this selector outranks .seal and would un-absolute it */
+  .masthead > *:not(.seal) { position: relative; z-index: 2; }
+  .masthead { z-index: 1; padding: 132px 0 118px; }
+  .mark {
+    display: inline-block; margin-bottom: 24px; padding: 6px 11px;
+    border: 1px solid var(--line); border-radius: 2px;
+    font: 700 10px/1 "JetBrains Mono", ui-monospace, monospace;
+    letter-spacing: .26em; text-transform: uppercase; color: var(--ember);
+  }
+  h1 {
+    margin: 0; font-family: "Archivo Black", Archivo, sans-serif; font-weight: 400;
+    font-size: clamp(40px, 8.5vw, 76px); line-height: .9; letter-spacing: -.045em;
+    text-transform: uppercase; color: var(--paper);
+  }
+  h1 em { font-style: normal; color: var(--ember); }
+  .lede { margin: 20px 0 0; max-width: 40ch; color: var(--muted); font-size: 15px; }
+
+  /* ── install ──────────────────────────────────────────────────────────── */
+  .install { position: relative; z-index: 1; margin-top: 40px; }
+  .install-label {
+    font: 500 11px/1 "JetBrains Mono", ui-monospace, monospace;
+    letter-spacing: .2em; text-transform: uppercase; color: var(--muted);
+  }
+  .install-label b { color: var(--paper); font-weight: 500; }
+  .url-row { display: flex; margin-top: 12px; border: 1px solid var(--line); border-radius: 3px; background: var(--surface); }
+  .url {
+    flex: 1; min-width: 0; padding: 15px 16px; overflow-x: auto; white-space: nowrap;
+    font: 400 14px/1.2 "JetBrains Mono", ui-monospace, monospace; color: var(--amber);
+  }
+  button {
+    flex: none; padding: 0 22px; cursor: pointer; border: 0; border-left: 1px solid var(--line);
+    background: var(--ember); color: #150705;
+    font: 700 12px/1 Archivo, sans-serif; letter-spacing: .1em; text-transform: uppercase;
+  }
+  button:hover { background: var(--amber); }
+
+  /* ── body ─────────────────────────────────────────────────────────────── */
+  main { padding: 56px 0 80px; }
+  section + section { margin-top: 56px; }
+  h2 {
+    display: flex; align-items: center; gap: 14px; margin: 0 0 4px;
+    font: 500 11px/1 "JetBrains Mono", ui-monospace, monospace;
+    letter-spacing: .2em; text-transform: uppercase; color: var(--muted);
+  }
+  h2::after { content: ""; flex: 1; height: 1px; background: var(--line); }
+
+  ul.sources { list-style: none; margin: 0; padding: 0; }
+  .source {
+    display: flex; gap: 18px; align-items: flex-start;
+    padding: 24px 12px 24px 0; border-bottom: 1px solid var(--line);
+    scroll-margin-top: 24px; border-radius: 4px;
+    transition: background .3s, padding-left .2s;
+  }
+  .source:hover { background: rgba(232,89,12,.045); padding-left: 12px; }
+  .source:target { background: rgba(232,89,12,.09); }
+  .source:hover .icon-slot { border-color: var(--ember); }
+  .icon-slot { transition: border-color .25s; }
+  .icon-slot {
+    flex: none; width: 56px; height: 56px; border-radius: 4px; overflow: hidden;
+    background: var(--surface); border: 1px solid var(--line);
+  }
+  .icon { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .body { min-width: 0; flex: 1; }
+  .source h3 {
+    margin: 0; font-size: 19px; font-weight: 600; letter-spacing: -.01em;
+    display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap;
+  }
+  .ver { font: 400 12px "JetBrains Mono", ui-monospace, monospace; color: var(--muted); }
+  .source p { margin: 6px 0 0; font-size: 14px; color: var(--muted); }
+  .meta { display: flex; flex-wrap: wrap; align-items: center; gap: 14px; margin-top: 12px;
+          font: 500 11px/1 "JetBrains Mono", ui-monospace, monospace; letter-spacing: .08em; text-transform: uppercase; }
+  .meta a { color: var(--muted); text-decoration: none; }
+  .meta a:hover { color: var(--ember); }
+  .dot { width: 6px; height: 6px; border-radius: 50%; display: inline-block; margin-right: 7px; vertical-align: 0; }
+  .r0 { color: var(--safe); } .r1 { color: var(--mixed); } .r2 { color: var(--explicit); }
+  .r0 .dot { background: var(--safe); } .r1 .dot { background: var(--mixed); } .r2 .dot { background: var(--explicit); }
+
+  .request { display: flex; align-items: center; justify-content: space-between; gap: 24px; flex-wrap: wrap; padding-top: 22px; }
+  .request div { max-width: 44ch; }
+  .request strong { display: block; font-size: 18px; font-weight: 600; }
+  .request span { color: var(--muted); font-size: 14px; }
+  .request a {
+    flex: none; padding: 13px 20px; border-radius: 3px; text-decoration: none;
+    border: 1px solid var(--ember); color: var(--ember);
+    font: 700 12px/1 Archivo, sans-serif; letter-spacing: .1em; text-transform: uppercase;
+  }
+  .request a:hover { background: var(--ember); color: #150705; }
+
+  details { border-bottom: 1px solid var(--line); }
+  details summary { cursor: pointer; list-style: none; padding: 16px 0; font-size: 15px; font-weight: 500; display: flex; gap: 10px; align-items: baseline; }
+  details summary::-webkit-details-marker { display: none; }
+  details summary::before { content: "→"; color: var(--ember); font-size: 13px; }
+  details[open] summary::before { content: "↓"; }
+  .entry { padding: 0 0 16px 22px; }
+  .entry h4 { margin: 0 0 8px; font: 400 11px "JetBrains Mono", ui-monospace, monospace; color: var(--muted); letter-spacing: .1em; }
+  .entry ul { margin: 0; padding-left: 18px; }
+  .entry li { font-size: 14px; color: var(--muted); margin-bottom: 6px; }
+  code { font: 400 12px "JetBrains Mono", ui-monospace, monospace; color: var(--amber); }
+
+  footer { padding: 24px 0 48px; color: var(--muted);
+           font: 400 11px "JetBrains Mono", ui-monospace, monospace; letter-spacing: .1em; text-transform: uppercase; }
+  :focus-visible { outline: 2px solid var(--amber); outline-offset: 3px; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .spin-slow, .spin-fast, .spin-core { animation: none; }
+  }
+  @media (max-width: 560px) {
+    .seal { opacity: .22; }
+    .masthead { padding: 96px 0 84px; }
+  }
+</style>
 </head>
-<body class="bg-zinc-950 text-zinc-50 min-h-screen antialiased">
+<body>
 
-  <!-- sticky header -->
-  <header class="sticky top-0 z-20 border-b border-zinc-800 bg-zinc-950/90 backdrop-blur-md">
-    <div class="max-w-5xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between gap-4">
-      <div class="flex items-center gap-2.5">
-        <svg class="w-5 h-5 text-zinc-400 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75">
-          <path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/>
-        </svg>
-        <span class="font-semibold text-sm text-zinc-100">${repoDisplayName}</span>
-        <span class="hidden sm:inline-flex items-center text-[11px] font-medium px-2 py-0.5 rounded-full bg-zinc-800 text-zinc-400 border border-zinc-700">
-          ${count} extension${count !== 1 ? "s" : ""}
-        </span>
-      </div>
-      <div class="flex items-center gap-2">
-        <span class="text-[11px] text-zinc-600 hidden md:block">Built ${built}</span>
+<div class="top">
+  <div class="wrap masthead">
+    ${seal()}
+    <span class="mark">Mana</span>
+    <h1>${escapeHtml(repoDisplayName).replace(/-/g, "<em>-</em>")}</h1>
+    <p class="lede">Add this once in Mana and everything below comes with it. Anything added later turns up on its own.</p>
+
+    <div class="install">
+      <div class="install-label">Discover <b>&rsaquo;</b> Repositories <b>&rsaquo;</b> Add Repo</div>
+      <div class="url-row">
+        <div class="url" id="url">${sourcesUrl}</div>
+        <button id="copy" type="button">Copy</button>
       </div>
     </div>
-  </header>
+  </div>
+</div>
 
-  <main class="max-w-5xl mx-auto px-4 sm:px-6 py-10 space-y-8">
+<main class="wrap">
+  <section>
+    <h2>${count} source${count === 1 ? "" : "s"}</h2>
+    <ul class="sources">
+${sources.map(sourceRow).join("\n")}
+    </ul>
+  </section>
 
-    <!-- install banner -->
-    <div class="rounded-xl border border-zinc-800 bg-zinc-900 p-4">
-      <div class="flex items-start gap-3">
-        <div class="mt-0.5 w-8 h-8 rounded-lg bg-zinc-800 border border-zinc-700 flex items-center justify-center shrink-0">
-          <svg class="w-4 h-4 text-zinc-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
-          </svg>
-        </div>
-        <div class="flex-1 min-w-0 space-y-2">
-          <div>
-            <p class="text-sm font-medium text-zinc-100">Add Repository to Mana</p>
-            <p class="text-xs text-zinc-500 mt-0.5 flex items-center gap-1 flex-wrap">Copy the URL below and paste it in
-              <span class="inline-flex items-center gap-0.5 text-zinc-400 font-medium">Mana
-                <svg class="w-3 h-3 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
-                Discover
-                <svg class="w-3 h-3 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
-                Repositories
-                <svg class="w-3 h-3 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
-                Add Repo
-              </span>
-            </p>
-          </div>
-          <div class="flex items-center gap-2">
-            <code class="flex-1 min-w-0 block text-xs font-mono text-zinc-300 bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-2 truncate">${sourcesUrl}</code>
-            <button id="copy-btn"
-              onclick="navigator.clipboard.writeText('${sourcesUrl}').then(()=>{const b=document.getElementById('copy-btn');b.classList.add('copied');b.querySelector('span').textContent='Copied!';setTimeout(()=>{b.classList.remove('copied');b.querySelector('span').textContent='Copy';},2000)})"
-              class="shrink-0 inline-flex items-center gap-1.5 text-xs font-medium px-3 py-2 rounded-lg bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-zinc-300 hover:text-zinc-100 transition-colors">
-              <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/>
-              </svg>
-              <span>Copy</span>
-            </button>
-          </div>
-        </div>
+  <section>
+    <h2>Requests</h2>
+    <div class="request">
+      <div>
+        <strong>Want a site added?</strong>
+        <span>Open a request with its URL. One site per request.</span>
       </div>
+      ${requestUrl ? `<a href="${requestUrl}" target="_blank" rel="noopener">Request a site</a>` : ""}
     </div>
+  </section>
 
-    <!-- section heading -->
-    <div class="flex items-center justify-between">
-      <h1 class="text-base font-semibold text-zinc-100">
-        Extensions
-        <span class="ml-2 text-sm font-normal text-zinc-500">${count} available</span>
-      </h1>
-    </div>
+  ${changelog(changelogExtensions)}
+</main>
 
-    <!-- cards grid -->
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-${cards}
-    </div>
-${changelogSection(changelogExtensions)}
-  </main>
+<footer class="wrap">Updated ${built}</footer>
 
-  <footer class="border-t border-zinc-800 mt-12">
-    <div class="max-w-5xl mx-auto px-4 sm:px-6 py-6 flex flex-col sm:flex-row items-start sm:items-center gap-4 justify-between">
-      <div class="flex items-center gap-4">
-        <div class="flex items-center gap-2">
-          <svg class="w-4 h-4 text-zinc-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75">
-            <path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/>
-          </svg>
-          <span class="text-xs font-medium text-zinc-500">${repoDisplayName}</span>
-        </div>
-        ${homepage ? `<a href="${homepage}" target="_blank" rel="noopener"
-           class="inline-flex items-center gap-1.5 text-xs text-zinc-600 hover:text-zinc-400 transition-colors">
-          <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 00-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0020 4.77 5.07 5.07 0 0019.91 1S18.73.65 16 2.48a13.38 13.38 0 00-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 005 4.77a5.44 5.44 0 00-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 009 18.13V22"/>
-          </svg>
-          GitHub Pages
-        </a>` : ""}
-      </div>
-      <span class="text-xs text-zinc-600">Built ${built}</span>
-    </div>
-  </footer>
-
+<script>
+  document.getElementById("copy").addEventListener("click", function () {
+    var b = this;
+    navigator.clipboard.writeText(document.getElementById("url").textContent.trim()).then(function () {
+      b.textContent = "Copied";
+      setTimeout(function () { b.textContent = "Copy"; }, 1600);
+    });
+  });
+</script>
 </body>
-</html>`;
+</html>
+`;
 
 fs.writeFileSync(path.join(distDir, "index.html"), html, "utf-8");
+process.stdout.write("[mana-dev] Generated dist/index.html\n");
 
-// Copied alongside index.html so the "View raw" changelog link resolves on GitHub Pages too.
 const changelogSrc = path.join(cwd, "CHANGELOG.md");
 if (fs.existsSync(changelogSrc)) {
   fs.copyFileSync(changelogSrc, path.join(distDir, "CHANGELOG.md"));
 }
-
-process.stdout.write("[mana-dev] \uD83C\uDF10 Generated dist/index.html\n");

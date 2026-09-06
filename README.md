@@ -1,6 +1,6 @@
 # mana-sources
 
-Content sources for the Mana app.
+Content sources for the [Mana](https://mana.moe) app.
 
 ## Install
 
@@ -10,100 +10,42 @@ In Mana: **Discover → Repositories → Add Repo**, and paste:
 https://kittycatgit.github.io/mana-sources/main
 ```
 
-Or open the [install page](https://kittycatgit.github.io/mana-sources/main/).
+Or open the [install page](https://kittycatgit.github.io/mana-sources/main/) and copy it
+from there.
 
-| Name | Version | Language | Rating |
-| ---- | ------- | -------- | ------ |
-| Hiperdex | 1.0.0 | English | Explicit |
+| Source | Version | Language | Rating |
+| ------ | ------- | -------- | ------ |
 | Tailspace | 1.1.0 | English | Explicit |
 
-See [CHANGELOG.md](CHANGELOG.md) for what changed.
+See [CHANGELOG.md](CHANGELOG.md) for what changed and when.
 
-## Development
+## Requesting a site
 
-Scaffolding and the build skill live in a separate private repository.
+Open a [source request](../../issues/new?template=new-source.yml) with the site's URL —
+one site per request. Requests are reviewed by hand before anything is built.
+
+If it gets built you will get a link on the issue to install that source on its own,
+before it joins the catalogue above, so you can tell us what is wrong with it.
+
+Some sites cannot be supported: ones behind a login, ones that challenge every visitor,
+and ones with no stable way to read them.
+
+## Working on a source
 
 ```bash
 npm install
 npm run lint && npm run format && npm run typecheck && npm run build
-npm run verify <Name>
+npm run verify <Name> -- --verbose
 ```
 
-### Requests from other people
+`verify` loads the built `.mana` bundle and drives it against the live site — the four
+gates only prove a source compiles, not that it returns anything. Read the `--verbose`
+output as a reader would: it prints the home sections, search results and first chapter
+the app will actually show.
 
-Anyone can open a **Source request** issue with a site URL. Nothing runs until a
-maintainer labels it. Builds happen on a maintainer's machine against their own Claude
-Code login — no server, no API key, nothing listening for inbound connections.
+Each source under `src/` is self-contained: `main.ts` holds the source class and its
+parsing, `model.ts` its constants and filters, `client.ts` its network client, and
+`forms/` the search and section helpers.
 
-```bash
-npm run inbox            # what is waiting
-npm run inbox -- --run   # build the `approved` ones
-npm run inbox -- --fix   # apply the `needs-fix` ones
-```
-
-The loop:
-
-1. Someone opens an issue with a URL.
-2. A maintainer adds **`approved`**; `--run` builds it on a `source/<id>` branch.
-3. That branch publishes **its own install URL**, posted back on the issue. The requester
-   adds it in Mana and reports what is wrong — the extension is testable before it reaches
-   the catalogue on `main`.
-4. A maintainer restates the fix **in their own comment** and adds **`needs-fix`**;
-   `--fix` applies it and republishes.
-5. Merge the branch when it is right.
-
-Builds have a headless browser (`@playwright/mcp`, registered in `.mcp.json`) for sites
-that render client-side. It cannot clear a challenge — an automated browser is what a
-challenge scores against — so a challenged site pauses instead of failing:
-
-1. The build stops and comments on the issue saying a challenge is in the way.
-2. On the build machine: `npm run clear-site -- https://thesite.com`. A real browser
-   opens, you click once, you close it.
-3. Re-apply `approved`. The next run reuses the same browser profile, so the clearance
-   you just earned is still valid, and the build carries on headlessly.
-
-The clearance is tied to the browser that earned it, which is why this works and a bought
-token does not — and why it expires after a few hours, so re-label near when you clear.
-
-A site that a click cannot fix is labelled `needs-human` instead, and wants the
-`recon/<id>.md` handoff below.
-
-To run the inbox on a timer instead of by hand:
-
-```bash
-cp scripts/com.kittycatgit.mana-inbox.plist ~/Library/LaunchAgents/
-launchctl load ~/Library/LaunchAgents/com.kittycatgit.mana-inbox.plist
-```
-
-It checks every 15 minutes while you are logged in, one build per tick, logging to
-`.inbox.log`. It must be a LaunchAgent — a LaunchDaemon runs as root and cannot reach the
-keychain Claude Code authenticates from. `launchctl unload` the same path stops it.
-
-**Only the repository owner can approve or steer a build.** Not a collaborator, not an
-organisation member, not whoever opened the issue or a pull request:
-
-- A label is checked against the events timeline — who *applied* it, not just that it is
-  present. A label put on by anyone else is removed and the issue is commented.
-- `--fix` reads only comments authored by the owner. A requester's report is a report; it
-  becomes an instruction when the owner restates it in their own words.
-- Both checks fail closed: an API error, a missing event, an unrecognised actor all count
-  as not approved.
-
-That is what stops a stranger steering a process that holds a shell on the build machine.
-
-### From a URL
-
-```bash
-npm run new-from-url -- https://example.com
-```
-
-Runs Claude Code headlessly against the `mana-extension` skill, then re-runs lint, format,
-typecheck, build and `verify --verbose` itself — the agent's account of its own work is not
-evidence. On success it pushes a branch and opens a PR with the verbose output in the body;
-on any failure it rolls back to `main` (`--keep` to inspect instead). It never commits to
-`main`.
-
-Needs the skill in `.claude/skills/` (gitignored here — it lives in a separate private
-repository) and `gh` authenticated.
-
-Pushing to `main` builds and republishes the install page.
+The scaffolding, the authoring guide and the tooling that builds these live in a separate
+private repository; only finished sources land here.

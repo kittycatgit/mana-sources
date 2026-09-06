@@ -27,7 +27,15 @@ jobs:
       # package-lock.json is gitignored, so there is nothing for `npm ci` to read.
       - run: npm install --no-audit --no-fund
 
-      - run: npm run lint && npm run typecheck && npm run build
+      # On a source/<id> branch, publish only that source so the preview install URL
+      # holds the one thing under review rather than the whole catalogue.
+      # Actions expressions have no replace(), so strip the prefix in the shell.
+      - run: |
+          if [[ "$GITHUB_REF_NAME" == source/* ]]; then
+            export MANA_ONLY="${GITHUB_REF_NAME#source/}"
+            echo "preview limited to $MANA_ONLY"
+          fi
+          npm run lint && npm run typecheck && npm run build
 
       - uses: peaceiris/actions-gh-pages@v4
         with:

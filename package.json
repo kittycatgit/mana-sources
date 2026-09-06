@@ -20,6 +20,8 @@
     "clear-site": "node scripts/clear-site.mjs"
   },
   "mana": {
+    "repositoryName": "Demon | Mana Sources",
+    "thumbnail": "https://avatars.githubusercontent.com/u/204405496",
     "src": "src/",
     "out": "dist/",
     "target": "es2020",

@@ -20,3 +20,4 @@ scripts/request-url.mjs
 scripts/*.plist
 .playwright-mcp/
 scripts/watch-inbox.sh
+.inbox.lock/
