@@ -129,9 +129,9 @@ const LANG = /** @type {Record<string,string>} */ ({
 
 /** @param {any} s */
 function sourceRow(s) {
-  const iconFile = s.thumbnail ?? "icon.png";
-  const icon = s.path
-    ? `<img class="icon" src="sources/${s.path}/${iconFile}" alt="" onerror="this.remove()">`
+  const src = /^https?:\/\//.test(s.thumbnail ?? "") ? s.thumbnail : `assets/${s.thumbnail}`;
+  const icon = s.thumbnail
+    ? `<img class="icon" src="${src}" alt="" onerror="this.remove()">`
     : "";
   const rating = RATING[s.rating ?? 0] ?? "Safe";
   const langs = (s.supportedLanguages ?? []).map((l) => LANG[l] ?? l).join(" / ");
@@ -175,17 +175,27 @@ function changelog(extensions) {
 </section>`;
 }
 
-// Copy source icons into dist/sources/<path>/ so the page can reach them.
+// Icons go in ONE shared dist/assets/ folder, named after the source, and `thumbnail`
+// in sources.json becomes that bare filename. Mana resolves a source's thumbnail against
+// <repo>/assets/, not against the source's own directory — leave it as "assets/icon.png"
+// beside the bundle and the app looks in the wrong place and shows nothing.
+const assetsDir = path.join(distDir, "assets");
 for (const s of sources) {
   if (!s.path) continue;
-  const iconFile = s.thumbnail ?? "icon.png";
-  const srcIcon = path.join(cwd, "src", s.path, iconFile);
-  if (fs.existsSync(srcIcon)) {
-    const destPath = path.join(distDir, "sources", s.path, iconFile);
-    fs.mkdirSync(path.dirname(destPath), { recursive: true });
-    fs.copyFileSync(srcIcon, destPath);
+  const declared = s.thumbnail ?? "assets/icon.png";
+  if (/^https?:\/\//.test(declared)) continue;
+  const srcIcon = path.join(cwd, "src", s.path, declared);
+  if (!fs.existsSync(srcIcon)) {
+    process.stderr.write(`[mana-dev] ${s.name}: no icon at src/${s.path}/${declared}\n`);
+    continue;
   }
+  const ext = path.extname(declared) || ".png";
+  const flat = `${s.path}${ext}`;
+  fs.mkdirSync(assetsDir, { recursive: true });
+  fs.copyFileSync(srcIcon, path.join(assetsDir, flat));
+  s.thumbnail = flat;
 }
+fs.writeFileSync(sourcesPath, JSON.stringify(data, null, 2), "utf-8");
 
 const built = new Date().toISOString().slice(0, 10);
 const count = sources.length;
