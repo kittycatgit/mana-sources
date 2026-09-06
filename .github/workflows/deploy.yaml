@@ -37,6 +37,19 @@ jobs:
           fi
           npm run lint && npm run typecheck && npm run build
 
+      # A preview with no sources in it is worse than no preview: the app adds the repo
+      # happily and then shows nothing, which reads as a broken source rather than a
+      # broken publish. It happened once — a source branch pushed at main's tip built a
+      # tree that did not contain its own source — and took a day to recognise, so fail
+      # here instead of deploying the empty catalogue over the good one.
+      - run: |
+          count=$(node -e "process.stdout.write(String((require('./dist/sources.json').sources ?? []).length))")
+          echo "built $count source(s)"
+          if [[ "$count" == "0" ]]; then
+            echo "::error::built no sources — refusing to publish an empty catalogue over ${GITHUB_REF_NAME}"
+            exit 1
+          fi
+
       - uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
