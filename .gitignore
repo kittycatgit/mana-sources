@@ -22,3 +22,5 @@ scripts/*.plist
 scripts/watch-inbox.sh
 .inbox.lock/
 .gh-pages-tmp/
+scripts/preflight.mjs
+.worktrees/
