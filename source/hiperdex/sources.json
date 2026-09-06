@@ -1,5 +1,6 @@
 {
-  "repositoryName": "mana-sources",
+  "repositoryName": "Demon | Mana Sources",
+  "thumbnail": "https://avatars.githubusercontent.com/u/204405496",
   "sources": [
     {
       "id": "hiperdex",
@@ -11,7 +12,7 @@
       "supportedLanguages": [
         "en_US"
       ],
-      "thumbnail": "assets/icon.png",
+      "thumbnail": "Hiperdex.png",
       "developers": [
         {
           "name": "Demon",
@@ -21,29 +22,7 @@
       "path": "Hiperdex",
       "environment": "source",
       "intents": 2104332,
-      "hash": "47c1cf6a47c1cf6a47c1cf6a47c1cf6a47c1cf6a47c1cf6a47c1cf6a47c1cf6a"
-    },
-    {
-      "id": "tailspace",
-      "name": "Tailspace",
-      "version": "1.1.0",
-      "description": "Pulls furry comics from tailspace.com",
-      "website": "https://tailspace.com",
-      "rating": 2,
-      "supportedLanguages": [
-        "en_US"
-      ],
-      "thumbnail": "assets/icon.png",
-      "developers": [
-        {
-          "name": "Demon",
-          "github": "https://github.com/kittycatgit"
-        }
-      ],
-      "path": "Tailspace",
-      "environment": "source",
-      "intents": 2104328,
-      "hash": "0a8462d70a8462d70a8462d70a8462d70a8462d70a8462d70a8462d70a8462d7"
+      "hash": "5b785ac45b785ac45b785ac45b785ac45b785ac45b785ac45b785ac45b785ac4"
     }
   ]
 }
