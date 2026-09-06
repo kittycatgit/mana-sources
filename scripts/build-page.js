@@ -124,7 +124,7 @@ const LANG = /** @type {Record<string,string>} */ ({
   en_US: "EN", en: "EN", ja_JP: "JA", ja: "JA", ko_KR: "KO", ko: "KO",
   zh_CN: "ZH", zh: "ZH", fr_FR: "FR", fr: "FR", de_DE: "DE", de: "DE",
   es_ES: "ES", es: "ES", pt_BR: "PT", pt: "PT", it_IT: "IT", it: "IT",
-  ru_RU: "RU", ru: "RU", universal: "ALL",
+  ru_RU: "RU", ru: "RU", universal: "ALL", UNIVERSAL: "ALL",
 });
 
 /** @param {any} s */

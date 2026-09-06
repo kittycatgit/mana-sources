@@ -56,6 +56,8 @@ const SECTION_STYLE = [
 const HERO_STYLES = new Set([3, 4]);
 const MIN_HERO_ITEMS = 3;
 const MAX_SECTION_ITEMS = 20;
+/** Above this share of the smaller section's titles, two sections are the same listing. */
+const MAX_SECTION_OVERLAP = 2 / 3;
 
 const PUBLICATION_STATUS = { 1: "ONGOING", 2: "COMPLETED", 3: "CANCELLED", 4: "HIATUS" };
 const CONTENT_RATING = { 0: "SAFE", 1: "SUGGESTIVE", 2: "MATURE", 3: "EXPLICIT" };
@@ -314,20 +316,29 @@ async function verify(name, probe, verbose) {
       return `"${content.title}"${content.cover ? "" : " (no cover)"}`;
     });
 
-    let chapters;
     if (target.getChapters) {
-      chapters = await step(results, "getChapters", async () => {
+      // The step's return value is its printed detail, so it has to be the summary
+      // string — returning the chapters themselves left every source's getChapters line
+      // blank, which is the one line saying how many chapters and how many are dated.
+      await step(results, "getChapters", async () => {
         const found = await target.getChapters(contentId);
         preview.chapters = found ?? [];
-        checkChapters(found);
-        return found;
+        return checkChapters(found);
       });
     }
 
-    const chapterId =
-      probe.chapterId ?? (Array.isArray(chapters) ? chapters[0]?.chapterId : undefined);
+    // A probe left half-filled seeds `""`, which `??` would accept as a real id and then
+    // drop getChapterData with no line printed either way.
+    const chapterId = probe.chapterId || preview.chapters[0]?.chapterId;
 
-    if (chapterId) {
+    if (!chapterId) {
+      results.push({
+        name: "getChapterData",
+        status: "skip",
+        detail: "no chapterId in probe and no chapter to take one from",
+        ms: 0,
+      });
+    } else {
       await step(results, "getChapterData", async () => {
         // Some sources read pages through a third party that may have nothing
         // for a given issue. `"pagesDependOnUpstream": true` in the probe marks
@@ -376,7 +387,10 @@ async function verify(name, probe, verbose) {
       }
 
       // Two sections showing the same tiles in the same order are one query wearing
-      // two titles — usually a copied `load` that never had its sort changed.
+      // two titles — usually a copied `load` that never had its sort changed. Sharing
+      // most of them in any order is the softer version of the same break: a site's
+      // "recently added" and its "latest updates" hold the same series, because a series
+      // arrives with its chapters.
       for (let i = 0; i < preview.sections.length; i++) {
         for (let j = i + 1; j < preview.sections.length; j++) {
           const a = preview.sections[i];
@@ -386,6 +400,18 @@ async function verify(name, probe, verbose) {
           if (headA.length > 0 && headA.join("\u0000") === headB.join("\u0000")) {
             problems.push(
               `"${a.section.title}" and "${b.section.title}" open with the same titles in the same order — they are running the same query.`,
+            );
+            continue;
+          }
+
+          const idsA = new Set(a.items.map((item) => item.id));
+          const idsB = new Set(b.items.map((item) => item.id));
+          const smaller = Math.min(idsA.size, idsB.size);
+          if (smaller === 0) continue;
+          const shared = [...idsA].filter((id) => idsB.has(id)).length;
+          if (shared / smaller > MAX_SECTION_OVERLAP) {
+            problems.push(
+              `"${a.section.title}" and "${b.section.title}" share ${shared} of ${smaller} titles — they are near-duplicates of each other. Give one of them a different query.`,
             );
           }
         }

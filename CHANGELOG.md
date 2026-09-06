@@ -4,6 +4,29 @@ Notable changes to the extensions in this repository, grouped by extension —
 each one versions independently (see `info.version` in its `main.ts`). Dates
 are UTC. Format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## Ehentai (current: v1.0.0)
+
+### 2026-09-06
+
+- Initial implementation, reading e-hentai.org's listings from its markup and every
+  gallery's metadata from `api.e-hentai.org/api.php` (`gdata`), which carries the title,
+  category, uploader, page count, rating and full tag list in one request.
+- Home page carries Popular Right Now, Latest Galleries and the Yesterday, This Month and
+  All-Time gallery toplists, each backed by the same query as its view-more listing.
+- Listings are cursor-paged rather than offset-paged — `?page=` is accepted and ignored,
+  and the only way to page 2 is the `next=<gid>` link page 1 printed. The source walks and
+  remembers that trail, so ordinary forwards paging still costs one request per page.
+- Search supports a keyword query, the ten categories, include/exclude tags, parody, the
+  translation language, gallery length, a minimum rating, "has a torrent" and "expunged
+  only". Length is a picker rather than a pair of steppers because the site refuses any
+  range narrower than 20 pages.
+- No sort control: listings are always newest first and the site offers no alternative.
+- Each gallery is exposed as a single chapter, matching the site's one-upload model, and
+  its pages are resolved from the `/s/` page each thumbnail links to.
+- Responses are accepted at HTTP 451 as well as 2xx. The site serves the complete page
+  under that status where local law makes it add an age notice, and rejecting it would
+  leave those readers with an empty app.
+
 ## Hiperdex (current: v1.0.0)
 
 ### 2026-09-06
