@@ -22,7 +22,7 @@
       "path": "Hiperdex",
       "environment": "source",
       "intents": 2104332,
-      "hash": "6ffecf8a6ffecf8a6ffecf8a6ffecf8a6ffecf8a6ffecf8a6ffecf8a6ffecf8a"
+      "hash": "56166ecf56166ecf56166ecf56166ecf56166ecf56166ecf56166ecf56166ecf"
     },
     {
       "id": "tailspace",
@@ -44,7 +44,7 @@
       "path": "Tailspace",
       "environment": "source",
       "intents": 2104328,
-      "hash": "52c3c40052c3c40052c3c40052c3c40052c3c40052c3c40052c3c40052c3c400"
+      "hash": "18d9025a18d9025a18d9025a18d9025a18d9025a18d9025a18d9025a18d9025a"
     }
   ]
 }
