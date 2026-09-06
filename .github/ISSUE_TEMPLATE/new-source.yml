@@ -7,6 +7,9 @@ body:
     attributes:
       value: |
         One site per request. A maintainer reviews it before anything runs.
+
+        Once it is built you will get a link here to install that source on its own,
+        so you can try it and say what is wrong before it joins the catalogue.
   - type: input
     id: url
     attributes:
