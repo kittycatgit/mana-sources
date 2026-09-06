@@ -1,0 +1,28 @@
+{
+  "repositoryName": "Demon | Mana Sources",
+  "thumbnail": "https://avatars.githubusercontent.com/u/204405496",
+  "sources": [
+    {
+      "id": "madaradex",
+      "name": "Madaradex",
+      "version": "1.0.0",
+      "description": "Pulls manga, manhwa and manhua from madaradex.org",
+      "website": "https://madaradex.org",
+      "rating": 2,
+      "supportedLanguages": [
+        "en_US"
+      ],
+      "thumbnail": "Madaradex.png",
+      "developers": [
+        {
+          "name": "Demon",
+          "github": "https://github.com/kittycatgit"
+        }
+      ],
+      "path": "Madaradex",
+      "environment": "source",
+      "intents": 2104332,
+      "hash": "0ff32c610ff32c610ff32c610ff32c610ff32c610ff32c610ff32c610ff32c61"
+    }
+  ]
+}
