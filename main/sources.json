@@ -12,7 +12,7 @@
       "supportedLanguages": [
         "en_US"
       ],
-      "thumbnail": "assets/icon.png",
+      "thumbnail": "Tailspace.png",
       "developers": [
         {
           "name": "Demon",
@@ -22,7 +22,7 @@
       "path": "Tailspace",
       "environment": "source",
       "intents": 2104328,
-      "hash": "1a0982a51a0982a51a0982a51a0982a51a0982a51a0982a51a0982a51a0982a5"
+      "hash": "1378ee371378ee371378ee371378ee371378ee371378ee371378ee371378ee37"
     }
   ]
 }
