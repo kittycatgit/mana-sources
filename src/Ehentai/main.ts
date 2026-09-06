@@ -65,7 +65,7 @@ import {
 const info: SourceInfo = {
   id: "ehentai",
   name: "Ehentai",
-  version: "1.0.0",
+  version: "1.0.1",
   description: "Reads the doujinshi, manga and image galleries hosted on e-hentai.org",
   website: BASE_URL,
   rating: CatalogRating.EXPLICIT,
@@ -354,7 +354,9 @@ class EhentaiSource implements ChapterSource, SearchProvider, PageLinkResolver {
     const [gid, token] = splitContentId(contentId);
     const response = await this.http.post(API_URL, {
       headers: { accept: JSON_ACCEPT, "content-type": "application/json" },
-      body: JSON.stringify({ method: "gdata", gidlist: [[gid, token]], namespace: 1 }),
+      // The host serialises `body` itself from the content type, so a string here reaches
+      // the API JSON-encoded a second time and it answers "No method provided".
+      body: { method: "gdata", gidlist: [[gid, token]], namespace: 1 },
       validateStatus: servedStatus,
     });
 

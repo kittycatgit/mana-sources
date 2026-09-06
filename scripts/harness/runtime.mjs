@@ -54,6 +54,28 @@ function buildUrl(url, params) {
   return `${url}${url.includes("?") ? "&" : "?"}${query}`;
 }
 
+/**
+ * The host serialises `NetworkRequest.body` from the content type — a JSON object for
+ * `application/json`, a URL-encoded string for `application/x-www-form-urlencoded` — while
+ * `fetch` would take a pre-stringified body happily. Modelling that here is what makes a
+ * source that stringifies its own JSON body fail in the harness the way it fails in the
+ * app, instead of passing every gate and erroring on the reader's phone.
+ */
+function encodeBody(body, headers) {
+  if (body === undefined || body === null) return undefined;
+  const type = String(
+    Object.entries(headers).find(([key]) => key.toLowerCase() === "content-type")?.[1] ?? "",
+  ).toLowerCase();
+
+  if (type.includes("application/json")) return JSON.stringify(body);
+  if (type.includes("application/x-www-form-urlencoded") && typeof body === "object") {
+    return Object.entries(body)
+      .map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(String(v))}`)
+      .join("&");
+  }
+  return body;
+}
+
 async function applyAll(value, transformers) {
   let current = value;
   for (const transform of transformers) current = await transform(current);
@@ -120,7 +142,7 @@ export class NetworkClient {
       raw = await fetch(target, {
         method: prepared.method ?? "GET",
         headers,
-        body: prepared.body,
+        body: encodeBody(prepared.body, headers),
         redirect: "follow",
         signal: controller.signal,
       });
