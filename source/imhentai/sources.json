@@ -6,7 +6,7 @@
       "id": "imhentai",
       "name": "Imhentai",
       "version": "1.0.0",
-      "description": "Pulls doujinshi, manga and western galleries from imhentai.xxx",
+      "description": "Browses the doujinshi, manga and artist CG galleries on imhentai.xxx",
       "website": "https://imhentai.xxx",
       "rating": 2,
       "supportedLanguages": [
@@ -26,7 +26,7 @@
       "path": "Imhentai",
       "environment": "source",
       "intents": 2104328,
-      "hash": "2e5158942e5158942e5158942e5158942e5158942e5158942e5158942e515894"
+      "hash": "2172a2802172a2802172a2802172a2802172a2802172a2802172a2802172a280"
     }
   ]
 }
