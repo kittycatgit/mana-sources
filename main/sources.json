@@ -1,5 +1,6 @@
 {
-  "repositoryName": "mana-sources",
+  "repositoryName": "Demon | Mana Sources",
+  "thumbnail": "https://avatars.githubusercontent.com/u/204405496",
   "sources": [
     {
       "id": "tailspace",
@@ -21,7 +22,7 @@
       "path": "Tailspace",
       "environment": "source",
       "intents": 2104328,
-      "hash": "45b6a74045b6a74045b6a74045b6a74045b6a74045b6a74045b6a74045b6a740"
+      "hash": "1a0982a51a0982a51a0982a51a0982a51a0982a51a0982a51a0982a51a0982a5"
     }
   ]
 }
