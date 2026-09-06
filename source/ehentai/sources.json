@@ -1,0 +1,32 @@
+{
+  "repositoryName": "Demon | Mana Sources",
+  "thumbnail": "https://avatars.githubusercontent.com/u/204405496",
+  "sources": [
+    {
+      "id": "ehentai",
+      "name": "Ehentai",
+      "version": "1.0.0",
+      "description": "Reads the doujinshi, manga and image galleries hosted on e-hentai.org",
+      "website": "https://e-hentai.org",
+      "rating": 2,
+      "supportedLanguages": [
+        "ja_JP",
+        "en_US",
+        "zh-CN",
+        "ko_KR",
+        "es_ES"
+      ],
+      "thumbnail": "Ehentai.png",
+      "developers": [
+        {
+          "name": "Demon",
+          "github": "https://github.com/kittycatgit"
+        }
+      ],
+      "path": "Ehentai",
+      "environment": "source",
+      "intents": 6294536,
+      "hash": "38d4434d38d4434d38d4434d38d4434d38d4434d38d4434d38d4434d38d4434d"
+    }
+  ]
+}
