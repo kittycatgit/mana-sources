@@ -219,20 +219,6 @@
   <section>
   <h2>Changes</h2>
   <details>
-  <summary>Nhentai <span class="ver">1.0.0</span></summary>
-  <div class="entry">
-    <h4>2026-09-06</h4>
-    <ul><li>Initial implementation, reading nhentai.net's <code>/api/v2</code> JSON API throughout. The HTML site sits behind a Cloudflare interstitial that a plain request cannot clear, but every API endpoint answers unauthenticated and unchallenged, so the source parses no markup and carries no cheerio.</li><li>Home page carries Popular Right Now, Recently Added, Popular in English This Week and Manga This Month, each backed by a different endpoint or tag; measured overlap between any pair is at most two titles.</li><li>Popular Right Now has no view-more link because <code>/galleries/popular</code> returns five galleries and has no second page.</li><li>Search maps the site's own query grammar onto filters for language, format, artist, parody, included and excluded tags, minimum pages and minimum favourites; each one was proved against the live API before being declared.</li><li>Sort offers the API's five <code>sort</code> values. The <code>popular-*</code> ones cap the result set at 20 pages while <code>date</code> does not, which <code>num_pages</code> reports honestly, so pagination needs no special case for it.</li><li>Tag options are the site's 100 most used tags, fetched at runtime and cached.</li><li>A gallery is a single work, so one chapter is synthesised per gallery, titled with its page count and dated from <code>upload_date</code>.</li><li>Covers and pages are addressed to separate CDN pools, because the two are not interchangeable — asking the wrong one drops the connection instead of answering 404.</li><li>Status is COMPLETED for every gallery: the API publishes no status field, and the payload describing a gallery already carries every page it will ever have.</li><li>Summaries are composed from the gallery's own metadata, since the API has no description field at all.</li></ul>
-  </div>
-</details>
-<details>
-  <summary>Manga18fx <span class="ver">1.0.0</span></summary>
-  <div class="entry">
-    <h4>2026-09-06</h4>
-    <ul><li>Initial implementation, reading manga18fx.com's server-rendered markup — every listing route shares one grid template, so a single parser backs the home page, the genre archives and the search results.</li><li>Home page carries Popular Manhwa, Latest Updates, Manhwa Raw and Uncensored, each backed by the same query as its view-more listing; the home page's own hot carousel is the same query as the popular archive and is not built as a second section.</li><li>Search takes a title query and a genre, but the site's search results and its genre archives are separate routes that each ignore the other's parameter, so a query wins and the genre applies only to an empty one — the search form says so in its footer.</li><li>No sort control is offered, because the site has none: no listing exposes an ordering parameter that changes what comes back.</li><li>Genre options are harvested from the site's own navigation at runtime, unioned with the two genres it only ever links from a title page.</li><li>Pagination reads the pager's "next" anchor rather than its list item, which the site renders on the last page too, disabled.</li><li>Content type comes from the genre tags rather than the title page's "Type" row, which reads Manhwa on every title including the ones filed under manhua.</li></ul>
-  </div>
-</details>
-<details>
   <summary>Hiperdex <span class="ver">1.0.0</span></summary>
   <div class="entry">
     <h4>2026-09-06</h4>
