@@ -193,7 +193,7 @@
 <li class="source" id="src-Madaradex">
   <div class="icon-slot"><img class="icon" src="assets/Madaradex.png" alt="" onerror="this.remove()"></div>
   <div class="body">
-    <h3>Madaradex <span class="ver">v1.0.0</span></h3>
+    <h3>Madaradex <span class="ver">v1.0.1</span></h3>
     <p>Pulls manga, manhwa and manhua from madaradex.org</p>
     <div class="meta">
       <span class="r2"><i class="dot"></i>Explicit</span>
@@ -219,9 +219,12 @@
   <section>
   <h2>Changes</h2>
   <details>
-  <summary>Madaradex <span class="ver">1.0.0</span></summary>
+  <summary>Madaradex <span class="ver">1.0.1</span></summary>
   <div class="entry">
-    <h4>2026-09-06</h4>
+    <h4>2026-09-06 — v1.0.1</h4>
+    <ul><li>Chapter images load again. The site added a <code>madaradex-shield</code> plugin that gates cdn.madaradex.org on two cookies its reader page sets from an inline script, so the referer the source already sent stopped being enough and every page 403'd — a chapter that opened and then never finished loading.</li><li>The source now performs the same handshake: it mints an <code>mdx_fp</code> fingerprint, trades it at <code>admin-ajax.php</code> for the short-lived <code>mdx_auth</code> token, and sends both alongside the referer. The grant is shared across a chapter's pages and renewed before it expires.</li></ul>
+  </div><div class="entry">
+    <h4>2026-09-06 — v1.0.0</h4>
     <ul><li>Initial implementation, reading madaradex.org — a stock Madara WordPress install whose manga post type is mounted at <code>/title/&lt;slug&gt;/</code> rather than the usual <code>/manga/&lt;slug&gt;/</code>.</li><li>One listing shape backs search, sorting, filters and every home section, so a section and its view-more page can never disagree.</li><li>Home page carries New Manga, Latest Updates, Most Read and Top Rated. The site's <code>trending</code> order was left out: it shares two thirds of its first page with <code>views</code>.</li><li>Search supports a title query, the site's seven sort orders, its 25 genres with an all-or-any switch, status, an adult-content picker, and author and artist by name.</li><li>The advanced-search form's "Year" box is not offered — the install never populates a release year, so every year returns nothing.</li><li>Chapter pages are requested with the site as their referer, without which the CDN answers 403 with the site's own error page.</li></ul>
   </div>
 </details>

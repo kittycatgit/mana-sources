@@ -4,9 +4,19 @@ Notable changes to the extensions in this repository, grouped by extension —
 each one versions independently (see `info.version` in its `main.ts`). Dates
 are UTC. Format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## Madaradex (current: v1.0.0)
+## Madaradex (current: v1.0.1)
 
-### 2026-09-06
+### 2026-09-06 — v1.0.1
+
+- Chapter images load again. The site added a `madaradex-shield` plugin that gates
+  cdn.madaradex.org on two cookies its reader page sets from an inline script, so the
+  referer the source already sent stopped being enough and every page 403'd — a chapter
+  that opened and then never finished loading.
+- The source now performs the same handshake: it mints an `mdx_fp` fingerprint, trades it
+  at `admin-ajax.php` for the short-lived `mdx_auth` token, and sends both alongside the
+  referer. The grant is shared across a chapter's pages and renewed before it expires.
+
+### 2026-09-06 — v1.0.0
 
 - Initial implementation, reading madaradex.org — a stock Madara WordPress install whose
   manga post type is mounted at `/title/<slug>/` rather than the usual `/manga/<slug>/`.
