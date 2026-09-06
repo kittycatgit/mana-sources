@@ -4,7 +4,14 @@ Notable changes to the extensions in this repository, grouped by extension —
 each one versions independently (see `info.version` in its `main.ts`). Dates
 are UTC. Format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## Ehentai (current: v1.0.0)
+## Ehentai (current: v1.0.1)
+
+### 2026-09-06
+
+- Opening any gallery failed with "E-Hentai rejected the metadata request: No method
+  provided". The `gdata` body was stringified by the source and then serialised again by
+  the host, so the API received a quoted string instead of a request object. The body is
+  now handed over as an object.
 
 ### 2026-09-06
 

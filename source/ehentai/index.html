@@ -193,7 +193,7 @@
 <li class="source" id="src-Ehentai">
   <div class="icon-slot"><img class="icon" src="assets/Ehentai.png" alt="" onerror="this.remove()"></div>
   <div class="body">
-    <h3>Ehentai <span class="ver">v1.0.0</span></h3>
+    <h3>Ehentai <span class="ver">v1.0.1</span></h3>
     <p>Reads the doujinshi, manga and image galleries hosted on e-hentai.org</p>
     <div class="meta">
       <span class="r2"><i class="dot"></i>Explicit</span>
@@ -219,8 +219,11 @@
   <section>
   <h2>Changes</h2>
   <details>
-  <summary>Ehentai <span class="ver">1.0.0</span></summary>
+  <summary>Ehentai <span class="ver">1.0.1</span></summary>
   <div class="entry">
+    <h4>2026-09-06</h4>
+    <ul><li>Opening any gallery failed with "E-Hentai rejected the metadata request: No method provided". The <code>gdata</code> body was stringified by the source and then serialised again by the host, so the API received a quoted string instead of a request object. The body is now handed over as an object.</li></ul>
+  </div><div class="entry">
     <h4>2026-09-06</h4>
     <ul><li>Initial implementation, reading e-hentai.org's listings from its markup and every gallery's metadata from <code>api.e-hentai.org/api.php</code> (<code>gdata</code>), which carries the title, category, uploader, page count, rating and full tag list in one request.</li><li>Home page carries Popular Right Now, Latest Galleries and the Yesterday, This Month and All-Time gallery toplists, each backed by the same query as its view-more listing.</li><li>Listings are cursor-paged rather than offset-paged — <code>?page=</code> is accepted and ignored, and the only way to page 2 is the <code>next=&lt;gid&gt;</code> link page 1 printed. The source walks and remembers that trail, so ordinary forwards paging still costs one request per page.</li><li>Search supports a keyword query, the ten categories, include/exclude tags, parody, the translation language, gallery length, a minimum rating, "has a torrent" and "expunged only". Length is a picker rather than a pair of steppers because the site refuses any range narrower than 20 pages.</li><li>No sort control: listings are always newest first and the site offers no alternative.</li><li>Each gallery is exposed as a single chapter, matching the site's one-upload model, and its pages are resolved from the <code>/s/</code> page each thumbnail links to.</li><li>Responses are accepted at HTTP 451 as well as 2xx. The site serves the complete page under that status where local law makes it add an age notice, and rejecting it would leave those readers with an empty app.</li></ul>
   </div>
