@@ -21,3 +21,4 @@ scripts/*.plist
 .playwright-mcp/
 scripts/watch-inbox.sh
 .inbox.lock/
+.gh-pages-tmp/
