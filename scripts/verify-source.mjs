@@ -56,6 +56,8 @@ const SECTION_STYLE = [
 const HERO_STYLES = new Set([3, 4]);
 const MIN_HERO_ITEMS = 3;
 const MAX_SECTION_ITEMS = 20;
+/** Above this share of the smaller section's titles, two sections are the same row twice. */
+const NEAR_DUPLICATE_RATIO = 2 / 3;
 
 const PUBLICATION_STATUS = { 1: "ONGOING", 2: "COMPLETED", 3: "CANCELLED", 4: "HIATUS" };
 const CONTENT_RATING = { 0: "SAFE", 1: "SUGGESTIVE", 2: "MATURE", 3: "EXPLICIT" };
@@ -386,6 +388,22 @@ async function verify(name, probe, verbose) {
           if (headA.length > 0 && headA.join("\u0000") === headB.join("\u0000")) {
             problems.push(
               `"${a.section.title}" and "${b.section.title}" open with the same titles in the same order — they are running the same query.`,
+            );
+            continue;
+          }
+
+          // Order alone misses the commoner break: a site's "recently added" and its
+          // "latest updates" hold the same series in a different order, because a series
+          // arrives with its chapters. Compare the sets, scaled to the smaller section.
+          const idsA = new Set(a.items.map((item) => item.id));
+          const idsB = new Set(b.items.map((item) => item.id));
+          const smaller = Math.min(idsA.size, idsB.size);
+          if (smaller === 0) continue;
+          const shared = [...idsA].filter((id) => idsB.has(id)).length;
+          if (shared / smaller > NEAR_DUPLICATE_RATIO) {
+            const percent = Math.round((shared / smaller) * 100);
+            problems.push(
+              `"${a.section.title}" and "${b.section.title}" share ${shared} of ${smaller} titles (${percent}%) — they are near-duplicates. Give one of them a query the other does not cover.`,
             );
           }
         }

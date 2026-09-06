@@ -4,6 +4,31 @@ Notable changes to the extensions in this repository, grouped by extension —
 each one versions independently (see `info.version` in its `main.ts`). Dates
 are UTC. Format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## Hitomi (current: v1.0.0)
+
+### 2026-09-06
+
+- Initial implementation, reading hitomi.la through the Atom feeds, gallery JSON and tag
+  index on `ltn.gold-usergeneratedcontent.net` and `tagindex.hitomi.la` rather than the
+  markup — every page on the site is rendered client-side and arrives empty.
+- Listings are one Atom feed deep, 25 galleries, and report `isLastPage` on the first
+  page. The site's own paginated listings are `.nozomi` files — arrays of big-endian
+  int32 gallery ids — and the runtime hands every response back as a UTF-8 string, which
+  mangles them beyond recovery. The feeds are the only listing endpoint that answers as
+  text.
+- Home page carries Just Added, New in English, Doujinshi, Manga and Game CG. Artist CG
+  was dropped: it shares roughly 70% of Just Added, because artist CG sets dominate the
+  site's recent uploads.
+- Search matches one term at a time, the way the site's own search box does — a typed
+  query is resolved against the tag index to a tag, artist, series, character or group,
+  and a term that resolves to nothing throws rather than returning a silent empty list.
+  Gallery titles are not searchable; that index is binary too.
+- Type and Language filters, with all 45 languages the site publishes, each confirmed to
+  return entries. No sort options: every feed is newest-first and the site offers no
+  other order on them.
+- Chapter pages are built from the rotating path prefix and subdomain table in `gg.js`,
+  re-fetched every 20 minutes. Both image CDNs answer 404 without the site as referer.
+
 ## Hiperdex (current: v1.0.0)
 
 ### 2026-09-06

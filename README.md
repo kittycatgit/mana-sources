@@ -15,6 +15,7 @@ from there.
 
 | Source | Version | Language | Rating |
 | ------ | ------- | -------- | ------ |
+| Hitomi | 1.0.0 | Multi-language | Explicit |
 | Tailspace | 1.1.0 | English | Explicit |
 | Hiperdex | 1.0.0 | English | Mixed |
 
