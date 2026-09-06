@@ -4,6 +4,23 @@ Notable changes to the extensions in this repository, grouped by extension —
 each one versions independently (see `info.version` in its `main.ts`). Dates
 are UTC. Format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## Madaradex (current: v1.0.0)
+
+### 2026-09-06
+
+- Initial implementation, reading madaradex.org — a stock Madara WordPress install whose
+  manga post type is mounted at `/title/<slug>/` rather than the usual `/manga/<slug>/`.
+- One listing shape backs search, sorting, filters and every home section, so a section
+  and its view-more page can never disagree.
+- Home page carries New Manga, Latest Updates, Most Read and Top Rated. The site's
+  `trending` order was left out: it shares two thirds of its first page with `views`.
+- Search supports a title query, the site's seven sort orders, its 25 genres with an
+  all-or-any switch, status, an adult-content picker, and author and artist by name.
+- The advanced-search form's "Year" box is not offered — the install never populates a
+  release year, so every year returns nothing.
+- Chapter pages are requested with the site as their referer, without which the CDN
+  answers 403 with the site's own error page.
+
 ## Hiperdex (current: v1.0.0)
 
 ### 2026-09-06
