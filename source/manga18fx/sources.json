@@ -1,0 +1,28 @@
+{
+  "repositoryName": "Demon | Mana Sources",
+  "thumbnail": "https://avatars.githubusercontent.com/u/204405496",
+  "sources": [
+    {
+      "id": "manga18fx",
+      "name": "Manga18fx",
+      "version": "1.0.0",
+      "description": "Pulls adult manhwa, manhua and manga from manga18fx.com",
+      "website": "https://manga18fx.com",
+      "rating": 2,
+      "supportedLanguages": [
+        "en_US"
+      ],
+      "thumbnail": "Manga18fx.png",
+      "developers": [
+        {
+          "name": "Demon",
+          "github": "https://github.com/kittycatgit"
+        }
+      ],
+      "path": "Manga18fx",
+      "environment": "source",
+      "intents": 2100232,
+      "hash": "57020d9757020d9757020d9757020d9757020d9757020d9757020d9757020d97"
+    }
+  ]
+}
