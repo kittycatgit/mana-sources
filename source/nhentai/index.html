@@ -193,7 +193,7 @@
 <li class="source" id="src-Nhentai">
   <div class="icon-slot"><img class="icon" src="assets/Nhentai.png" alt="" onerror="this.remove()"></div>
   <div class="body">
-    <h3>Nhentai <span class="ver">v1.0.0</span></h3>
+    <h3>Nhentai <span class="ver">v1.1.0</span></h3>
     <p>Reads doujinshi and manga galleries from nhentai.net</p>
     <div class="meta">
       <span class="r2"><i class="dot"></i>Explicit</span>
@@ -219,6 +219,16 @@
   <section>
   <h2>Changes</h2>
   <details>
+  <summary>Nhentai <span class="ver">1.1.0</span></summary>
+  <div class="entry">
+    <h4>2026-09-07 — Language setting</h4>
+    <ul><li>The source's settings now carry a reading language, chosen from the four the site actually stocks: English, Japanese, Chinese, and Translated for anything carrying a translation at all.</li><li>The whole home page follows that choice — the hero becomes the language's most popular galleries, Recently Added its newest uploads, and Manga This Month its serialised manga. With nothing chosen the page is what it was, site-wide with an English week row.</li><li>Searches follow it too, wherever the search screen's own language filter is left on "Any language"; picking a language there still wins for that one search.</li><li>Stopped reading a Turnstile widget as a Cloudflare challenge, matching the fix the other sources already carried — this source was branched before it landed.</li></ul>
+  </div><div class="entry">
+    <h4>2026-09-06</h4>
+    <ul><li>Initial implementation, reading nhentai.net through its public <code>/api/v2</code> endpoints. The HTML site sits behind a Cloudflare interstitial the app cannot clear; the API answers unauthenticated and unchallenged, so the source parses no markup at all.</li><li>Home page carries Popular Right Now, Recently Added, Popular This Week and Manga This Month, each backed by the same query as its view-more listing.</li><li>Search supports a keyword query, the site's five sort orders, language, format, artist and parody filters, include/exclude across the 100 most used tags, and minimum page and favourite counts.</li><li>Each gallery is one work rather than a series, so it is exposed as a single chapter; the title view composes a summary from the metadata, since the API publishes none.</li><li>Covers and pages come from two CDN pools that are not interchangeable — thumbnails only from the thumb servers, full pages only from the image servers.</li></ul>
+  </div>
+</details>
+<details>
   <summary>Hiperdex <span class="ver">1.0.0</span></summary>
   <div class="entry">
     <h4>2026-09-06</h4>
@@ -238,7 +248,7 @@
 </section>
 </main>
 
-<footer class="wrap">Updated 2026-09-06</footer>
+<footer class="wrap">Updated 2026-09-07</footer>
 
 <script>
   document.getElementById("copy").addEventListener("click", function () {
