@@ -1,0 +1,28 @@
+{
+  "repositoryName": "Demon | Mana Sources",
+  "thumbnail": "https://avatars.githubusercontent.com/u/204405496",
+  "sources": [
+    {
+      "id": "comix",
+      "name": "Comix",
+      "version": "1.0.0",
+      "description": "Reads manga, manhwa and manhua from comix.to",
+      "website": "https://comix.to",
+      "rating": 1,
+      "supportedLanguages": [
+        "en_US"
+      ],
+      "thumbnail": "Comix.png",
+      "developers": [
+        {
+          "name": "Demon",
+          "github": "https://github.com/kittycatgit"
+        }
+      ],
+      "path": "Comix",
+      "environment": "source",
+      "intents": 6298636,
+      "hash": "6f76ca536f76ca536f76ca536f76ca536f76ca536f76ca536f76ca536f76ca53"
+    }
+  ]
+}
