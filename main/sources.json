@@ -22,7 +22,7 @@
       "path": "Hiperdex",
       "environment": "source",
       "intents": 2104332,
-      "hash": "1d7a388b1d7a388b1d7a388b1d7a388b1d7a388b1d7a388b1d7a388b1d7a388b"
+      "hash": "1f67e76f1f67e76f1f67e76f1f67e76f1f67e76f1f67e76f1f67e76f1f67e76f"
     },
     {
       "id": "hitomi",
@@ -50,7 +50,29 @@
       "path": "Hitomi",
       "environment": "source",
       "intents": 2100237,
-      "hash": "26b3e85926b3e85926b3e85926b3e85926b3e85926b3e85926b3e85926b3e859"
+      "hash": "28a1977a28a1977a28a1977a28a1977a28a1977a28a1977a28a1977a28a1977a"
+    },
+    {
+      "id": "madaradex",
+      "name": "Madaradex",
+      "version": "1.0.1",
+      "description": "Pulls manga, manhwa and manhua from madaradex.org",
+      "website": "https://madaradex.org",
+      "rating": 2,
+      "supportedLanguages": [
+        "en_US"
+      ],
+      "thumbnail": "Madaradex.png",
+      "developers": [
+        {
+          "name": "Demon",
+          "github": "https://github.com/kittycatgit"
+        }
+      ],
+      "path": "Madaradex",
+      "environment": "source",
+      "intents": 2104332,
+      "hash": "05f8927c05f8927c05f8927c05f8927c05f8927c05f8927c05f8927c05f8927c"
     },
     {
       "id": "tailspace",
@@ -72,7 +94,7 @@
       "path": "Tailspace",
       "environment": "source",
       "intents": 2104328,
-      "hash": "1fc3340d1fc3340d1fc3340d1fc3340d1fc3340d1fc3340d1fc3340d1fc3340d"
+      "hash": "1dd584d01dd584d01dd584d01dd584d01dd584d01dd584d01dd584d01dd584d0"
     },
     {
       "id": "weebcentral",
@@ -94,7 +116,7 @@
       "path": "Weebcentral",
       "environment": "source",
       "intents": 2104328,
-      "hash": "4e7d0d584e7d0d584e7d0d584e7d0d584e7d0d584e7d0d584e7d0d584e7d0d58"
+      "hash": "506abf08506abf08506abf08506abf08506abf08506abf08506abf08506abf08"
     }
   ]
 }
