@@ -6,6 +6,8 @@ import {
   type SearchListField,
 } from "@mana-app/types";
 
+import type { PreferenceValue } from "./forms/index.ts";
+
 export const BASE_URL = "https://hitomi.la";
 export const LTN_URL = "https://ltn.gold-usergeneratedcontent.net";
 export const TAG_INDEX_URL = "https://tagindex.hitomi.la";
@@ -25,6 +27,14 @@ export const FilterID = {
   Language: "language",
   Tag: "tag",
 } as const;
+
+export const PreferenceID = {
+  Language: "language",
+} as const;
+
+export const PREFERENCE_DEFAULTS: Record<string, PreferenceValue> = {
+  [PreferenceID.Language]: ALL_LANGUAGES,
+};
 
 export const ListID = {
   Latest: "latest",
@@ -113,20 +123,39 @@ export const LANGUAGE_OPTIONS: Option[] = [
   { id: "vietnamese", title: "Vietnamese" },
 ];
 
-export const SEARCH_FIELDS: SearchListField[] = [
-  SearchMenuPicker({
-    id: FilterID.Type,
-    title: "Type",
-    subtitle: "Only applies when the search box is empty",
-    options: TYPE_OPTIONS,
-  }),
-  SearchPickerSheet({
-    id: FilterID.Language,
-    title: "Language",
-    subtitle: "Narrows every listing, including a term search",
-    options: LANGUAGE_OPTIONS,
-  }),
-];
+export function languageTitle(id: string): string {
+  return LANGUAGE_OPTIONS.find((option) => option.id === id)?.title ?? id;
+}
+
+/**
+ * The first Language option means "whatever the source setting says", so it is titled with
+ * the language actually in force rather than with a flat "All languages" the setting would
+ * then quietly override.
+ */
+export function searchFields(preferred: string): SearchListField[] {
+  const languages =
+    preferred === ALL_LANGUAGES
+      ? LANGUAGE_OPTIONS
+      : [
+          { id: ALL_LANGUAGES, title: `${languageTitle(preferred)} (source setting)` },
+          ...LANGUAGE_OPTIONS.slice(1),
+        ];
+
+  return [
+    SearchMenuPicker({
+      id: FilterID.Type,
+      title: "Type",
+      subtitle: "Only applies when the search box is empty",
+      options: TYPE_OPTIONS,
+    }),
+    SearchPickerSheet({
+      id: FilterID.Language,
+      title: "Language",
+      subtitle: "Narrows every listing, including a term search",
+      options: languages,
+    }),
+  ];
+}
 
 /**
  * Which feed directory a namespaced term belongs to, mirroring the site's own

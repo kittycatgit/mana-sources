@@ -11,6 +11,7 @@ import {
   type ChapterData,
   type ChapterSource,
   type Content,
+  type Form,
   type Highlight,
   type NetworkRequest,
   type Option,
@@ -24,17 +25,21 @@ import {
   type SearchRequest,
   type SourceConfig,
   type SourceInfo,
+  type SourcePreferenceProvider,
   type Tag,
 } from "@mana-app/types";
 
 import { buildClient } from "./client.ts";
 import {
   FilterReader,
+  PreferenceStore,
+  buildPreferenceMenu,
   buildSearchForm,
   listResults,
   pageOf,
   resolveSection,
   toPageSections,
+  type PreferenceValue,
   type SectionSpec,
 } from "./forms/index.ts";
 import {
@@ -47,13 +52,17 @@ import {
   IMAGE_DOMAIN,
   IMAGE_KEY_TTL,
   LANGUAGE_CODES,
+  LANGUAGE_OPTIONS,
   LTN_URL,
   ListID,
-  SEARCH_FIELDS,
+  PREFERENCE_DEFAULTS,
+  PreferenceID,
   TAG_INDEX_URL,
   TAG_NAMESPACES,
   THUMBNAIL_URL,
   TYPE_TITLES,
+  languageTitle,
+  searchFields,
   type GalleryInfo,
   type ImageKey,
   type Listing,
@@ -64,7 +73,7 @@ import {
 const info: SourceInfo = {
   id: "hitomi",
   name: "Hitomi",
-  version: "1.0.0",
+  version: "1.1.0",
   description: "Reads doujinshi, manga and CG sets from hitomi.la",
   website: BASE_URL,
   rating: CatalogRating.EXPLICIT,
@@ -91,7 +100,9 @@ const config: SourceConfig = {
 const FEED_SIZE = 25;
 const GALLERY_CACHE_SIZE = 200;
 
-class HitomiSource implements ChapterSource, SearchProvider, PageLinkResolver {
+class HitomiSource
+  implements ChapterSource, SearchProvider, PageLinkResolver, SourcePreferenceProvider
+{
   readonly info = info;
   readonly config = config;
 
@@ -99,6 +110,10 @@ class HitomiSource implements ChapterSource, SearchProvider, PageLinkResolver {
   private tagOptions: Option[] | undefined;
   private imageKey: ImageKey | undefined;
   private readonly galleries = new Map<string, GalleryInfo>();
+  private readonly preferences = new PreferenceStore<Record<string, PreferenceValue>>(
+    info.id,
+    PREFERENCE_DEFAULTS,
+  );
 
   private get http(): NetworkClient {
     // Every endpoint lives on a static CDN that the site itself hits 25 times per page
@@ -113,48 +128,75 @@ class HitomiSource implements ChapterSource, SearchProvider, PageLinkResolver {
     return this.client;
   }
 
-  private sections(): SectionSpec[] {
+  private async sections(): Promise<SectionSpec[]> {
+    const language = await this.preferredLanguage();
+    const everything = language === ALL_LANGUAGES;
+
     return [
       {
         id: ListID.Latest,
         title: "Just Added",
-        subtitle: "The newest uploads in every language",
+        subtitle: everything
+          ? "The newest uploads in every language"
+          : `The newest ${languageTitle(language)} uploads`,
         style: SectionStyle.SimpleHero,
         limit: 10,
-        load: (page) => this.listing({ language: ALL_LANGUAGES }, page),
+        load: (page) => this.listing({ language }, page),
       },
-      {
-        id: ListID.English,
-        title: "New in English",
-        style: SectionStyle.DetailedTripleRowPaged,
-        limit: 12,
-        load: (page) => this.listing({ language: "english" }, page),
-      },
+      // The English shortcut only earns its place while no language is set: with one set it
+      // is either the same feed as Just Added or the one language the reader ruled out.
+      ...(everything
+        ? [
+            {
+              id: ListID.English,
+              title: "New in English",
+              style: SectionStyle.DetailedTripleRowPaged,
+              limit: 12,
+              load: (page: number) => this.listing({ language: "english" }, page),
+            },
+          ]
+        : []),
       {
         id: ListID.Doujinshi,
         title: "Doujinshi",
         style: SectionStyle.DetailedTripleRowPaged,
         limit: 12,
-        load: (page) =>
-          this.listing({ area: "type", term: "doujinshi", language: ALL_LANGUAGES }, page),
+        load: (page) => this.listing({ area: "type", term: "doujinshi", language }, page),
       },
       {
         id: ListID.Manga,
         title: "Manga",
         style: SectionStyle.DetailedVerticalListGrouped,
         limit: 12,
-        load: (page) =>
-          this.listing({ area: "type", term: "manga", language: ALL_LANGUAGES }, page),
+        load: (page) => this.listing({ area: "type", term: "manga", language }, page),
       },
       {
         id: ListID.GameCG,
         title: "Game CG",
         style: SectionStyle.DetailedTripleRowPaged,
         limit: 12,
-        load: (page) =>
-          this.listing({ area: "type", term: "gamecg", language: ALL_LANGUAGES }, page),
+        load: (page) => this.listing({ area: "type", term: "gamecg", language }, page),
       },
     ];
+  }
+
+  async getPreferenceMenu(): Promise<Form> {
+    return buildPreferenceMenu(this.preferences, [
+      {
+        header: "Content",
+        footer:
+          "Every listing, the home page and search alike, is narrowed to this language. " +
+          "The Language filter in search still overrides it for one search at a time.",
+        fields: [
+          {
+            type: "select",
+            key: PreferenceID.Language,
+            title: "Language",
+            options: LANGUAGE_OPTIONS,
+          },
+        ],
+      },
+    ]);
   }
 
   async getSearchForm(): Promise<SearchForm> {
@@ -164,7 +206,7 @@ class HitomiSource implements ChapterSource, SearchProvider, PageLinkResolver {
         "Hitomi lists one term at a time. Anything typed in the search box wins over the " +
         "tag picked below, and the search box matches tags, artists, series, characters " +
         "and groups — not gallery titles.",
-      fields: SEARCH_FIELDS,
+      fields: searchFields(await this.preferredLanguage()),
       tags: SearchPicker({
         id: FilterID.Tag,
         title: "Tag",
@@ -177,23 +219,28 @@ class HitomiSource implements ChapterSource, SearchProvider, PageLinkResolver {
   }
 
   async getSectionsForPage(_link: PageLink): Promise<PageSection[]> {
-    return toPageSections(this.sections());
+    return toPageSections(await this.sections());
   }
 
   async resolvePageSection(_link: PageLink, sectionID: string): Promise<ResolvedPageSection> {
-    return resolveSection(this.sections(), sectionID);
+    return resolveSection(await this.sections(), sectionID);
   }
 
   async search(request: SearchRequest): Promise<PagedSearchResult> {
-    const list = listResults(this.sections(), request);
+    const sections = await this.sections();
+    const list = listResults(sections, request);
     if (list) return list;
 
     const filters = new FilterReader(request);
-    const language = filters.option(FilterID.Language, ALL_LANGUAGES);
+    const selected = filters.option(FilterID.Language, ALL_LANGUAGES);
+    const language = selected === ALL_LANGUAGES ? await this.preferredLanguage() : selected;
     const query = request.query?.trim() ?? "";
 
     if (query) {
       const term = await this.resolveTerm(query);
+      // Hitomi indexes tags, artists, series, characters and groups, not gallery titles, so
+      // a query naming none of them has no results rather than having gone wrong.
+      if (!term) return { results: [], isLastPage: true };
       return this.listing({ ...term, language: term.language ?? language }, pageOf(request));
     }
 
@@ -395,7 +442,7 @@ class HitomiSource implements ChapterSource, SearchProvider, PageLinkResolver {
    * site's own search box does: an explicit `namespace:value` is taken as written, and a
    * bare word is looked up in the tag index one character per path segment.
    */
-  private async resolveTerm(query: string): Promise<TermTarget> {
+  private async resolveTerm(query: string): Promise<TermTarget | undefined> {
     const typed = query.toLowerCase().replace(/_/g, " ");
     if (typed.includes(":")) return splitTerm(typed);
 
@@ -405,15 +452,17 @@ class HitomiSource implements ChapterSource, SearchProvider, PageLinkResolver {
       .join("/");
     const matches = await this.suggestions(`${TAG_INDEX_URL}/global/${path}.json`);
 
-    const best = matches[0];
-    if (!best) {
-      throw new Error(
-        `Hitomi has no tag, artist, series, character or group matching "${query}". Its search covers those, not gallery titles.`,
-      );
-    }
+    const best = bestMatch(matches, typed);
+    if (!best) return undefined;
 
     const [name, , namespace] = best;
     return splitTerm(namespace === "tag" ? name : `${namespace}:${name}`);
+  }
+
+  private async preferredLanguage(): Promise<string> {
+    const stored = await this.preferences.get(PreferenceID.Language);
+    if (typeof stored !== "string" || stored === "") return ALL_LANGUAGES;
+    return LANGUAGE_OPTIONS.some((option) => option.id === stored) ? stored : ALL_LANGUAGES;
   }
 
   private async suggestions(url: string): Promise<Suggestion[]> {
@@ -436,6 +485,16 @@ function feedUrl(feed: Listing): string {
   // than escaping them, so a term carrying one only resolves if we strip them too.
   const term = encodeURIComponent(feed.term.replace(/[/#]/g, ""));
   return `${LTN_URL}/${feed.area}/${term}-${language}.atom`;
+}
+
+/**
+ * The tag index matches a query anywhere in a term and orders what it finds by gallery
+ * count, so a longer term outranks the exact one that was typed — "dragon ball" comes back
+ * behind "dragon ball z". An exact name therefore wins outright, and the count only decides
+ * between equals.
+ */
+function bestMatch(matches: readonly Suggestion[], query: string): Suggestion | undefined {
+  return matches.find(([name]) => name === query) ?? matches[0];
 }
 
 /**

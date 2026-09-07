@@ -4,7 +4,24 @@ Notable changes to the extensions in this repository, grouped by extension —
 each one versions independently (see `info.version` in its `main.ts`). Dates
 are UTC. Format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## Hitomi (current: v1.0.0)
+## Hitomi (current: v1.1.0)
+
+### 2026-09-07
+
+- Search now prefers a term the query names exactly over the longest one containing it. The
+  tag index matches anywhere in a term and orders what it finds by gallery count, so
+  "dragon ball" resolved to the larger `dragon ball z` feed and every gallery tag tapped on
+  a title view was resolved the same loose way.
+- A query the tag index knows nothing about returns an empty page instead of throwing. It
+  reached the reader as an error card, when the honest answer is that Hitomi indexes tags,
+  artists, series, characters and groups and not gallery titles — which the search form
+  already says.
+- New Language setting in the source's own preferences, covering all 45 languages the site
+  publishes. Every listing follows it: the home page, and search whenever its own Language
+  filter is left alone. That filter's first option is titled with the language in force so
+  it cannot read as "All languages" while the setting narrows it.
+- The New in English home section now only appears while no language is set, where before
+  it would have duplicated Just Added or shown the one language the reader ruled out.
 
 ### 2026-09-06
 
