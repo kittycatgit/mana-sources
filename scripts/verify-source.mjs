@@ -164,7 +164,10 @@ function loadTarget(bundlePath) {
  * checked, so not proven.
  */
 function isHarnessLimit(error) {
-  return /^WebViewPage( shim)?:/.test(String(error?.message ?? error));
+  // Only the shim's own refusals — `WebViewPage shim: document.x is not available`. A page
+  // that loaded and then would not answer is the source's problem, not the harness's, and
+  // calling that unverifiable hid the exact bug it was meant to expose.
+  return /^WebViewPage shim:/.test(String(error?.message ?? error));
 }
 
 function isCloudflare(error) {

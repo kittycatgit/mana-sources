@@ -324,10 +324,13 @@ export async function evaluateInBrowser(script, args = []) {
   const link = await open();
   if (!link) return { ok: false };
 
-  // The page's own scripts are what this is for, so the script is run as written, with the
-  // arguments serialised beside it rather than interpolated into it.
+  // `args` is declared in the page's own global scope, not inside a wrapper, because that
+  // is what the app does — and it is why evaluating twice in one WebView throws
+  // "Cannot declare a const variable twice: 'args'". Wrapping it in a function made that
+  // impossible to hit, so a source that breaks on the second evaluation of a page passed
+  // every check here and failed on the first title long enough to need one.
   const fn = `async () => {
-    const args = ${JSON.stringify(args)};
+    (0, eval)(${JSON.stringify(`const args = ${JSON.stringify(args)};`)});
     const value = await (async () => { ${script.startsWith("return") ? script : `return ${script}`} })();
     return JSON.stringify({ value: value === undefined ? null : value });
   }`;
