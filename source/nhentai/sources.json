@@ -1,0 +1,30 @@
+{
+  "repositoryName": "Demon | Mana Sources",
+  "thumbnail": "https://avatars.githubusercontent.com/u/204405496",
+  "sources": [
+    {
+      "id": "nhentai",
+      "name": "Nhentai",
+      "version": "1.1.0",
+      "description": "Reads doujinshi and manga galleries from nhentai.net",
+      "website": "https://nhentai.net",
+      "rating": 2,
+      "supportedLanguages": [
+        "en_US",
+        "ja_JP",
+        "zh-CN"
+      ],
+      "thumbnail": "Nhentai.png",
+      "developers": [
+        {
+          "name": "Demon",
+          "github": "https://github.com/kittycatgit"
+        }
+      ],
+      "path": "Nhentai",
+      "environment": "source",
+      "intents": 2104329,
+      "hash": "728457b5728457b5728457b5728457b5728457b5728457b5728457b5728457b5"
+    }
+  ]
+}
