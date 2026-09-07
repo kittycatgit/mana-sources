@@ -21,6 +21,26 @@ export const ListID = {
   Uncensored: "uncensored",
 } as const;
 
+export const PreferenceID = {
+  HideRaw: "hideRaw",
+} as const;
+
+/** Changing this orphans every setting a reader has already saved. */
+export const PREFERENCE_NAMESPACE = "manga18fx";
+
+export const PREFERENCE_DEFAULTS: { hideRaw: boolean } = { hideRaw: false };
+
+/**
+ * A raw edition — the untranslated Korean release the site publishes beside a translated
+ * title — is only distinguishable in a listing by its name. The slug carries a `-raw`
+ * suffix, occasionally with a numeric disambiguator, and the heading ends in the word.
+ * Over the whole 1,086-title raw archive the two together miss four titles that carry no
+ * marker at all, and across 525 titles from the ordinary listings nothing that is not a
+ * raw edition matches either.
+ */
+export const RAW_SLUG_PATTERN = /-raw(?:-\d+)?$/i;
+export const RAW_TITLE_PATTERN = /[\s\-–—:([]raw[)\]]?$/i;
+
 /** The id the genre picker uses for "no genre", which is not a route the site has. */
 export const ANY = "any";
 

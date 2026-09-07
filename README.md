@@ -17,6 +17,7 @@ from there.
 | ------ | ------- | -------- | ------ |
 | Tailspace | 1.1.0 | English | Explicit |
 | Hiperdex | 1.0.0 | English | Mixed |
+| Manga18fx | 1.1.0 | English | Explicit |
 
 See [CHANGELOG.md](CHANGELOG.md) for what changed and when.
 

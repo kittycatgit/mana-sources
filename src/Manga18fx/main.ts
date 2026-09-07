@@ -11,6 +11,7 @@ import {
   type ChapterPage,
   type ChapterSource,
   type Content,
+  type Form,
   type Highlight,
   type Option,
   type PageLink,
@@ -24,6 +25,7 @@ import {
   type SourceConfig,
   type SourceContext,
   type SourceInfo,
+  type SourcePreferenceProvider,
   type StaffItem,
   type Tag,
 } from "@mana-app/types";
@@ -33,6 +35,8 @@ import type { AnyNode } from "domhandler";
 import { HTML_ACCEPT, buildClient } from "./client.ts";
 import {
   FilterReader,
+  PreferenceStore,
+  buildPreferenceMenu,
   buildSearchForm,
   listResults,
   pageOf,
@@ -50,8 +54,13 @@ import {
   FilterID,
   GENRE_ROUTE,
   ListID,
+  PREFERENCE_DEFAULTS,
+  PREFERENCE_NAMESPACE,
   POPULAR_ROUTE,
+  PreferenceID,
   RAW_ROUTE,
+  RAW_SLUG_PATTERN,
+  RAW_TITLE_PATTERN,
   READING_MODE_BY_TYPE,
   SEARCH_ROUTE,
   STATUS_BY_LABEL,
@@ -64,7 +73,7 @@ import {
 const info: SourceInfo = {
   id: "manga18fx",
   name: "Manga18fx",
-  version: "1.0.0",
+  version: "1.1.0",
   description: "Pulls adult manhwa, manhua and manga from manga18fx.com",
   website: BASE_URL,
   rating: CatalogRating.EXPLICIT,
@@ -79,10 +88,13 @@ const config: SourceConfig = {
   owningLinks: ["manga18fx.com"],
 };
 
-class Manga18fxSource implements ChapterSource, SearchProvider, PageLinkResolver {
+class Manga18fxSource
+  implements ChapterSource, SearchProvider, PageLinkResolver, SourcePreferenceProvider
+{
   readonly info = info;
   readonly config = config;
 
+  private readonly preferences = new PreferenceStore(PREFERENCE_NAMESPACE, PREFERENCE_DEFAULTS);
   private client: NetworkClient | undefined;
   private genreOptions: Option[] | undefined;
   private titleCache: { contentId: string; at: number; document: CheerioAPI } | undefined;
@@ -97,7 +109,9 @@ class Manga18fxSource implements ChapterSource, SearchProvider, PageLinkResolver
     return this.client;
   }
 
-  private sections(context: SourceContext | undefined): SectionSpec[] {
+  private async sections(context: SourceContext | undefined): Promise<SectionSpec[]> {
+    const rawHidden = await this.rawHidden();
+
     return [
       {
         id: ListID.Popular,
@@ -115,14 +129,20 @@ class Manga18fxSource implements ChapterSource, SearchProvider, PageLinkResolver
         limit: 15,
         load: (page) => this.listing(latestUrl(page), context),
       },
-      {
-        id: ListID.Raw,
-        title: "Manhwa Raw",
-        subtitle: "Untranslated Korean releases",
-        style: SectionStyle.DetailedTripleRowPaged,
-        limit: 15,
-        load: (page) => this.listing(rawUrl(page), context),
-      },
+      // The whole row is raw releases, so the setting that hides them has to take the row
+      // with it rather than leave an empty one behind.
+      ...(rawHidden
+        ? []
+        : [
+            {
+              id: ListID.Raw,
+              title: "Manhwa Raw",
+              subtitle: "Untranslated Korean releases",
+              style: SectionStyle.DetailedTripleRowPaged,
+              limit: 15,
+              load: (page: number) => this.listing(rawUrl(page), context),
+            },
+          ]),
       {
         id: ListID.Uncensored,
         title: "Uncensored",
@@ -151,16 +171,27 @@ class Manga18fxSource implements ChapterSource, SearchProvider, PageLinkResolver
     });
   }
 
+  async getPreferenceMenu(): Promise<Form> {
+    return buildPreferenceMenu(this.preferences, [
+      {
+        header: "Listings",
+        footer:
+          "The site publishes the untranslated Korean edition of a title as a separate series ending in “Raw”. Hiding them drops the Manhwa Raw row from the home page as well; a raw title already in your library still opens.",
+        fields: [{ type: "toggle", key: PreferenceID.HideRaw, title: "Hide raw releases" }],
+      },
+    ]);
+  }
+
   async getSectionsForPage(link: PageLink): Promise<PageSection[]> {
-    return toPageSections(this.sections(link.context));
+    return toPageSections(await this.sections(link.context));
   }
 
   async resolvePageSection(link: PageLink, sectionID: string): Promise<ResolvedPageSection> {
-    return resolveSection(this.sections(link.context), sectionID);
+    return resolveSection(await this.sections(link.context), sectionID);
   }
 
   async search(request: SearchRequest): Promise<PagedSearchResult> {
-    const list = listResults(this.sections(request.context), request);
+    const list = listResults(await this.sections(request.context), request);
     if (list) return list;
 
     const filters = new FilterReader(request);
@@ -291,9 +322,22 @@ class Manga18fxSource implements ChapterSource, SearchProvider, PageLinkResolver
 
   private async listing(url: string, context?: SourceContext): Promise<PagedSearchResult> {
     const $ = await this.page(url);
-    const results = permitted(highlightsFrom($), context);
+    const parsed = highlightsFrom($);
+    const results = permitted(await this.translatedOnly(parsed), context);
 
-    return { results, isLastPage: results.length === 0 || !hasNextPage($) };
+    // The end of the list is judged on what the page held, not on what survived filtering
+    // — a page that filters down to nothing is not the last one, and reporting it as such
+    // stops the reader an arbitrary distance short of the real end.
+    return { results, isLastPage: parsed.length === 0 || !hasNextPage($) };
+  }
+
+  private async translatedOnly(results: Highlight[]): Promise<Highlight[]> {
+    if (!(await this.rawHidden())) return results;
+    return results.filter((result) => !isRawEdition(result));
+  }
+
+  private async rawHidden(): Promise<boolean> {
+    return this.preferences.get(PreferenceID.HideRaw);
   }
 
   /**
@@ -425,6 +469,14 @@ function highlightsFrom($: CheerioAPI): Highlight[] {
 function scoreOf(row: Cheerio<AnyNode>): string {
   const score = text(row.find(".item-rate span").first());
   return score === "" || score === "0" ? "" : `★ ${score}`;
+}
+
+/**
+ * A listing row carries no marker of its own for a raw edition — the same markup, badges
+ * and rating as a translated one — so the name is all there is to read it from.
+ */
+function isRawEdition(result: Highlight): boolean {
+  return RAW_SLUG_PATTERN.test(result.id) || RAW_TITLE_PATTERN.test(result.title);
 }
 
 function permitted(results: Highlight[], context: SourceContext | undefined): Highlight[] {
