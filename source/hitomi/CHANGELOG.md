@@ -4,18 +4,29 @@ Notable changes to the extensions in this repository, grouped by extension —
 each one versions independently (see `info.version` in its `main.ts`). Dates
 are UTC. Format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## Hitomi (current: v1.1.0)
+## Hitomi (current: v1.2.0)
 
 ### 2026-09-07
 
+- Search now runs the site's own search rather than an approximation of it, so a query
+  matches gallery titles and several words narrow each other. "asuna family" returned
+  nothing where the site returns 68 galleries, and "midareuchi" returned the 7 galleries
+  its circle published where the site returns 83, because a query was only ever resolved
+  to one tag and read back as that tag's feed. `-word` to exclude and `namespace:value`
+  now work too, and the search form says so.
+- Search results page. A query resolves to a list of ids rather than a single 25-entry
+  feed, so the reader can page through it; the list is held while they do, because the
+  descent behind it costs a dozen round trips.
+- The index behind that search is raw big-endian int32 and `NetworkResponse.data` is a
+  string, which mangles it. The descent therefore runs inside an auxiliary WebView opened
+  on hitomi.la, which reads bytes and holds the CORS grant the CDN issues that origin. If
+  no WebView is available the old tag-index route still answers, minus gallery titles.
 - Search now prefers a term the query names exactly over the longest one containing it. The
   tag index matches anywhere in a term and orders what it finds by gallery count, so
   "dragon ball" resolved to the larger `dragon ball z` feed and every gallery tag tapped on
   a title view was resolved the same loose way.
-- A query the tag index knows nothing about returns an empty page instead of throwing. It
-  reached the reader as an error card, when the honest answer is that Hitomi indexes tags,
-  artists, series, characters and groups and not gallery titles — which the search form
-  already says.
+- A query that matches nothing returns an empty page instead of throwing. It reached the
+  reader as an error card, when the honest answer is that the site has no results for it.
 - New Language setting in the source's own preferences, covering all 45 languages the site
   publishes. Every listing follows it: the home page, and search whenever its own Language
   filter is left alone. That filter's first option is titled with the language in force so
