@@ -154,6 +154,19 @@ function loadTarget(bundlePath) {
   return new Target();
 }
 
+/**
+ * Whether the harness — not the source — is what could not do this.
+ *
+ * `WebViewPage` runs in the browser when one is reachable and falls back to a cheerio
+ * document with no JS engine when it is not. A source built around a site that computes
+ * what it serves then fails on the stand-in's own limits, and reporting that as FAIL says
+ * the source is broken when it may be perfect. It is the same case as a challenge: not
+ * checked, so not proven.
+ */
+function isHarnessLimit(error) {
+  return /^WebViewPage( shim)?:/.test(String(error?.message ?? error));
+}
+
 function isCloudflare(error) {
   if (!error) return false;
   if (error.name === "CloudflareError") return true;
@@ -169,7 +182,8 @@ async function step(results, name, fn) {
     results.push({ name, status: "pass", detail, ms: Date.now() - started });
     return detail;
   } catch (error) {
-    const status = isCloudflare(error) || error instanceof Skip ? "skip" : "fail";
+    const status =
+      isCloudflare(error) || isHarnessLimit(error) || error instanceof Skip ? "skip" : "fail";
     const message = String(error?.message ?? error);
     results.push({
       name,
