@@ -19,6 +19,9 @@ from there.
 | Tailspace | 1.1.0 | English | Explicit |
 | Hiperdex | 1.0.0 | English | Mixed |
 <<<<<<< HEAD
+| Ehentai | 1.1.0 | Multiple | Explicit |
+=======
+<<<<<<< HEAD
 | Manga18fx | 1.1.0 | English | Explicit |
 =======
 <<<<<<< HEAD
@@ -26,6 +29,7 @@ from there.
 =======
 | Weebcentral | 1.0.1 | English | Mixed |
 | Madaradex | 1.0.1 | English | Explicit |
+>>>>>>> origin/main
 >>>>>>> origin/main
 >>>>>>> origin/main
 
