@@ -4,59 +4,27 @@ Notable changes to the extensions in this repository, grouped by extension —
 each one versions independently (see `info.version` in its `main.ts`). Dates
 are UTC. Format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## Hitomi (current: v1.2.0)
+## Weebcentral (current: v1.0.1)
 
 ### 2026-09-07
 
-- Search now runs the site's own search rather than an approximation of it, so a query
-  matches gallery titles and several words narrow each other. "asuna family" returned
-  nothing where the site returns 68 galleries, and "midareuchi" returned the 7 galleries
-  its circle published where the site returns 83, because a query was only ever resolved
-  to one tag and read back as that tag's feed. `-word` to exclude and `namespace:value`
-  now work too, and the search form says so.
-- Search results page. A query resolves to a list of ids rather than a single 25-entry
-  feed, so the reader can page through it; the list is held while they do, because the
-  descent behind it costs a dozen round trips.
-- The index behind that search is raw big-endian int32 and `NetworkResponse.data` is a
-  string, which mangles it. The descent therefore runs inside an auxiliary WebView opened
-  on hitomi.la, which reads bytes and holds the CORS grant the CDN issues that origin. If
-  no WebView is available the old tag-index route still answers, minus gallery titles.
-- Search now prefers a term the query names exactly over the longest one containing it. The
-  tag index matches anywhere in a term and orders what it finds by gallery count, so
-  "dragon ball" resolved to the larger `dragon ball z` feed and every gallery tag tapped on
-  a title view was resolved the same loose way.
-- A query that matches nothing returns an empty page instead of throwing. It reached the
-  reader as an error card, when the honest answer is that the site has no results for it.
-- New Language setting in the source's own preferences, covering all 45 languages the site
-  publishes. Every listing follows it: the home page, and search whenever its own Language
-  filter is left alone. That filter's first option is titled with the language in force so
-  it cannot read as "All languages" while the setting narrows it.
-- The New in English home section now only appears while no language is set, where before
-  it would have duplicated Just Added or shown the one language the reader ruled out.
+- Index the chapters from the first one. The site renders `full-chapter-list` newest-first
+  and that order was kept verbatim, so the newest chapter arrived as index 0 — which made
+  the title view offer it as the place to start a series nobody had read yet.
 
 ### 2026-09-06
 
-- Initial implementation, reading hitomi.la through the Atom feeds, gallery JSON and tag
-  index on `ltn.gold-usergeneratedcontent.net` and `tagindex.hitomi.la` rather than the
-  markup — every page on the site is rendered client-side and arrives empty.
-- Listings are one Atom feed deep, 25 galleries, and report `isLastPage` on the first
-  page. The site's own paginated listings are `.nozomi` files — arrays of big-endian
-  int32 gallery ids — and the runtime hands every response back as a UTF-8 string, which
-  mangles them beyond recovery. The feeds are the only listing endpoint that answers as
-  text.
-- Home page carries Just Added, New in English, Doujinshi, Manga and Game CG. Artist CG
-  was dropped: it shares roughly 70% of Just Added, because artist CG sets dominate the
-  site's recent uploads.
-- Search matches one term at a time, the way the site's own search box does — a typed
-  query is resolved against the tag index to a tag, artist, series, character or group,
-  and a term that resolves to nothing throws rather than returning a silent empty list.
-  Gallery titles are not searchable; that index is binary too.
-- Type and Language filters, with all 45 languages the site publishes, each confirmed to
-  return entries. No sort options: every feed is newest-first and the site offers no
-  other order on them.
-- Chapter pages are built from the rotating path prefix and subdomain table in `gg.js`,
-  re-fetched every 20 minutes. Both image CDNs answer 404 without the site as referer.
-
+- Initial implementation, reading weebcentral.com through the htmx endpoints its own
+  pages call (`/search/data`, `/series/<id>/full-chapter-list`, `/chapters/<id>/images`)
+  rather than the rendered documents.
+- Home page carries Hot Updates (hero), Latest Updates, Most Popular and Popular
+  Webtoons; each of the latter three is backed by the same search query as its view-more
+  listing.
+- Search supports a title query, an author field, type and status multi-pickers,
+  include/exclude tags, the Official Translation / Anime Adaptation / Adult Content
+  toggles, and the site's six sort orders in either direction.
+- Honours the host's content-rating policy by asking the site for non-adult results when
+  mature content is not allowed.
 ## Hiperdex (current: v1.0.0)
 
 ### 2026-09-06
