@@ -4,7 +4,17 @@ Notable changes to the extensions in this repository, grouped by extension —
 each one versions independently (see `info.version` in its `main.ts`). Dates
 are UTC. Format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## Comix (current: v1.0.6)
+## Comix (current: v1.0.7)
+
+### 2026-09-08 — Do not wait for the pictures
+
+- The title page was opened with `waitUntil: "load"`, which waits for every image and
+  stylesheet it pulls in — none of which carries a chapter. It now waits for
+  `domcontentloaded`, which is when the data this reads has arrived.
+- Clicking the pager was measured against fetching directly, on a 620-chapter title:
+  clicking returned 100 chapters in 20.5s, fetching returned all 620 in 20.6s. Twenty per
+  request is a server cap and the app serialises them, so about thirty round trips is the
+  floor for that title however they are asked for. Fetching is kept.
 
 ### 2026-09-08 — Twenty chapters is not the whole list
 

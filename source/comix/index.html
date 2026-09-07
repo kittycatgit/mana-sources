@@ -203,7 +203,7 @@
 <li class="source" id="src-Comix">
   <div class="icon-slot"><img class="icon" src="assets/Comix.png" alt="" onerror="this.remove()"></div>
   <div class="body">
-    <h3>Comix <span class="ver">v1.0.6</span></h3>
+    <h3>Comix <span class="ver">v1.0.7</span></h3>
     <p>Reads manga, manhwa and manhua from comix.to</p>
     <div class="meta">
       <span class="r1"><i class="dot"></i>Mixed</span>
@@ -232,8 +232,11 @@
   <section>
   <h2>Changes</h2>
   <details>
-  <summary>Comix <span class="ver">1.0.6</span></summary>
+  <summary>Comix <span class="ver">1.0.7</span></summary>
   <div class="entry">
+    <h4>2026-09-08 — Do not wait for the pictures</h4>
+    <ul><li>The title page was opened with <code>waitUntil: "load"</code>, which waits for every image and stylesheet it pulls in — none of which carries a chapter. It now waits for <code>domcontentloaded</code>, which is when the data this reads has arrived.</li><li>Clicking the pager was measured against fetching directly, on a 620-chapter title: clicking returned 100 chapters in 20.5s, fetching returned all 620 in 20.6s. Twenty per request is a server cap and the app serialises them, so about thirty round trips is the floor for that title however they are asked for. Fetching is kept.</li></ul>
+  </div><div class="entry">
     <h4>2026-09-08 — Twenty chapters is not the whole list</h4>
     <ul><li>On a device the list stopped at twenty. The walk took its page count from the payload the page had rendered, and what a page renders is a layout decision: the phone's list reported one page where the API reports thirty-one. Off-device, in a desktop browser, the same code saw all of it and passed.</li><li>Page one is now asked for rather than read off the render, and the walk follows what the API says about how much there is. The rendered payload is only used to find the query.</li></ul>
   </div><div class="entry">
