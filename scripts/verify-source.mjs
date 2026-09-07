@@ -68,8 +68,9 @@ const CONTENT_RATING = { 0: "SAFE", 1: "SUGGESTIVE", 2: "MATURE", 3: "EXPLICIT" 
  * Fetches a handful of URLs and reports the ones that do not come back as images.
  *
  * A source with `willRequestImage` is telling the app how to ask for its images — most
- * often a referer a CDN refuses to serve without. Fetching bare would report 403 on a
- * source that works perfectly in the app, so the handler is applied here too.
+ * often a referer a CDN refuses to serve without, and sometimes cookies alongside it.
+ * Fetching bare would report 403 on a source that works perfectly in the app, so the
+ * handler is applied here too, `cookies` included.
  */
 async function checkImageUrls(urls, target) {
   const broken = [];
@@ -79,6 +80,10 @@ async function checkImageUrls(urls, target) {
       const headers = {};
       for (const [key, value] of Object.entries(request?.headers ?? {})) {
         headers[key] = String(value);
+      }
+      const cookies = request?.cookies ?? [];
+      if (cookies.length > 0) {
+        headers.cookie = cookies.map((cookie) => `${cookie.name}=${cookie.value}`).join("; ");
       }
       const response = await fetch(request?.url ?? url, { headers });
       const type = response.headers.get("content-type") ?? "";
