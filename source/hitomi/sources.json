@@ -1,0 +1,34 @@
+{
+  "repositoryName": "Demon | Mana Sources",
+  "thumbnail": "https://avatars.githubusercontent.com/u/204405496",
+  "sources": [
+    {
+      "id": "hitomi",
+      "name": "Hitomi",
+      "version": "1.2.0",
+      "description": "Reads doujinshi, manga and CG sets from hitomi.la",
+      "website": "https://hitomi.la",
+      "rating": 2,
+      "supportedLanguages": [
+        "ja_JP",
+        "en_US",
+        "zh-CN",
+        "ko_KR",
+        "es_ES",
+        "pt_BR",
+        "fr_FR"
+      ],
+      "thumbnail": "Hitomi.png",
+      "developers": [
+        {
+          "name": "Demon",
+          "github": "https://github.com/kittycatgit"
+        }
+      ],
+      "path": "Hitomi",
+      "environment": "source",
+      "intents": 2100237,
+      "hash": "35395fea35395fea35395fea35395fea35395fea35395fea35395fea35395fea"
+    }
+  ]
+}
