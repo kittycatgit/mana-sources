@@ -135,18 +135,43 @@ const threads = (() => {
   return found;
 })();
 
+/**
+ * What a preview published about itself, so a testing row can look like any other source.
+ *
+ * Its `sources.json` sits on gh-pages beside the bundle a reader would install, which makes
+ * it the one description guaranteed to match what they are trying — no second copy of a
+ * name, version or icon here to fall out of step with the branch.
+ */
+function previewSource(id) {
+  try {
+    const raw = require("child_process").execFileSync(
+      "git",
+      ["show", `origin/gh-pages:source/${id}/sources.json`],
+      { encoding: "utf-8", timeout: 20000, stdio: ["ignore", "pipe", "ignore"] },
+    );
+    return JSON.parse(raw).sources?.[0] ?? null;
+  } catch {
+    return null; // Not published yet, or no gh-pages to read.
+  }
+}
+
 /** @param {string} id */
 function testingRow(id) {
-  const name = id.charAt(0).toUpperCase() + id.slice(1);
   const install = pageBase ? `${pageBase}/source/${id}` : "";
   const thread = threads[id] || (repoUrl ? `${repoUrl}/issues?q=is%3Aissue+${encodeURIComponent(id)}` : "");
-  return `<li class="testing">
-  <div class="body">
-    <h3>${escapeHtml(name)} <span class="tag">in testing</span></h3>
-    ${install ? `<div class="url-row"><code class="turl">${escapeHtml(install)}</code><button class="copy-one" type="button" data-url="${escapeHtml(install)}">Copy</button></div>` : ""}
-  </div>
-  ${thread ? `<a class="thread" href="${thread}" target="_blank" rel="noopener">Leave feedback</a>` : ""}
-</li>`;
+  const extra = `<div class="testing-actions">
+      ${install ? `<code class="turl">${escapeHtml(install)}</code><button class="copy-one" type="button" data-url="${escapeHtml(install)}">Copy</button>` : ""}
+      ${thread ? `<a class="thread" href="${thread}" target="_blank" rel="noopener">Leave feedback</a>` : ""}
+    </div>`;
+
+  const published = previewSource(id);
+  const source = published ?? { name: id.charAt(0).toUpperCase() + id.slice(1), version: "?" };
+  return sourceRow(source, {
+    iconBase: `${pageBase}/source/${id}/assets/`,
+    idPrefix: "testing",
+    tag: ` <span class="tag">testing</span>`,
+    extra,
+  });
 }
 
 // A source/<id> branch publishes a preview for reviewing that one source, so the
@@ -207,8 +232,11 @@ const LANG = /** @type {Record<string,string>} */ ({
 });
 
 /** @param {any} s */
-function sourceRow(s) {
-  const src = /^https?:\/\//.test(s.thumbnail ?? "") ? s.thumbnail : `assets/${s.thumbnail}`;
+function sourceRow(s, opts = {}) {
+  // A row for a source under test is the same row, with its icon living under that
+  // preview's directory rather than this page's, and two extra affordances beneath.
+  const iconBase = opts.iconBase ?? "assets/";
+  const src = /^https?:\/\//.test(s.thumbnail ?? "") ? s.thumbnail : `${iconBase}${s.thumbnail}`;
   const icon = s.thumbnail
     ? `<img class="icon" src="${src}" alt="" onerror="this.remove()">`
     : "";
@@ -216,16 +244,19 @@ function sourceRow(s) {
   const langs = (s.supportedLanguages ?? []).map((l) => LANG[l] ?? l).join(" / ");
   const host = s.website ? s.website.replace(/^https?:\/\//, "").replace(/\/$/, "") : "";
 
-  return `<li class="source" id="src-${encodeURIComponent(s.name)}">
+  // A source under test can share its name with the one already in the catalogue — a fix
+  // branch for something merged does exactly that — so its row cannot share the anchor.
+  return `<li class="source" id="${opts.idPrefix ?? "src"}-${encodeURIComponent(s.name)}">
   <div class="icon-slot">${icon}</div>
   <div class="body">
-    <h3>${escapeHtml(s.name)} <span class="ver">v${escapeHtml(String(s.version ?? "?"))}</span></h3>
+    <h3>${escapeHtml(s.name)} <span class="ver">v${escapeHtml(String(s.version ?? "?"))}</span>${opts.tag ?? ""}</h3>
     ${s.description ? `<p>${escapeHtml(s.description)}</p>` : ""}
     <div class="meta">
       <span class="r${s.rating ?? 0}"><i class="dot"></i>${rating}</span>
       ${langs ? `<span style="color:var(--muted)">${langs}</span>` : ""}
       ${host ? `<a href="${s.website}" target="_blank" rel="noopener">${escapeHtml(host)} &nearr;</a>` : ""}
     </div>
+    ${opts.extra ?? ""}
   </div>
 </li>`;
 }
@@ -459,24 +490,15 @@ const html = `<!doctype html>
   }
   .request a:hover { background: var(--ember); color: #150705; }
 
-  .testing { display: flex; align-items: center; justify-content: space-between; gap: 20px; flex-wrap: wrap; padding: 16px 0; border-bottom: 1px solid var(--line); }
-  .testing:last-child { border-bottom: none; }
-  .testing h3 { margin: 0 0 8px; font-size: 16px; font-weight: 600; display: flex; gap: 10px; align-items: baseline; }
-  .testing .tag { font: 700 10px/1 Archivo, sans-serif; letter-spacing: .12em; text-transform: uppercase; color: var(--amber); }
-  .url-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .tag { font: 700 10px/1 Archivo, sans-serif; letter-spacing: .12em; text-transform: uppercase; color: var(--amber); }
+  .testing-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-top: 12px; }
   .turl { font: 400 12px "JetBrains Mono", ui-monospace, monospace; color: var(--muted); word-break: break-all; }
-  .copy-one {
-    flex: none; padding: 6px 12px; border-radius: 3px; cursor: pointer; background: none;
-    border: 1px solid var(--line); color: var(--muted);
+  .copy-one, .thread {
+    flex: none; padding: 7px 13px; border-radius: 3px; cursor: pointer; background: none;
+    border: 1px solid var(--line); color: var(--muted); text-decoration: none;
     font: 700 10px/1 Archivo, sans-serif; letter-spacing: .1em; text-transform: uppercase;
   }
-  .copy-one:hover { border-color: var(--ember); color: var(--ember); }
-  .testing .thread {
-    flex: none; padding: 11px 18px; border-radius: 3px; text-decoration: none;
-    border: 1px solid var(--line); color: var(--muted);
-    font: 700 11px/1 Archivo, sans-serif; letter-spacing: .1em; text-transform: uppercase;
-  }
-  .testing .thread:hover { border-color: var(--ember); color: var(--ember); }
+  .copy-one:hover, .thread:hover { border-color: var(--ember); color: var(--ember); }
 
   details { border-bottom: 1px solid var(--line); }
   details summary { cursor: pointer; list-style: none; padding: 16px 0; font-size: 15px; font-weight: 500; display: flex; gap: 10px; align-items: baseline; }
