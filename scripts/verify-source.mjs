@@ -62,6 +62,18 @@ const SECTION_STYLE = [
 const HERO_STYLES = new Set([3, 4]);
 const MIN_HERO_ITEMS = 3;
 const MAX_SECTION_ITEMS = 20;
+/**
+ * Two sections sharing more than this fraction of the smaller one are the same row twice.
+ *
+ * Deliberately near-total, and only over a sample worth drawing a conclusion from. Sections
+ * that rank the same catalogue over different windows — "popular right now" against
+ * "popular this week" — share most of their titles by their nature, and at two thirds of
+ * five items that read as a duplicate and failed a source that was doing exactly what it
+ * should. Running the same query is what this is looking for, and the identical-order check
+ * above catches the honest form of that; this catches it reordered.
+ */
+const MAX_SECTION_OVERLAP = 0.9;
+const MIN_OVERLAP_ITEMS = 10;
 
 const PUBLICATION_STATUS = { 1: "ONGOING", 2: "COMPLETED", 3: "CANCELLED", 4: "HIATUS" };
 const CONTENT_RATING = { 0: "SAFE", 1: "SUGGESTIVE", 2: "MATURE", 3: "EXPLICIT" };
@@ -70,8 +82,9 @@ const CONTENT_RATING = { 0: "SAFE", 1: "SUGGESTIVE", 2: "MATURE", 3: "EXPLICIT" 
  * Fetches a handful of URLs and reports the ones that do not come back as images.
  *
  * A source with `willRequestImage` is telling the app how to ask for its images — most
- * often a referer a CDN refuses to serve without. Fetching bare would report 403 on a
- * source that works perfectly in the app, so the handler is applied here too.
+ * often a referer a CDN refuses to serve without, and sometimes cookies alongside it.
+ * Fetching bare would report 403 on a source that works perfectly in the app, so the
+ * handler is applied here too, `cookies` included.
  */
 async function checkImageUrls(urls, target) {
   const broken = [];
@@ -81,6 +94,10 @@ async function checkImageUrls(urls, target) {
       const headers = {};
       for (const [key, value] of Object.entries(request?.headers ?? {})) {
         headers[key] = String(value);
+      }
+      const cookies = request?.cookies ?? [];
+      if (cookies.length > 0) {
+        headers.cookie = cookies.map((cookie) => `${cookie.name}=${cookie.value}`).join("; ");
       }
       const response = await fetch(request?.url ?? url, { headers });
       const type = response.headers.get("content-type") ?? "";
@@ -240,6 +257,16 @@ function checkChapters(chapters) {
     assert(chapter.index === index, `chapter ${index}: index is ${chapter.index}, expected ${index}`);
     assert(isValidDate(chapter.date), `chapter ${index}: bad date`);
   });
+  // Sites render their chapter list newest-first and `index` has to run from the first
+  // chapter, so a list whose numbers only ever fall is that order left unreversed. The
+  // shape checks pass on it happily, and the app then offers the newest chapter as the
+  // place to start a series the user has never opened.
+  const steps = chapters.slice(1).map((c, i) => c.number - chapters[i].number);
+  assert(
+    !steps.some((s) => s < 0) || steps.some((s) => s > 0),
+    `chapters run newest-first (${chapters[0].number} down to ${chapters[chapters.length - 1].number}) — reverse the list so index 0 is the first chapter`,
+  );
+
   const dated = chapters.filter((c) => c.date.getTime() > 0).length;
   return `${chapters.length} chapters, ${dated} with real dates`;
 }
@@ -291,12 +318,14 @@ async function verify(name, probe, verbose, prefs) {
 
   let sections = [];
   if (target.getSectionsForPage && target.resolvePageSection) {
-    sections =
-      (await step(results, "getSectionsForPage", async () => {
-        const found = await target.getSectionsForPage({ id: "home" });
-        assert(Array.isArray(found) && found.length > 0, "no sections returned");
-        return found;
-      })) ?? [];
+    // The step's return value is its printed detail, so anything a step needs to hand
+    // onwards is stashed here instead — returning the array printed a blank detail.
+    await step(results, "getSectionsForPage", async () => {
+      const found = await target.getSectionsForPage({ id: "home" });
+      assert(Array.isArray(found) && found.length > 0, "no sections returned");
+      sections = found;
+      return `${found.length} sections`;
+    });
 
     if (Array.isArray(sections)) {
       if (target.willResolveSectionsForPage) {
@@ -341,16 +370,28 @@ async function verify(name, probe, verbose, prefs) {
 
     let chapters;
     if (target.getChapters) {
-      chapters = await step(results, "getChapters", async () => {
+      await step(results, "getChapters", async () => {
         const found = await target.getChapters(contentId);
         preview.chapters = found ?? [];
-        checkChapters(found);
-        return found;
+        const detail = checkChapters(found);
+        chapters = found;
+        return detail;
       });
     }
 
+    // `new-source` seeds `"chapterId": ""`, and `??` accepts an empty string — which used
+    // to drop getChapterData entirely with no line printed to say so.
     const chapterId =
-      probe.chapterId ?? (Array.isArray(chapters) ? chapters[0]?.chapterId : undefined);
+      probe.chapterId || (Array.isArray(chapters) ? chapters[0]?.chapterId : undefined);
+
+    if (!chapterId) {
+      results.push({
+        name: "getChapterData",
+        status: "skip",
+        detail: "no chapterId in probe and no chapters to take one from",
+        ms: 0,
+      });
+    }
 
     if (chapterId) {
       await step(results, "getChapterData", async () => {
@@ -411,6 +452,19 @@ async function verify(name, probe, verbose, prefs) {
           if (headA.length > 0 && headA.join("\u0000") === headB.join("\u0000")) {
             problems.push(
               `"${a.section.title}" and "${b.section.title}" open with the same titles in the same order — they are running the same query.`,
+            );
+            continue;
+          }
+
+          // Reordering the same titles clears the check above and is still two rows of
+          // the same thing: a site's "recently added" and its "latest updates" hold the
+          // same series, because a series arrives with its chapters.
+          const idsA = new Set(a.items.map((item) => item.id));
+          const shared = b.items.filter((item) => idsA.has(item.id)).length;
+          const smaller = Math.min(a.items.length, b.items.length);
+          if (smaller >= MIN_OVERLAP_ITEMS && shared / smaller > MAX_SECTION_OVERLAP) {
+            problems.push(
+              `"${a.section.title}" and "${b.section.title}" share ${shared} of ${smaller} titles — they are near-duplicates. Give one of them a query the other cannot answer.`,
             );
           }
         }
