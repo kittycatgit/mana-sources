@@ -4,6 +4,23 @@ Notable changes to the extensions in this repository, grouped by extension —
 each one versions independently (see `info.version` in its `main.ts`). Dates
 are UTC. Format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## Mangafire (current: v1.0.0)
+
+### 2026-09-07 — First release
+
+- Reads mangafire.to through the JSON API its own site runs on, signing each request the
+  way the site does, so no page markup is parsed and nothing breaks when the layout moves.
+- Home page carries Trending, Latest Updates, Most Viewed This Week, New Arrivals and
+  Highest Rated, each opening into its own paginated listing.
+- Search offers the site's whole filter set — type, status, content rating, available
+  language, minimum chapters, publication years, demographic, themes, and genres with
+  per-genre include and exclude — over its eleven sorts.
+- Settings choose the chapter language and whether to show official releases, fan
+  translations or both. A title that has nothing in the chosen language falls back to
+  whatever it does have rather than showing an empty list.
+- Covers and pages carry the referer the site's CDN requires, and mangafire.to title links
+  open in the app.
+
 ## Nhentai (current: v1.1.0)
 
 ### 2026-09-07 — Language setting

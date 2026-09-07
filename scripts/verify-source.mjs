@@ -74,6 +74,61 @@ const PUBLICATION_STATUS = { 1: "ONGOING", 2: "COMPLETED", 3: "CANCELLED", 4: "H
 const CONTENT_RATING = { 0: "SAFE", 1: "SUGGESTIVE", 2: "MATURE", 3: "EXPLICIT" };
 
 /**
+ * Method on the instance -> intent the build must have recorded for it. Only the
+ * unconditional rules are listed; the two that depend on a second method are checked
+ * alongside them in `checkCatalogue`.
+ */
+const REQUIRED_INTENTS = [
+  ["getPreferenceMenu", "preferenceMenuBuilder"],
+  ["willRequestImage", "imageRequestHandler"],
+  ["search", "providesSearch"],
+  ["getSearchForm", "providesSearchForm"],
+  ["getSortOptions", "providesSearchSortOptions"],
+  ["handleURL", "canHandleURL"],
+];
+
+/**
+ * A bundle that throws while it is being evaluated still lands in `dist/sources/` — the
+ * catalogue is what it drops out of. `mana-dev build` reports that as a single
+ * "Failed to process <hash>.js" line and exits 0, so all four gates stay green while the
+ * app can never see the source, and every step below happily verifies a bundle nobody
+ * will install. Reading the manifest is the only place that shows up.
+ */
+function checkCatalogue(name, target) {
+  const manifestPath = path.join(ROOT, "dist", "sources.json");
+  assert(fs.existsSync(manifestPath), 'dist/sources.json is missing — run "npm run build"');
+
+  const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf-8"));
+  const entry = (manifest.sources ?? []).find((source) => source.name === name);
+  assert(
+    entry,
+    `${name} built a bundle but is not listed in dist/sources.json, so the app will never offer it. The build could not evaluate the bundle — look for a "Failed to process <hash>.js" line in "npm run build". A module-scope constant computed from a helper declared further down the same file is the usual cause.`,
+  );
+
+  const intents = decodeIntents(entry.intents ?? 0);
+  const missing = [];
+
+  for (const [method, intent] of REQUIRED_INTENTS) {
+    if (typeof target[method] === "function" && !intents.includes(intent)) {
+      missing.push(`${method}() is defined but ${intent} is unset`);
+    }
+  }
+  if (target.getSectionsForPage && target.resolvePageSection && !intents.includes("pageLinkResolver")) {
+    missing.push("getSectionsForPage() + resolvePageSection() are defined but pageLinkResolver is unset");
+  }
+  if (target.getContent && target.getChapterData && !intents.includes("providesChapters")) {
+    missing.push("getContent() + getChapterData() are defined but providesChapters is unset");
+  }
+
+  assert(
+    missing.length === 0,
+    `the bundle's intent mask does not match its methods\n${missing.join("\n")}`,
+  );
+
+  return intents.join(", ") || "no intents";
+}
+
+/**
  * Fetches a handful of URLs and reports the ones that do not come back as images.
  *
  * A source with `willRequestImage` is telling the app how to ask for its images — most
@@ -271,6 +326,8 @@ async function verify(name, probe, verbose) {
     );
     return `${target.info.id} v${target.info.version}`;
   });
+
+  await step(results, "catalogue", async () => checkCatalogue(name, target));
 
   if (target.getSearchForm) {
     await step(results, "getSearchForm", async () => checkSearchForm(await target.getSearchForm()));
