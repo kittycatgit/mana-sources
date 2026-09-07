@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>mana-sources</title>
+<title>Demon | Mana Sources</title>
 <meta name="description" content="Sources for Mana. Add the repository once and they all come with it.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -173,7 +173,7 @@
   </g>
 </svg>
     <span class="mark">Mana</span>
-    <h1>mana<em>-</em>sources</h1>
+    <h1>Demon | Mana Sources</h1>
     <p class="lede">Add this once in Mana and everything below comes with it. Anything added later turns up on its own.</p>
 
     <div class="install">
@@ -188,22 +188,10 @@
 
 <main class="wrap">
   <section>
-    <h2>2 sources</h2>
+    <h2>1 source</h2>
     <ul class="sources">
-<li class="source" id="src-Tailspace">
-  <div class="icon-slot"><img class="icon" src="sources/Tailspace/assets/icon.png" alt="" onerror="this.remove()"></div>
-  <div class="body">
-    <h3>Tailspace <span class="ver">v1.1.0</span></h3>
-    <p>Pulls furry comics from tailspace.com</p>
-    <div class="meta">
-      <span class="r2"><i class="dot"></i>Explicit</span>
-      <span style="color:var(--muted)">EN</span>
-      <a href="https://tailspace.com" target="_blank" rel="noopener">tailspace.com &nearr;</a>
-    </div>
-  </div>
-</li>
 <li class="source" id="src-Weebcentral">
-  <div class="icon-slot"><img class="icon" src="sources/Weebcentral/assets/icon.png" alt="" onerror="this.remove()"></div>
+  <div class="icon-slot"><img class="icon" src="assets/Weebcentral.png" alt="" onerror="this.remove()"></div>
   <div class="body">
     <h3>Weebcentral <span class="ver">v1.0.1</span></h3>
     <p>Pulls manga, manhwa and manhua from weebcentral.com</p>
@@ -238,6 +226,13 @@
   </div><div class="entry">
     <h4>2026-09-06</h4>
     <ul><li>Initial implementation, reading weebcentral.com through the htmx endpoints its own pages call (<code>/search/data</code>, <code>/series/&lt;id&gt;/full-chapter-list</code>, <code>/chapters/&lt;id&gt;/images</code>) rather than the rendered documents.</li><li>Home page carries Hot Updates (hero), Latest Updates, Most Popular and Popular Webtoons; each of the latter three is backed by the same search query as its view-more listing.</li><li>Search supports a title query, an author field, type and status multi-pickers, include/exclude tags, the Official Translation / Anime Adaptation / Adult Content toggles, and the site's six sort orders in either direction.</li><li>Honours the host's content-rating policy by asking the site for non-adult results when mature content is not allowed.</li></ul>
+  </div>
+</details>
+<details>
+  <summary>Hiperdex <span class="ver">1.0.0</span></summary>
+  <div class="entry">
+    <h4>2026-09-06</h4>
+    <ul><li>Initial implementation, reading hiperdex.com through its tRPC API at <code>/api/trpc</code> rather than the markup — the site is now a client-rendered SPA whose pages contain no content.</li><li>Every API call carries the <code>__st</code> session cookie, which the server only issues in the <code>Set-Cookie</code> of a document request; the source fetches the landing page once for it and re-fetches on a 401.</li><li>Home page carries Trending Today, Latest Updates, Most Popular, Top Rated and Recently Added, each backed by the same query as its view-more listing.</li><li>Search supports a title query, the site's seven sort orders, and type, status, rating and genre filters; the status picker adds "Releasing", which the site's own filter panel omits despite 284 titles carrying it.</li><li>Covers and chapter pages are requested with the site as their referer, without which both CDNs answer 403.</li></ul>
   </div>
 </details>
 <details>
