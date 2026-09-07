@@ -11,6 +11,26 @@
  * in-app runtime provides, backed by Node's `fetch`.
  */
 
+import { fetchThroughBrowser } from "./browser.mjs";
+
+/**
+ * What a challenge page looks like, whatever status it arrives with. Kept in one place
+ * because both paths below have to agree on it: a body that matches is not a reply to the
+ * request, it is the site asking who is asking.
+ *
+ * Markers only an interstitial carries. Neither `challenges.cloudflare.com` nor
+ * `/cdn-cgi/challenge-platform/` belongs here — a Turnstile widget on an ordinary form
+ * loads both, and imhentai serves them in the <head> of the very pages this is meant to
+ * rescue, so matching them declared every good page a challenge and threw the browser's
+ * own answer away. Check any addition against a good page as well as a blocked one.
+ */
+const CHALLENGE =
+  /<title>\s*just a moment|cf-browser-verification|__cf_chl_|cf_chl_opt|enable javascript and cookies to continue/i;
+
+function looksChallenged(body) {
+  return typeof body === "string" && CHALLENGE.test(body.slice(0, 8192));
+}
+
 const STATUS_MESSAGES = {
   400: "Bad Request",
   401: "Unauthorized",
@@ -42,6 +62,33 @@ export class CloudflareError extends Error {
   }
 }
 
+/**
+ * Encodes an object body the way the host runtime does.
+ *
+ * A source posts `body: { action: "..." }` and states the content type in its headers. Node
+ * `fetch` has no such convention: it stringifies a plain object, so the server received
+ * `[object Object]` and answered 400 — which surfaced as the source's own error and read
+ * like the site had broken, when the same call works in the app. Anything already in a
+ * form `fetch` understands is passed through untouched.
+ */
+function encodeBody(body, headers) {
+  if (body === undefined || body === null || typeof body === "string") return body;
+  if (body instanceof URLSearchParams || body instanceof ArrayBuffer || ArrayBuffer.isView(body)) {
+    return body;
+  }
+  if (typeof body !== "object") return String(body);
+
+  const type = String(
+    Object.entries(headers).find(([key]) => key.toLowerCase() === "content-type")?.[1] ?? "",
+  ).toLowerCase();
+  if (type.includes("json")) return JSON.stringify(body);
+  return new URLSearchParams(
+    Object.entries(body)
+      .filter(([, value]) => value !== undefined && value !== null)
+      .map(([key, value]) => [key, String(value)]),
+  ).toString();
+}
+
 function buildUrl(url, params) {
   if (!params) return url;
   const entries = Object.entries(params).filter(
@@ -52,28 +99,6 @@ function buildUrl(url, params) {
     .map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(String(v))}`)
     .join("&");
   return `${url}${url.includes("?") ? "&" : "?"}${query}`;
-}
-
-/**
- * The host serialises `NetworkRequest.body` from the content type — a JSON object for
- * `application/json`, a URL-encoded string for `application/x-www-form-urlencoded` — while
- * `fetch` would take a pre-stringified body happily. Modelling that here is what makes a
- * source that stringifies its own JSON body fail in the harness the way it fails in the
- * app, instead of passing every gate and erroring on the reader's phone.
- */
-function encodeBody(body, headers) {
-  if (body === undefined || body === null) return undefined;
-  const type = String(
-    Object.entries(headers).find(([key]) => key.toLowerCase() === "content-type")?.[1] ?? "",
-  ).toLowerCase();
-
-  if (type.includes("application/json")) return JSON.stringify(body);
-  if (type.includes("application/x-www-form-urlencoded") && typeof body === "object") {
-    return Object.entries(body)
-      .map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(String(v))}`)
-      .join("&");
-  }
-  return body;
 }
 
 async function applyAll(value, transformers) {
@@ -150,16 +175,30 @@ export class NetworkClient {
       clearTimeout(timer);
     }
 
-    const data = await raw.text();
-    const response = {
-      data,
-      status: raw.status,
-      headers: Object.fromEntries(raw.headers.entries()),
-      request: prepared,
-    };
+    let data = await raw.text();
+    let status = raw.status;
+    let headersOut = Object.fromEntries(raw.headers.entries());
+
+    // Node cannot clear a challenge — the fingerprint is what is being judged, not the
+    // request — so the same URL is re-issued inside the user's browser, where the site's
+    // own cookies and a clearance it already granted apply. If that route is unavailable
+    // the challenge page falls through untouched and the source reports it as before.
+    if (looksChallenged(data)) {
+      const viaBrowser = await fetchThroughBrowser(target, {
+        method: prepared.method ?? "GET",
+        body: prepared.body,
+      });
+      if (viaBrowser && !looksChallenged(viaBrowser.data)) {
+        data = viaBrowser.data;
+        status = viaBrowser.status;
+        headersOut = viaBrowser.headers;
+      }
+    }
+
+    const response = { data, status, headers: headersOut, request: prepared };
 
     const validate = prepared.validateStatus ?? this.statusValidator;
-    const ok = validate ? validate(raw.status) : raw.status >= 200 && raw.status < 300;
+    const ok = validate ? validate(status) : status >= 200 && status < 300;
 
     const transformed = await applyAll(response, [
       ...this.responseTransformers,
@@ -169,7 +208,7 @@ export class NetworkClient {
     if (!ok) {
       throw new NetworkError(
         "NetworkError",
-        STATUS_MESSAGES[raw.status] ?? `Request failed with status ${raw.status}`,
+        STATUS_MESSAGES[status] ?? `Request failed with status ${status}`,
         prepared,
         transformed,
       );
@@ -229,10 +268,14 @@ class HarnessWebViewPageInstance {
       clearTimeout(timer);
     }
 
-    // The harness has no way to solve a challenge; report it the way the client does so
-    // verify records SKIP rather than a misleading FAIL.
-    if (/just a moment|cf-browser-verification|challenges\.cloudflare\.com/i.test(this.html.slice(0, 4096))) {
-      throw new CloudflareError(this.url);
+    // On a device this is a real WebView carrying a cleared cookie jar. Here the nearest
+    // thing to one is the user's own browser, so a challenge is re-read through it before
+    // giving up — and only when that is unavailable is it reported the way the client
+    // does, leaving verify a SKIP rather than a misleading FAIL.
+    if (looksChallenged(this.html)) {
+      const viaBrowser = await fetchThroughBrowser(this.url);
+      if (!viaBrowser || looksChallenged(viaBrowser.data)) throw new CloudflareError(this.url);
+      this.html = viaBrowser.data;
     }
   }
 
