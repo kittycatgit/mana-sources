@@ -4,7 +4,21 @@ Notable changes to the extensions in this repository, grouped by extension —
 each one versions independently (see `info.version` in its `main.ts`). Dates
 are UTC. Format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## Comix (current: v1.0.1)
+## Comix (current: v1.0.2)
+
+### 2026-09-08 — Long chapter lists open again, this time for real
+
+- The previous fix gave each evaluation its own `WebViewPage`, which does not help: Mana
+  gives a source one auxiliary WebView per method, so `create` after `close` hands back the
+  same one and the host's `const args` is still redeclared. Only one evaluation per method
+  avoids it, so the chapter list now walks its whole pager inside that one evaluation and
+  the walk's budget grew to cover what the second round used to pick up. Two of the titles
+  on the site's own home page — 4601 and 1099 uploads — were enough to hit this.
+- A pager click that does not take is retried rather than ending the walk, and the wait for
+  one is bounded so a single dropped click cannot spend the budget the rest of the list
+  needs. That recovery used to come from the second round, which no longer exists.
+- A title past about 110 pager pages still comes back partial: it is walked as far as sixty
+  seconds reaches, newest uploads first. One sampled title is that long.
 
 ### 2026-09-08 — Long chapter lists open again
 
