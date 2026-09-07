@@ -207,7 +207,7 @@
 
 <main class="wrap">
   <section>
-    <h2>5 sources</h2>
+    <h2>6 sources</h2>
     <ul class="sources">
 <li class="source" id="src-Hiperdex">
   <div class="icon-slot"><img class="icon" src="assets/Hiperdex.png" alt="" onerror="this.remove()"></div>
@@ -230,6 +230,18 @@
       <span class="r2"><i class="dot"></i>Explicit</span>
       <span style="color:var(--muted)">JA / EN / zh-CN / KO / ES / PT / FR</span>
       <a href="https://hitomi.la" target="_blank" rel="noopener">hitomi.la &nearr;</a>
+    </div>
+  </div>
+</li>
+<li class="source" id="src-Imhentai">
+  <div class="icon-slot"><img class="icon" src="assets/Imhentai.png" alt="" onerror="this.remove()"></div>
+  <div class="body">
+    <h3>Imhentai <span class="ver">v1.0.0</span></h3>
+    <p>Browses the doujinshi, manga and artist CG galleries on imhentai.xxx</p>
+    <div class="meta">
+      <span class="r2"><i class="dot"></i>Explicit</span>
+      <span style="color:var(--muted)">EN / JA / ES / FR / KO</span>
+      <a href="https://imhentai.xxx" target="_blank" rel="noopener">imhentai.xxx &nearr;</a>
     </div>
   </div>
 </li>
@@ -286,13 +298,6 @@
 </li>
 <li class="testing">
   <div class="body">
-    <h3>Imhentai <span class="tag">in testing</span></h3>
-    <div class="url-row"><code class="turl">https://kittycatgit.github.io/mana-sources/source/imhentai</code><button class="copy-one" type="button" data-url="https://kittycatgit.github.io/mana-sources/source/imhentai">Copy</button></div>
-  </div>
-  <a class="thread" href="https://github.com/kittycatgit/mana-sources/issues/7" target="_blank" rel="noopener">Leave feedback</a>
-</li>
-<li class="testing">
-  <div class="body">
     <h3>Manga18fx <span class="tag">in testing</span></h3>
     <div class="url-row"><code class="turl">https://kittycatgit.github.io/mana-sources/source/manga18fx</code><button class="copy-one" type="button" data-url="https://kittycatgit.github.io/mana-sources/source/manga18fx">Copy</button></div>
   </div>
@@ -322,6 +327,13 @@
   <section>
   <h2>Changes</h2>
   <details>
+  <summary>Imhentai <span class="ver">1.0.0</span></summary>
+  <div class="entry">
+    <h4>2026-09-06</h4>
+    <ul><li>Initial implementation. Cloudflare challenges every route on imhentai.xxx except <code>/search/</code>, so search and all six home sections are built on that one route, which accepts the same sort and category flags as the listing pages it replaces.</li><li>Home page carries Popular Now (hero), Latest Uploads, Top Rated, New Manga, New Western and New Artist CG. Most Downloaded was left out: it shares 55% of its titles with Popular, and two sections holding the same galleries are one section wearing two names.</li><li>Search supports a comma-separated tag query, the site's four sort orders, and its category and language facets. Both facets are submitted as complete groups with an explicit 1 or 0 per member — a lone <code>m=1</code> is accepted and returns the unfiltered listing, so a partial group reads as the site ignoring the filter.</li><li>A gallery is one finished work, so it is modelled as a single chapter holding every page, and its status is COMPLETED unless the uploader wrote <code>[ongoing]</code> in the title.</li><li>Page URLs take their extension from the per-page type letter in the gallery's <code>g_th</code> manifest. It varies within a single gallery — 1733050 is mostly webp with jpg scattered through it — so assuming one extension 404s a fifth of its pages.</li><li>Titles are decoded twice. The site stores them already-escaped and escapes them again, so an apostrophe arrives as <code>&amp;amp;#039;</code> and cheerio's own decode leaves <code>&amp;#039;</code> behind.</li><li><code>getContent</code>, <code>getChapters</code> and <code>getChapterData</code> **SKIP under <code>npm run verify</code>**: they read <code>/gallery/&lt;id&gt;/</code>, which is challenged to every HTTP client, and the harness runs on Node. In the app they fall back to <code>WebViewPage</code>, whose WebView carries the clearance the user establishes through <code>cloudflareResolutionURL</code>. All three were checked before release by driving the built bundle against gallery HTML captured from a real browser, and the cover and page URLs they produced were fetched to confirm they serve.</li></ul>
+  </div>
+</details>
+<details>
   <summary>Madaradex <span class="ver">1.0.1</span></summary>
   <div class="entry">
     <h4>2026-09-06</h4>
