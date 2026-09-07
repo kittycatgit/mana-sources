@@ -9,6 +9,8 @@ on:
 
 permissions:
   contents: write
+  # The page lists what is in testing and links each to its thread, which means reading them.
+  issues: read
 
 concurrency:
   group: pages-${{ github.ref_name }}
@@ -36,6 +38,10 @@ jobs:
             echo "preview limited to $MANA_ONLY"
           fi
           npm run lint && npm run typecheck && npm run build
+        env:
+          # The install page resolves each in-testing source to its issue thread, which
+          # needs a token to read them. Without one it falls back to a search link.
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       # A preview with no sources in it is worse than no preview: the app adds the repo
       # happily and then shows nothing, which reads as a broken source rather than a
