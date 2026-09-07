@@ -12,9 +12,13 @@ permissions:
   # The page lists what is in testing and links each to its thread, which means reading them.
   issues: read
 
+# Every branch deploys to the same gh-pages ref, so grouping by branch let a main deploy
+# and a source/<id> deploy run at once and race for it — the loser died on "cannot lock
+# ref" and its publish was simply lost. One group for all of them, and no cancelling:
+# these are publishes, and the one being cancelled is as real as the one arriving.
 concurrency:
-  group: pages-${{ github.ref_name }}
-  cancel-in-progress: true
+  group: pages
+  cancel-in-progress: false
 
 jobs:
   build-deploy:
