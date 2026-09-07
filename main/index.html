@@ -136,6 +136,25 @@
   }
   .request a:hover { background: var(--ember); color: #150705; }
 
+  .testing { display: flex; align-items: center; justify-content: space-between; gap: 20px; flex-wrap: wrap; padding: 16px 0; border-bottom: 1px solid var(--line); }
+  .testing:last-child { border-bottom: none; }
+  .testing h3 { margin: 0 0 8px; font-size: 16px; font-weight: 600; display: flex; gap: 10px; align-items: baseline; }
+  .testing .tag { font: 700 10px/1 Archivo, sans-serif; letter-spacing: .12em; text-transform: uppercase; color: var(--amber); }
+  .url-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .turl { font: 400 12px "JetBrains Mono", ui-monospace, monospace; color: var(--muted); word-break: break-all; }
+  .copy-one {
+    flex: none; padding: 6px 12px; border-radius: 3px; cursor: pointer; background: none;
+    border: 1px solid var(--line); color: var(--muted);
+    font: 700 10px/1 Archivo, sans-serif; letter-spacing: .1em; text-transform: uppercase;
+  }
+  .copy-one:hover { border-color: var(--ember); color: var(--ember); }
+  .testing .thread {
+    flex: none; padding: 11px 18px; border-radius: 3px; text-decoration: none;
+    border: 1px solid var(--line); color: var(--muted);
+    font: 700 11px/1 Archivo, sans-serif; letter-spacing: .1em; text-transform: uppercase;
+  }
+  .testing .thread:hover { border-color: var(--ember); color: var(--ember); }
+
   details { border-bottom: 1px solid var(--line); }
   details summary { cursor: pointer; list-style: none; padding: 16px 0; font-size: 15px; font-weight: 500; display: flex; gap: 10px; align-items: baseline; }
   details summary::-webkit-details-marker { display: none; }
@@ -254,6 +273,42 @@
   </section>
 
   <section>
+    <h2>In testing</h2>
+    <p class="lede">Built and published, not in the catalogue yet. Add one the same way, try it,
+    and say on its thread what worked and what did not — that is what decides whether it ships.</p>
+    <ul class="sources">
+<li class="testing">
+  <div class="body">
+    <h3>Ehentai <span class="tag">in testing</span></h3>
+    <div class="url-row"><code class="turl">https://kittycatgit.github.io/mana-sources/source/ehentai</code><button class="copy-one" type="button" data-url="https://kittycatgit.github.io/mana-sources/source/ehentai">Copy</button></div>
+  </div>
+  <a class="thread" href="https://github.com/kittycatgit/mana-sources/issues/6" target="_blank" rel="noopener">Leave feedback</a>
+</li>
+<li class="testing">
+  <div class="body">
+    <h3>Imhentai <span class="tag">in testing</span></h3>
+    <div class="url-row"><code class="turl">https://kittycatgit.github.io/mana-sources/source/imhentai</code><button class="copy-one" type="button" data-url="https://kittycatgit.github.io/mana-sources/source/imhentai">Copy</button></div>
+  </div>
+  <a class="thread" href="https://github.com/kittycatgit/mana-sources/issues/7" target="_blank" rel="noopener">Leave feedback</a>
+</li>
+<li class="testing">
+  <div class="body">
+    <h3>Manga18fx <span class="tag">in testing</span></h3>
+    <div class="url-row"><code class="turl">https://kittycatgit.github.io/mana-sources/source/manga18fx</code><button class="copy-one" type="button" data-url="https://kittycatgit.github.io/mana-sources/source/manga18fx">Copy</button></div>
+  </div>
+  <a class="thread" href="https://github.com/kittycatgit/mana-sources/issues/3" target="_blank" rel="noopener">Leave feedback</a>
+</li>
+<li class="testing">
+  <div class="body">
+    <h3>Nhentai <span class="tag">in testing</span></h3>
+    <div class="url-row"><code class="turl">https://kittycatgit.github.io/mana-sources/source/nhentai</code><button class="copy-one" type="button" data-url="https://kittycatgit.github.io/mana-sources/source/nhentai">Copy</button></div>
+  </div>
+  <a class="thread" href="https://github.com/kittycatgit/mana-sources/issues/5" target="_blank" rel="noopener">Leave feedback</a>
+</li>
+    </ul>
+  </section>
+
+  <section>
     <h2>Requests</h2>
     <div class="request">
       <div>
@@ -316,6 +371,15 @@
 <footer class="wrap">Updated 2026-09-07</footer>
 
 <script>
+  Array.prototype.forEach.call(document.querySelectorAll(".copy-one"), function (b) {
+    b.addEventListener("click", function () {
+      navigator.clipboard.writeText(b.getAttribute("data-url")).then(function () {
+        b.textContent = "Copied";
+        setTimeout(function () { b.textContent = "Copy"; }, 1600);
+      });
+    });
+  });
+
   document.getElementById("copy").addEventListener("click", function () {
     var b = this;
     navigator.clipboard.writeText(document.getElementById("url").textContent.trim()).then(function () {
