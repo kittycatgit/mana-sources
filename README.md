@@ -17,6 +17,7 @@ from there.
 | ------ | ------- | -------- | ------ |
 | Tailspace | 1.1.0 | English | Explicit |
 | Hiperdex | 1.0.0 | English | Mixed |
+| Weebcentral | 1.0.1 | English | Mixed |
 
 See [CHANGELOG.md](CHANGELOG.md) for what changed and when.
 
