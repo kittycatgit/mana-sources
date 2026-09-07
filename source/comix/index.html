@@ -203,7 +203,7 @@
 <li class="source" id="src-Comix">
   <div class="icon-slot"><img class="icon" src="assets/Comix.png" alt="" onerror="this.remove()"></div>
   <div class="body">
-    <h3>Comix <span class="ver">v1.0.5</span></h3>
+    <h3>Comix <span class="ver">v1.0.6</span></h3>
     <p>Reads manga, manhwa and manhua from comix.to</p>
     <div class="meta">
       <span class="r1"><i class="dot"></i>Mixed</span>
@@ -232,8 +232,11 @@
   <section>
   <h2>Changes</h2>
   <details>
-  <summary>Comix <span class="ver">1.0.5</span></summary>
+  <summary>Comix <span class="ver">1.0.6</span></summary>
   <div class="entry">
+    <h4>2026-09-08 — Twenty chapters is not the whole list</h4>
+    <ul><li>On a device the list stopped at twenty. The walk took its page count from the payload the page had rendered, and what a page renders is a layout decision: the phone's list reported one page where the API reports thirty-one. Off-device, in a desktop browser, the same code saw all of it and passed.</li><li>Page one is now asked for rather than read off the render, and the walk follows what the API says about how much there is. The rendered payload is only used to find the query.</li></ul>
+  </div><div class="entry">
     <h4>2026-09-08 — The whole chapter list, through the app's own fetcher</h4>
     <ul><li>Chapter lists were both slow and short. The list was gathered by clicking the site's pager and reading each rendered page, which costs a render and a settle per page — about two and a half seconds — and gave up quietly when a click did not take. "Dungeons and Crayons" has 620 chapters and arrived as 64.</li><li>The requests behind those clicks are made by a query client that is reachable in the page, and each query carries the function that signs and sends them. The list is now fetched with that function directly, six pages at a time, with no rendering in between: 620 chapters in about sixteen seconds, all of them.</li><li>Twenty per request is a server cap — <code>limit</code>, <code>per_page</code> and <code>perPage</code> are all ignored above it — and the app serialises what it is given, so twelve at a time is no faster than six. Thirty-one requests is the floor for that title.</li><li>There is no pager fallback. It was slower, it lost entries, and a short list that looks complete is worse than a list that fails.</li></ul>
   </div><div class="entry">

@@ -4,7 +4,16 @@ Notable changes to the extensions in this repository, grouped by extension —
 each one versions independently (see `info.version` in its `main.ts`). Dates
 are UTC. Format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## Comix (current: v1.0.5)
+## Comix (current: v1.0.6)
+
+### 2026-09-08 — Twenty chapters is not the whole list
+
+- On a device the list stopped at twenty. The walk took its page count from the payload the
+  page had rendered, and what a page renders is a layout decision: the phone's list
+  reported one page where the API reports thirty-one. Off-device, in a desktop browser, the
+  same code saw all of it and passed.
+- Page one is now asked for rather than read off the render, and the walk follows what the
+  API says about how much there is. The rendered payload is only used to find the query.
 
 ### 2026-09-08 — The whole chapter list, through the app's own fetcher
 
