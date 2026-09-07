@@ -303,7 +303,11 @@ class HarnessWebViewPageInstance {
       if (result.ok) return result.value;
       // The page was real a moment ago and is not answering now. Reading the markup with
       // cheerio would quietly return the wrong answer, so say what happened instead.
-      throw new Error("WebViewPage: the browser stopped answering mid-page");
+      throw new Error(
+        result.error
+          ? `WebViewPage: the page threw — ${result.error}`
+          : "WebViewPage: the browser stopped answering mid-page",
+      );
     }
     const { load } = await import("cheerio");
     const $ = load(this.html);

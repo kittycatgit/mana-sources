@@ -172,9 +172,12 @@ async function open() {
 }
 
 /** The text of a tool reply, or null if the call failed. */
-function textOf(message) {
+function textOf(message, { keepErrorText = false } = {}) {
   if (message?.error || !message?.result) return null;
-  if (message.result.isError) return null;
+  // An error reply still carries what the page threw, which is the only account of a
+  // failure inside `evaluate` — discarding it reported every one of them as the browser
+  // going quiet, and hid the exception that explained it.
+  if (message.result.isError && !keepErrorText) return null;
   const blocks = message.result.content ?? [];
   return blocks
     .filter((block) => block?.type === "text")
@@ -324,13 +327,14 @@ export async function evaluateInBrowser(script, args = []) {
   const link = await open();
   if (!link) return { ok: false };
 
-  // `args` is declared in the page's own global scope, not inside a wrapper, because that
-  // is what the app does — and it is why evaluating twice in one WebView throws
-  // "Cannot declare a const variable twice: 'args'". Wrapping it in a function made that
-  // impossible to hit, so a source that breaks on the second evaluation of a page passed
-  // every check here and failed on the first title long enough to need one.
+  // `args` is a plain binding the script can read. Declaring it the way the app does — a
+  // `const` in the page's own scope, which is what makes a second `evaluateScript` collide
+  // — cannot be done from here: a `const` introduced by `eval` is scoped to that eval and
+  // gone by the time the script runs, so every source lost its arguments entirely. The
+  // collision is a host behaviour this cannot reproduce; `references/recon.md` carries the
+  // rule that keeps sources clear of it instead.
   const fn = `async () => {
-    (0, eval)(${JSON.stringify(`const args = ${JSON.stringify(args)};`)});
+    const args = ${JSON.stringify(args)};
     const value = await (async () => { ${script.startsWith("return") ? script : `return ${script}`} })();
     return JSON.stringify({ value: value === undefined ? null : value });
   }`;
@@ -340,12 +344,16 @@ export async function evaluateInBrowser(script, args = []) {
     { name: "browser_evaluate", arguments: { function: fn } },
     CALL_TIMEOUT,
   );
-  const raw = resultOf(textOf(reply));
-  if (typeof raw !== "string") return { ok: false };
+  const text = textOf(reply, { keepErrorText: true });
+  const raw = resultOf(text);
+  if (typeof raw !== "string") {
+    const thrown = String(text ?? "").trim();
+    return { ok: false, error: thrown ? thrown.split("\n").slice(0, 3).join(" ") : "" };
+  }
   try {
     return { ok: true, value: JSON.parse(raw).value };
   } catch {
-    return { ok: false };
+    return { ok: false, error: "the page returned something that is not JSON" };
   }
 }
 
