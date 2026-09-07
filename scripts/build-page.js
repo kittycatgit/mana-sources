@@ -142,7 +142,32 @@ const threads = (() => {
  * it the one description guaranteed to match what they are trying — no second copy of a
  * name, version or icon here to fall out of step with the branch.
  */
+let ghPagesReady = false;
+
+/**
+ * Makes gh-pages readable before anything asks it for a manifest.
+ *
+ * A deploy checks out one branch at depth 1, so `origin/gh-pages` is simply not there and
+ * every read of it failed — silently, into the fallback, which is how the published page
+ * ended up listing sources with no icon, no version, no languages and everything rated
+ * Safe while the same build was right on a laptop that happened to have the branch.
+ */
+function fetchGhPages() {
+  if (ghPagesReady) return;
+  ghPagesReady = true;
+  try {
+    require("child_process").execFileSync(
+      "git",
+      ["fetch", "--no-tags", "--depth=1", "origin", "gh-pages:refs/remotes/origin/gh-pages"],
+      { encoding: "utf-8", timeout: 60000, stdio: ["ignore", "ignore", "ignore"] },
+    );
+  } catch {
+    /* already present, or no remote to ask */
+  }
+}
+
 function previewSource(id) {
+  fetchGhPages();
   try {
     const raw = require("child_process").execFileSync(
       "git",
