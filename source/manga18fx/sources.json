@@ -5,7 +5,7 @@
     {
       "id": "manga18fx",
       "name": "Manga18fx",
-      "version": "1.0.0",
+      "version": "1.1.0",
       "description": "Pulls adult manhwa, manhua and manga from manga18fx.com",
       "website": "https://manga18fx.com",
       "rating": 2,
@@ -21,8 +21,8 @@
       ],
       "path": "Manga18fx",
       "environment": "source",
-      "intents": 2100232,
-      "hash": "7860dd247860dd247860dd247860dd247860dd247860dd247860dd247860dd24"
+      "intents": 2100233,
+      "hash": "23e86d5423e86d5423e86d5423e86d5423e86d5423e86d5423e86d5423e86d54"
     }
   ]
 }
