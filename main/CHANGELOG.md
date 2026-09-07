@@ -4,6 +4,27 @@ Notable changes to the extensions in this repository, grouped by extension —
 each one versions independently (see `info.version` in its `main.ts`). Dates
 are UTC. Format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## Weebcentral (current: v1.0.1)
+
+### 2026-09-07
+
+- Index the chapters from the first one. The site renders `full-chapter-list` newest-first
+  and that order was kept verbatim, so the newest chapter arrived as index 0 — which made
+  the title view offer it as the place to start a series nobody had read yet.
+
+### 2026-09-06
+
+- Initial implementation, reading weebcentral.com through the htmx endpoints its own
+  pages call (`/search/data`, `/series/<id>/full-chapter-list`, `/chapters/<id>/images`)
+  rather than the rendered documents.
+- Home page carries Hot Updates (hero), Latest Updates, Most Popular and Popular
+  Webtoons; each of the latter three is backed by the same search query as its view-more
+  listing.
+- Search supports a title query, an author field, type and status multi-pickers,
+  include/exclude tags, the Official Translation / Anime Adaptation / Adult Content
+  toggles, and the site's six sort orders in either direction.
+- Honours the host's content-rating policy by asking the site for non-adult results when
+  mature content is not allowed.
 ## Hiperdex (current: v1.0.0)
 
 ### 2026-09-06

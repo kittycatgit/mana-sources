@@ -188,7 +188,7 @@
 
 <main class="wrap">
   <section>
-    <h2>2 sources</h2>
+    <h2>3 sources</h2>
     <ul class="sources">
 <li class="source" id="src-Hiperdex">
   <div class="icon-slot"><img class="icon" src="assets/Hiperdex.png" alt="" onerror="this.remove()"></div>
@@ -214,6 +214,18 @@
     </div>
   </div>
 </li>
+<li class="source" id="src-Weebcentral">
+  <div class="icon-slot"><img class="icon" src="assets/Weebcentral.png" alt="" onerror="this.remove()"></div>
+  <div class="body">
+    <h3>Weebcentral <span class="ver">v1.0.1</span></h3>
+    <p>Pulls manga, manhwa and manhua from weebcentral.com</p>
+    <div class="meta">
+      <span class="r1"><i class="dot"></i>Mixed</span>
+      <span style="color:var(--muted)">EN</span>
+      <a href="https://weebcentral.com" target="_blank" rel="noopener">weebcentral.com &nearr;</a>
+    </div>
+  </div>
+</li>
     </ul>
   </section>
 
@@ -231,6 +243,16 @@
   <section>
   <h2>Changes</h2>
   <details>
+  <summary>Weebcentral <span class="ver">1.0.1</span></summary>
+  <div class="entry">
+    <h4>2026-09-07</h4>
+    <ul><li>Index the chapters from the first one. The site renders <code>full-chapter-list</code> newest-first and that order was kept verbatim, so the newest chapter arrived as index 0 — which made the title view offer it as the place to start a series nobody had read yet.</li></ul>
+  </div><div class="entry">
+    <h4>2026-09-06</h4>
+    <ul><li>Initial implementation, reading weebcentral.com through the htmx endpoints its own pages call (<code>/search/data</code>, <code>/series/&lt;id&gt;/full-chapter-list</code>, <code>/chapters/&lt;id&gt;/images</code>) rather than the rendered documents.</li><li>Home page carries Hot Updates (hero), Latest Updates, Most Popular and Popular Webtoons; each of the latter three is backed by the same search query as its view-more listing.</li><li>Search supports a title query, an author field, type and status multi-pickers, include/exclude tags, the Official Translation / Anime Adaptation / Adult Content toggles, and the site's six sort orders in either direction.</li><li>Honours the host's content-rating policy by asking the site for non-adult results when mature content is not allowed.</li></ul>
+  </div>
+</details>
+<details>
   <summary>Hiperdex <span class="ver">1.0.0</span></summary>
   <div class="entry">
     <h4>2026-09-06</h4>
@@ -250,7 +272,7 @@
 </section>
 </main>
 
-<footer class="wrap">Updated 2026-09-06</footer>
+<footer class="wrap">Updated 2026-09-07</footer>
 
 <script>
   document.getElementById("copy").addEventListener("click", function () {
