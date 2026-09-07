@@ -62,6 +62,33 @@ export class CloudflareError extends Error {
   }
 }
 
+/**
+ * Encodes an object body the way the host runtime does.
+ *
+ * A source posts `body: { action: "..." }` and states the content type in its headers. Node
+ * `fetch` has no such convention: it stringifies a plain object, so the server received
+ * `[object Object]` and answered 400 — which surfaced as the source's own error and read
+ * like the site had broken, when the same call works in the app. Anything already in a
+ * form `fetch` understands is passed through untouched.
+ */
+function encodeBody(body, headers) {
+  if (body === undefined || body === null || typeof body === "string") return body;
+  if (body instanceof URLSearchParams || body instanceof ArrayBuffer || ArrayBuffer.isView(body)) {
+    return body;
+  }
+  if (typeof body !== "object") return String(body);
+
+  const type = String(
+    Object.entries(headers).find(([key]) => key.toLowerCase() === "content-type")?.[1] ?? "",
+  ).toLowerCase();
+  if (type.includes("json")) return JSON.stringify(body);
+  return new URLSearchParams(
+    Object.entries(body)
+      .filter(([, value]) => value !== undefined && value !== null)
+      .map(([key, value]) => [key, String(value)]),
+  ).toString();
+}
+
 function buildUrl(url, params) {
   if (!params) return url;
   const entries = Object.entries(params).filter(
@@ -140,7 +167,7 @@ export class NetworkClient {
       raw = await fetch(target, {
         method: prepared.method ?? "GET",
         headers,
-        body: prepared.body,
+        body: encodeBody(prepared.body, headers),
         redirect: "follow",
         signal: controller.signal,
       });

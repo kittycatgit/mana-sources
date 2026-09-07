@@ -9,10 +9,16 @@ on:
 
 permissions:
   contents: write
+  # The page lists what is in testing and links each to its thread, which means reading them.
+  issues: read
 
+# Every branch deploys to the same gh-pages ref, so grouping by branch let a main deploy
+# and a source/<id> deploy run at once and race for it — the loser died on "cannot lock
+# ref" and its publish was simply lost. One group for all of them, and no cancelling:
+# these are publishes, and the one being cancelled is as real as the one arriving.
 concurrency:
-  group: pages-${{ github.ref_name }}
-  cancel-in-progress: true
+  group: pages
+  cancel-in-progress: false
 
 jobs:
   build-deploy:
@@ -36,6 +42,23 @@ jobs:
             echo "preview limited to $MANA_ONLY"
           fi
           npm run lint && npm run typecheck && npm run build
+        env:
+          # The install page resolves each in-testing source to its issue thread, which
+          # needs a token to read them. Without one it falls back to a search link.
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # A preview with no sources in it is worse than no preview: the app adds the repo
+      # happily and then shows nothing, which reads as a broken source rather than a
+      # broken publish. It happened once — a source branch pushed at main's tip built a
+      # tree that did not contain its own source — and took a day to recognise, so fail
+      # here instead of deploying the empty catalogue over the good one.
+      - run: |
+          count=$(node -e "process.stdout.write(String((require('./dist/sources.json').sources ?? []).length))")
+          echo "built $count source(s)"
+          if [[ "$count" == "0" ]]; then
+            echo "::error::built no sources — refusing to publish an empty catalogue over ${GITHUB_REF_NAME}"
+            exit 1
+          fi
 
       - uses: peaceiris/actions-gh-pages@v4
         with:
