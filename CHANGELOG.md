@@ -4,7 +4,13 @@ Notable changes to the extensions in this repository, grouped by extension —
 each one versions independently (see `info.version` in its `main.ts`). Dates
 are UTC. Format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## Weebcentral (current: v1.0.0)
+## Weebcentral (current: v1.0.1)
+
+### 2026-09-07
+
+- Index the chapters from the first one. The site renders `full-chapter-list` newest-first
+  and that order was kept verbatim, so the newest chapter arrived as index 0 — which made
+  the title view offer it as the place to start a series nobody had read yet.
 
 ### 2026-09-06
 

@@ -218,6 +218,16 @@ function checkChapters(chapters) {
     assert(chapter.index === index, `chapter ${index}: index is ${chapter.index}, expected ${index}`);
     assert(isValidDate(chapter.date), `chapter ${index}: bad date`);
   });
+  // Sites render their chapter list newest-first and `index` has to run from the first
+  // chapter, so a list whose numbers only ever fall is that order left unreversed. The
+  // shape checks pass on it happily, and the app then offers the newest chapter as the
+  // place to start a series the user has never opened.
+  const steps = chapters.slice(1).map((c, i) => c.number - chapters[i].number);
+  assert(
+    !steps.some((s) => s < 0) || steps.some((s) => s > 0),
+    `chapters run newest-first (${chapters[0].number} down to ${chapters[chapters.length - 1].number}) — reverse the list so index 0 is the first chapter`,
+  );
+
   const dated = chapters.filter((c) => c.date.getTime() > 0).length;
   return `${chapters.length} chapters, ${dated} with real dates`;
 }

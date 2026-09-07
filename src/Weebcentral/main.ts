@@ -66,7 +66,7 @@ import {
 const info: SourceInfo = {
   id: "weebcentral",
   name: "Weebcentral",
-  version: "1.0.0",
+  version: "1.0.1",
   description: "Pulls manga, manhwa and manhua from weebcentral.com",
   website: BASE_URL,
   rating: CatalogRating.MIXED,
@@ -277,7 +277,9 @@ class WeebcentralSource implements ChapterSource, SearchProvider, PageLinkResolv
 
   async getChapters(contentId: string): Promise<Chapter[]> {
     const $ = await this.page(`${seriesUrl(contentId)}/full-chapter-list`);
-    const rows = $('a[href*="/chapters/"]').toArray();
+    // The list is rendered newest-first and `index` has to run from the first chapter, so
+    // it is reversed before anything is assigned an index.
+    const rows = $('a[href*="/chapters/"]').toArray().reverse();
 
     const chapters: Chapter[] = [];
     for (const node of rows) {
