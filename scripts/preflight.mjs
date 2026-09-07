@@ -1,1 +1,0 @@
-/Users/samipmainali/Desktop/Mana/scripts/preflight.mjs

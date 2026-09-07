@@ -11,6 +11,26 @@
  * in-app runtime provides, backed by Node's `fetch`.
  */
 
+import { fetchThroughBrowser } from "./browser.mjs";
+
+/**
+ * What a challenge page looks like, whatever status it arrives with. Kept in one place
+ * because both paths below have to agree on it: a body that matches is not a reply to the
+ * request, it is the site asking who is asking.
+ *
+ * Markers only an interstitial carries. Neither `challenges.cloudflare.com` nor
+ * `/cdn-cgi/challenge-platform/` belongs here — a Turnstile widget on an ordinary form
+ * loads both, and imhentai serves them in the <head> of the very pages this is meant to
+ * rescue, so matching them declared every good page a challenge and threw the browser's
+ * own answer away. Check any addition against a good page as well as a blocked one.
+ */
+const CHALLENGE =
+  /<title>\s*just a moment|cf-browser-verification|__cf_chl_|cf_chl_opt|enable javascript and cookies to continue/i;
+
+function looksChallenged(body) {
+  return typeof body === "string" && CHALLENGE.test(body.slice(0, 8192));
+}
+
 const STATUS_MESSAGES = {
   400: "Bad Request",
   401: "Unauthorized",
@@ -128,16 +148,30 @@ export class NetworkClient {
       clearTimeout(timer);
     }
 
-    const data = await raw.text();
-    const response = {
-      data,
-      status: raw.status,
-      headers: Object.fromEntries(raw.headers.entries()),
-      request: prepared,
-    };
+    let data = await raw.text();
+    let status = raw.status;
+    let headersOut = Object.fromEntries(raw.headers.entries());
+
+    // Node cannot clear a challenge — the fingerprint is what is being judged, not the
+    // request — so the same URL is re-issued inside the user's browser, where the site's
+    // own cookies and a clearance it already granted apply. If that route is unavailable
+    // the challenge page falls through untouched and the source reports it as before.
+    if (looksChallenged(data)) {
+      const viaBrowser = await fetchThroughBrowser(target, {
+        method: prepared.method ?? "GET",
+        body: prepared.body,
+      });
+      if (viaBrowser && !looksChallenged(viaBrowser.data)) {
+        data = viaBrowser.data;
+        status = viaBrowser.status;
+        headersOut = viaBrowser.headers;
+      }
+    }
+
+    const response = { data, status, headers: headersOut, request: prepared };
 
     const validate = prepared.validateStatus ?? this.statusValidator;
-    const ok = validate ? validate(raw.status) : raw.status >= 200 && raw.status < 300;
+    const ok = validate ? validate(status) : status >= 200 && status < 300;
 
     const transformed = await applyAll(response, [
       ...this.responseTransformers,
@@ -147,7 +181,7 @@ export class NetworkClient {
     if (!ok) {
       throw new NetworkError(
         "NetworkError",
-        STATUS_MESSAGES[raw.status] ?? `Request failed with status ${raw.status}`,
+        STATUS_MESSAGES[status] ?? `Request failed with status ${status}`,
         prepared,
         transformed,
       );
@@ -207,10 +241,14 @@ class HarnessWebViewPageInstance {
       clearTimeout(timer);
     }
 
-    // The harness has no way to solve a challenge; report it the way the client does so
-    // verify records SKIP rather than a misleading FAIL.
-    if (/just a moment|cf-browser-verification|challenges\.cloudflare\.com/i.test(this.html.slice(0, 4096))) {
-      throw new CloudflareError(this.url);
+    // On a device this is a real WebView carrying a cleared cookie jar. Here the nearest
+    // thing to one is the user's own browser, so a challenge is re-read through it before
+    // giving up — and only when that is unavailable is it reported the way the client
+    // does, leaving verify a SKIP rather than a misleading FAIL.
+    if (looksChallenged(this.html)) {
+      const viaBrowser = await fetchThroughBrowser(this.url);
+      if (!viaBrowser || looksChallenged(viaBrowser.data)) throw new CloudflareError(this.url);
+      this.html = viaBrowser.data;
     }
   }
 

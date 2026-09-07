@@ -25,6 +25,22 @@ are UTC. Format loosely follows [Keep a Changelog](https://keepachangelog.com/en
   toggles, and the site's six sort orders in either direction.
 - Honours the host's content-rating policy by asking the site for non-adult results when
   mature content is not allowed.
+## Hiperdex (current: v1.0.0)
+
+### 2026-09-06
+
+- Initial implementation, reading hiperdex.com through its tRPC API at `/api/trpc` rather
+  than the markup — the site is now a client-rendered SPA whose pages contain no content.
+- Every API call carries the `__st` session cookie, which the server only issues in the
+  `Set-Cookie` of a document request; the source fetches the landing page once for it and
+  re-fetches on a 401.
+- Home page carries Trending Today, Latest Updates, Most Popular, Top Rated and Recently
+  Added, each backed by the same query as its view-more listing.
+- Search supports a title query, the site's seven sort orders, and type, status, rating
+  and genre filters; the status picker adds "Releasing", which the site's own filter panel
+  omits despite 284 titles carrying it.
+- Covers and chapter pages are requested with the site as their referer, without which
+  both CDNs answer 403.
 
 ## Tailspace (current: v1.1.0)
 

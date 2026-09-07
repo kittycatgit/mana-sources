@@ -20,3 +20,14 @@ scripts/request-url.mjs
 scripts/*.plist
 .playwright-mcp/
 scripts/watch-inbox.sh
+.inbox.lock*/
+.gh-pages-tmp/
+scripts/preflight.mjs
+.worktrees/
+
+# The worktree runs link these in rather than copying, and a trailing slash only matches
+# a real directory — a symlink of the same name would otherwise show up as untracked and
+# fail the clean-tree check before a build starts.
+.claude
+node_modules
+dist
