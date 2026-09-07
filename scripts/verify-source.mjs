@@ -10,7 +10,12 @@
  * suite stays meaningful on protected sites.
  *
  *   node scripts/verify-source.mjs <Name> [--probe path] [--verbose]
+ *   node scripts/verify-source.mjs <Name> --pref <key>=<value>
  *   node scripts/verify-source.mjs --all
+ *
+ * `--pref` seeds ObjectStore before the source loads, which is the only way to reach a
+ * source's behaviour under a preference other than its default — the store is empty
+ * otherwise, so a run proves nothing about the settings a reader actually changed.
  */
 
 import fs from "node:fs";
@@ -89,21 +94,40 @@ async function checkImageUrls(urls, target) {
   return broken;
 }
 
+/**
+ * `true`, `12` and `["a"]` are stored as the boolean, number and array they read as, because
+ * ObjectStore's typed accessors throw on anything else and a source reading a preference
+ * back has declared which type it expects. Anything that is not JSON stays a string.
+ */
+function parsePref(raw) {
+  const at = raw.indexOf("=");
+  if (at < 1) throw new Error(`--pref expects <key>=<value>, got "${raw}"`);
+  const value = raw.slice(at + 1);
+  try {
+    return [raw.slice(0, at), JSON.parse(value)];
+  } catch {
+    return [raw.slice(0, at), value];
+  }
+}
+
 function parseArgs(argv) {
-  const args = { names: [], probe: undefined, verbose: false, all: false };
+  const args = { names: [], probe: undefined, verbose: false, all: false, prefs: {} };
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i];
     if (arg === "--all") args.all = true;
     else if (arg === "--verbose" || arg === "-v") args.verbose = true;
     else if (arg === "--probe") args.probe = argv[++i];
-    else if (!arg.startsWith("-")) args.names.push(arg);
+    else if (arg === "--pref") {
+      const [key, value] = parsePref(argv[++i] ?? "");
+      args.prefs[key] = value;
+    } else if (!arg.startsWith("-")) args.names.push(arg);
   }
   return args;
 }
 
-function loadTarget(bundlePath) {
+function loadTarget(bundlePath, prefs) {
   const code = fs.readFileSync(bundlePath, "utf-8");
-  const store = new ManaStore();
+  const store = new ManaStore(prefs);
 
   const sandbox = {
     NetworkClient,
@@ -220,13 +244,13 @@ function checkChapters(chapters) {
   return `${chapters.length} chapters, ${dated} with real dates`;
 }
 
-async function verify(name, probe, verbose) {
+async function verify(name, probe, verbose, prefs) {
   const bundlePath = path.join(DIST_SOURCES, `${name}.mana`);
   if (!fs.existsSync(bundlePath)) {
     throw new Error(`${bundlePath} not found — run "npm run build" first`);
   }
 
-  const target = loadTarget(bundlePath);
+  const target = loadTarget(bundlePath, prefs);
   if (target.onEnvironmentLoaded) await target.onEnvironmentLoaded();
 
   const results = [];
@@ -475,9 +499,12 @@ function renderPreview(preview) {
   }
 }
 
-function report(name, results) {
+function report(name, results, prefs = {}) {
   const counts = { pass: 0, fail: 0, skip: 0 };
-  console.log(`\n${name}`);
+  const seeded = Object.entries(prefs).map(([key, value]) => `${key}=${JSON.stringify(value)}`);
+  // Said up front: every line below describes the source under these settings, not the
+  // defaults, and a run read as if it were the defaults is a run misread.
+  console.log(`\n${name}${seeded.length > 0 ? ` ${DIM}[${seeded.join(" ")}]${RESET}` : ""}`);
   for (const result of results) {
     counts[result.status]++;
     const color = result.status === "pass" ? GREEN : result.status === "fail" ? RED : YELLOW;
@@ -512,7 +539,9 @@ async function main() {
   const names = args.all ? sourceDirs() : args.names;
 
   if (names.length === 0) {
-    console.error("usage: node scripts/verify-source.mjs <Name> [--probe path] | --all");
+    console.error(
+      "usage: node scripts/verify-source.mjs <Name> [--probe path] [--pref key=value] | --all",
+    );
     process.exit(2);
   }
 
@@ -521,8 +550,8 @@ async function main() {
   for (const name of names) {
     const probe = loadProbe(name, args.probe);
     try {
-      const { results, preview } = await verify(name, probe, args.verbose);
-      const counts = report(name, results);
+      const { results, preview } = await verify(name, probe, args.verbose, args.prefs);
+      const counts = report(name, results, args.prefs);
       if (args.verbose) renderPreview(preview);
       totals.pass += counts.pass;
       totals.fail += counts.fail;

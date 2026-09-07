@@ -15,6 +15,7 @@ from there.
 
 | Source | Version | Language | Rating |
 | ------ | ------- | -------- | ------ |
+| Nhentai | 1.1.0 | Multi | Explicit |
 | Tailspace | 1.1.0 | English | Explicit |
 | Hiperdex | 1.0.0 | English | Mixed |
 

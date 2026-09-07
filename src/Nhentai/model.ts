@@ -8,6 +8,8 @@ import {
   type SortOption,
 } from "@mana-app/types";
 
+import type { PreferenceSection, PreferenceValue } from "./forms/index.ts";
+
 export const BASE_URL = "https://nhentai.net";
 export const API_URL = `${BASE_URL}/api/v2`;
 
@@ -39,6 +41,17 @@ export const DEFAULT_THUMB_SERVERS = [
 
 export const ANY = "any";
 
+// Changing this orphans every setting a reader has already saved.
+export const PREFERENCE_NAMESPACE = "nhentai";
+
+export const PreferenceID = {
+  Language: "language",
+} as const;
+
+export const PREFERENCE_DEFAULTS: Record<string, PreferenceValue> = {
+  [PreferenceID.Language]: ANY,
+};
+
 export const FilterID = {
   Language: "language",
   Category: "category",
@@ -62,25 +75,15 @@ export const SortID = {
 export const ListID = {
   PopularNow: "popular-now",
   Recent: "recent",
-  EnglishWeek: "english-week",
+  LanguageWeek: "language-week",
   MangaMonth: "manga-month",
 } as const;
 
-// Tag ids from /api/v2/tags/language and /api/v2/tags/category, used by the home sections
-// that call /galleries/tagged. They are stable database ids, not slugs.
+// Tag ids from /api/v2/tags/category, used by the home section that calls
+// /galleries/tagged. They are stable database ids, not slugs.
 export const TagID = {
-  English: 12227,
   Manga: 33173,
 } as const;
-
-// A listing entry carries `tag_ids` and no tag names, so a tile's language can only be read
-// by id. "Translated" (17249) is deliberately absent — it co-occurs with a real language
-// tag and names none itself.
-export const LANGUAGE_BY_TAG_ID: Record<number, string> = {
-  6346: "Japanese",
-  12227: "English",
-  29963: "Chinese",
-};
 
 export const TagType = {
   Tag: "tag",
@@ -92,15 +95,60 @@ export const TagType = {
   Category: "category",
 } as const;
 
+export type LanguageSpec = {
+  /** The `language:` query value, which is also the tag's slug. */
+  id: string;
+  title: string;
+  /** How the language reads mid-sentence in section copy. */
+  label: string;
+  /** From /api/v2/tags/language — a stable database id, for /galleries/tagged. */
+  tagId: number;
+  /**
+   * "Translated" is a language tag that names no language: it marks a work translated into
+   * some language and co-occurs with the real one. It is worth offering as a choice —
+   * a reader who wants anything they can read wants exactly that — but it can never label
+   * a tile, and it reads as an adjective rather than a proper noun.
+   */
+  namesLanguage: boolean;
+};
+
+export const ENGLISH: LanguageSpec = {
+  id: "english",
+  title: "English",
+  label: "English",
+  tagId: 12227,
+  namesLanguage: true,
+};
+
 // The API lists 14 languages, but ten of them are attached to fewer than ten galleries
-// each. Offering those as filter rows would be offering a filter that returns nothing.
+// each. Offering those would be offering a choice that returns nothing.
+export const LANGUAGES: readonly LanguageSpec[] = [
+  ENGLISH,
+  { id: "japanese", title: "Japanese", label: "Japanese", tagId: 6346, namesLanguage: true },
+  { id: "chinese", title: "Chinese", label: "Chinese", tagId: 29963, namesLanguage: true },
+  {
+    id: "translated",
+    title: "Translated",
+    label: "translated",
+    tagId: 17249,
+    namesLanguage: false,
+  },
+];
+
 export const LANGUAGE_OPTIONS: Option[] = [
   { id: ANY, title: "Any language" },
-  { id: "english", title: "English" },
-  { id: "japanese", title: "Japanese" },
-  { id: "chinese", title: "Chinese" },
-  { id: "translated", title: "Translated" },
+  ...LANGUAGES.map(({ id, title }) => ({ id, title })),
 ];
+
+// A listing entry carries `tag_ids` and no tag names, so a tile's language can only be read
+// by id.
+export const LANGUAGE_BY_TAG_ID: Record<number, string> = Object.fromEntries(
+  LANGUAGES.filter((language) => language.namesLanguage).map(({ tagId, title }) => [tagId, title]),
+);
+
+export function languageById(id: string): LanguageSpec | undefined {
+  return LANGUAGES.find((language) => language.id === id);
+}
 
 export const CATEGORY_OPTIONS: Option[] = [
   { id: ANY, title: "Any format" },
@@ -112,6 +160,7 @@ export const SEARCH_FIELDS: SearchListField[] = [
   SearchMenuPicker({
     id: FilterID.Language,
     title: "Language",
+    subtitle: "Any language falls back to the one set in this source's settings",
     options: LANGUAGE_OPTIONS,
   }),
   SearchMenuPicker({
@@ -157,6 +206,22 @@ export function tagsField(options: Option[]) {
     options,
   });
 }
+
+export const PREFERENCE_SECTIONS: readonly PreferenceSection[] = [
+  {
+    header: "Reading language",
+    footer:
+      "Applies to the home page, and to any search that leaves the language filter on Any language.",
+    fields: [
+      {
+        type: "select",
+        key: PreferenceID.Language,
+        title: "Language",
+        options: LANGUAGE_OPTIONS,
+      },
+    ],
+  },
+];
 
 // The API takes no sort direction, so nothing here is orderable.
 export const SORT_OPTIONS: SortOption[] = [

@@ -12,6 +12,7 @@ import {
   type ChapterPage,
   type ChapterSource,
   type Content,
+  type Form,
   type Highlight,
   type LinkItem,
   type Option,
@@ -32,6 +33,8 @@ import {
 import { buildClient, JSON_ACCEPT } from "./client.ts";
 import {
   FilterReader,
+  PreferenceStore,
+  buildPreferenceMenu,
   buildSearchForm,
   listResults,
   pageOf,
@@ -47,26 +50,33 @@ import {
   BASE_URL,
   DEFAULT_IMAGE_SERVERS,
   DEFAULT_THUMB_SERVERS,
+  ENGLISH,
   FilterID,
   LANGUAGE_BY_TAG_ID,
   ListID,
   MATCH_ALL_QUERY,
   PER_PAGE,
+  PREFERENCE_DEFAULTS,
+  PREFERENCE_NAMESPACE,
+  PREFERENCE_SECTIONS,
+  PreferenceID,
   SEARCH_FIELDS,
   SORT_OPTIONS,
   SortID,
   TAG_OPTION_COUNT,
   TagID,
   TagType,
+  languageById,
   tagsField,
   type GalleryQuery,
+  type LanguageSpec,
   type TaggedQuery,
 } from "./model.ts";
 
 const info: SourceInfo = {
   id: "nhentai",
   name: "Nhentai",
-  version: "1.0.0",
+  version: "1.1.0",
   description: "Reads doujinshi and manga galleries from nhentai.net",
   website: BASE_URL,
   rating: CatalogRating.EXPLICIT,
@@ -91,6 +101,8 @@ class NhentaiSource implements ChapterSource, SearchProvider, PageLinkResolver {
   readonly info = info;
   readonly config = config;
 
+  private readonly preferences = new PreferenceStore(PREFERENCE_NAMESPACE, PREFERENCE_DEFAULTS);
+
   private client: NetworkClient | undefined;
   private servers: Servers | undefined;
   private tagOptions: Option[] | undefined;
@@ -108,42 +120,81 @@ class NhentaiSource implements ChapterSource, SearchProvider, PageLinkResolver {
     return this.client;
   }
 
-  private sections(): SectionSpec[] {
+  /**
+   * The chosen language reaches every row, because a home page that ignores the setting is
+   * how the setting reads as broken. Only the week row has a language when none is chosen:
+   * it is the one that always had one.
+   *
+   * The hero is the site's own featured five until a language is chosen, at which point
+   * there is no featured list to filter and it becomes that language's all-time popular.
+   * Not its popular-today, which repeats five of the six galleries the week row opens with.
+   *
+   * Every language row goes through /galleries/tagged rather than the equivalent
+   * `language:` search — the two return the same galleries, and /search answers 429 well
+   * before the rest of the API does, which one home page load would otherwise reach.
+   */
+  private async sections(): Promise<SectionSpec[]> {
+    const language = await this.language();
+    const week = language ?? ENGLISH;
+
     return [
       {
         id: ListID.PopularNow,
-        title: "Popular Right Now",
-        subtitle: "What the site is featuring today",
+        title: language ? "Most Popular" : "Popular Right Now",
+        subtitle: language
+          ? `The site's best-loved ${language.label} galleries`
+          : "What the site is featuring today",
         style: SectionStyle.SimpleHero,
-        // /galleries/popular returns five galleries and has no page 2 to open.
-        viewMore: false,
-        load: () => this.popular(),
+        // /galleries/popular returns five galleries and has no page 2 to open; the listing
+        // that stands in for it once a language is chosen does paginate.
+        viewMore: language !== undefined,
+        limit: 6,
+        load: (page) =>
+          language ? this.inLanguage(language, page, SortID.Popular) : this.popular(),
       },
       {
         id: ListID.Recent,
         title: "Recently Added",
-        subtitle: "The newest uploads, whatever the language",
+        subtitle: language
+          ? `The newest ${language.label} uploads`
+          : "The newest uploads, whatever the language",
         style: SectionStyle.DetailedVerticalListGrouped,
         limit: 12,
-        load: (page) => this.galleries(page),
+        load: (page) =>
+          language ? this.inLanguage(language, page, SortID.Date) : this.galleries(page),
       },
       {
-        id: ListID.EnglishWeek,
-        title: "Popular in English This Week",
-        subtitle: "The week's most read English galleries",
+        id: ListID.LanguageWeek,
+        title: "Popular This Week",
+        subtitle: `The week's most read ${week.label} galleries`,
         style: SectionStyle.DetailedTripleRowPaged,
         limit: 12,
-        load: (page) => this.tagged({ page, tagId: TagID.English, sort: SortID.PopularWeek }),
+        load: (page) => this.inLanguage(week, page, SortID.PopularWeek),
       },
       {
         id: ListID.MangaMonth,
         title: "Manga This Month",
-        subtitle: "Serialised manga rather than doujinshi",
+        subtitle: language
+          ? `Serialised ${language.label} manga rather than doujinshi`
+          : "Serialised manga rather than doujinshi",
         style: SectionStyle.DetailedTripleRowPaged,
         limit: 12,
-        load: (page) => this.tagged({ page, tagId: TagID.Manga, sort: SortID.PopularMonth }),
+        load: (page) =>
+          language
+            ? // /galleries/tagged takes one tag, so a category and a language together can
+              // only be asked for through search.
+              this.searchGalleries({
+                page,
+                query: `${facet("category", "manga")} ${facet("language", language.id)}`,
+                sort: SortID.PopularMonth,
+              })
+            : this.tagged({ page, tagId: TagID.Manga, sort: SortID.PopularMonth }),
       },
     ];
+  }
+
+  async getPreferenceMenu(): Promise<Form> {
+    return buildPreferenceMenu(this.preferences, PREFERENCE_SECTIONS);
   }
 
   async getSearchForm(): Promise<SearchForm> {
@@ -161,11 +212,11 @@ class NhentaiSource implements ChapterSource, SearchProvider, PageLinkResolver {
   }
 
   async getSectionsForPage(_link: PageLink): Promise<PageSection[]> {
-    return toPageSections(this.sections());
+    return toPageSections(await this.sections());
   }
 
   async resolvePageSection(_link: PageLink, sectionID: string): Promise<ResolvedPageSection> {
-    return resolveSection(this.sections(), sectionID);
+    return resolveSection(await this.sections(), sectionID);
   }
 
   async search(request: SearchRequest): Promise<PagedSearchResult> {
@@ -176,14 +227,20 @@ class NhentaiSource implements ChapterSource, SearchProvider, PageLinkResolver {
       return { results: [], isLastPage: true };
     }
 
-    const list = listResults(this.sections(), request);
+    const list = listResults(await this.sections(), request);
     if (list) return list;
 
+    const language = await this.language();
     return this.searchGalleries({
       page: pageOf(request),
-      query: buildQuery(request.query, new FilterReader(request)),
+      query: buildQuery(request.query, new FilterReader(request), language?.id ?? ""),
       sort: resolveSortId(SORT_OPTIONS, request, SortID.Date),
     });
+  }
+
+  /** The reader's chosen language, or undefined when they have not narrowed the source. */
+  private async language(): Promise<LanguageSpec | undefined> {
+    return languageById(readString(await this.preferences.get(PreferenceID.Language)));
   }
 
   async getContent(contentId: string): Promise<Content> {
@@ -285,6 +342,14 @@ class NhentaiSource implements ChapterSource, SearchProvider, PageLinkResolver {
       per_page: PER_PAGE,
     });
     return this.listing(url, query.page);
+  }
+
+  private async inLanguage(
+    language: LanguageSpec,
+    page: number,
+    sort: string,
+  ): Promise<PagedSearchResult> {
+    return this.tagged({ page, tagId: language.tagId, sort });
   }
 
   private async searchGalleries(query: GalleryQuery): Promise<PagedSearchResult> {
@@ -674,12 +739,16 @@ function atLeast(name: string, value: number): string {
   return `${name}:>=${Math.floor(value)}`;
 }
 
-function buildQuery(raw: string | undefined, filters: FilterReader): string {
+/**
+ * `preferred` is the language from the source's settings. It fills in only where the reader
+ * left the filter on "Any language", so a language picked for one search still wins.
+ */
+function buildQuery(raw: string | undefined, filters: FilterReader, preferred: string): string {
   const tags = filters.excludable(FilterID.Tags);
 
   const parts = [
     (raw ?? "").trim(),
-    facet("language", chosen(filters.option(FilterID.Language))),
+    facet("language", chosen(filters.option(FilterID.Language)) || preferred),
     facet("category", chosen(filters.option(FilterID.Category))),
     facet("artist", filters.text(FilterID.Artist)),
     facet("parody", filters.text(FilterID.Parody)),
