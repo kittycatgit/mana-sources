@@ -193,7 +193,7 @@
 <li class="source" id="src-Ehentai">
   <div class="icon-slot"><img class="icon" src="assets/Ehentai.png" alt="" onerror="this.remove()"></div>
   <div class="body">
-    <h3>Ehentai <span class="ver">v1.0.1</span></h3>
+    <h3>Ehentai <span class="ver">v1.1.0</span></h3>
     <p>Reads the doujinshi, manga and image galleries hosted on e-hentai.org</p>
     <div class="meta">
       <span class="r2"><i class="dot"></i>Explicit</span>
@@ -219,8 +219,11 @@
   <section>
   <h2>Changes</h2>
   <details>
-  <summary>Ehentai <span class="ver">1.0.1</span></summary>
+  <summary>Ehentai <span class="ver">1.1.0</span></summary>
   <div class="entry">
+    <h4>2026-09-07</h4>
+    <ul><li>Opening a chapter spent one request per page before the reader saw anything, which took 79 seconds on the 478-page gallery that led the home page — long enough to read as images that never load. The image URL only exists inside the <code>/s/</code> viewer page it belongs to and the site's bulk viewer refuses anyone not signed in, so those pages are now handed to the reader as-is and resolved one at a time in <code>willRequestImage</code>. The same gallery opens in seven seconds, and each image URL is minted when it is displayed rather than up to a minute beforehand.</li><li>Added a Hidden languages setting to the source's preferences. A hidden language is left out of every listing, dropped from the search form's language picker, and — for the listings the site lets a query reach — excluded server-side as <code>-language:"x"$</code> so the page still comes back full.</li><li>Hiding Japanese hides galleries carrying no language tag at all, which is what an untranslated Japanese work looks like on this site; there is no <code>-language:</code> term that can express that, so those rows are dropped from the listing instead.</li><li>Home sections now page until they have the tiles they advertise. Hiding a language can leave a 25-row page holding one gallery, and the month's toplist was showing a single item where it promised twelve.</li></ul>
+  </div><div class="entry">
     <h4>2026-09-06</h4>
     <ul><li>Opening any gallery failed with "E-Hentai rejected the metadata request: No method provided". The <code>gdata</code> body was stringified by the source and then serialised again by the host, so the API received a quoted string instead of a request object. The body is now handed over as an object.</li></ul>
   </div><div class="entry">
@@ -248,7 +251,7 @@
 </section>
 </main>
 
-<footer class="wrap">Updated 2026-09-06</footer>
+<footer class="wrap">Updated 2026-09-07</footer>
 
 <script>
   document.getElementById("copy").addEventListener("click", function () {

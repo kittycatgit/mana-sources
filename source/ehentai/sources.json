@@ -5,7 +5,7 @@
     {
       "id": "ehentai",
       "name": "Ehentai",
-      "version": "1.0.1",
+      "version": "1.1.0",
       "description": "Reads the doujinshi, manga and image galleries hosted on e-hentai.org",
       "website": "https://e-hentai.org",
       "rating": 2,
@@ -25,8 +25,8 @@
       ],
       "path": "Ehentai",
       "environment": "source",
-      "intents": 6294536,
-      "hash": "6ea66ab16ea66ab16ea66ab16ea66ab16ea66ab16ea66ab16ea66ab16ea66ab1"
+      "intents": 6294541,
+      "hash": "25710b7b25710b7b25710b7b25710b7b25710b7b25710b7b25710b7b25710b7b"
     }
   ]
 }
