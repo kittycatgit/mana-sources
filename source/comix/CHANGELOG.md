@@ -4,7 +4,23 @@ Notable changes to the extensions in this repository, grouped by extension —
 each one versions independently (see `info.version` in its `main.ts`). Dates
 are UTC. Format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## Comix (current: v1.0.4)
+## Comix (current: v1.0.5)
+
+### 2026-09-08 — The whole chapter list, through the app's own fetcher
+
+- Chapter lists were both slow and short. The list was gathered by clicking the site's
+  pager and reading each rendered page, which costs a render and a settle per page — about
+  two and a half seconds — and gave up quietly when a click did not take. "Dungeons and
+  Crayons" has 620 chapters and arrived as 64.
+- The requests behind those clicks are made by a query client that is reachable in the
+  page, and each query carries the function that signs and sends them. The list is now
+  fetched with that function directly, six pages at a time, with no rendering in between:
+  620 chapters in about sixteen seconds, all of them.
+- Twenty per request is a server cap — `limit`, `per_page` and `perPage` are all ignored
+  above it — and the app serialises what it is given, so twelve at a time is no faster than
+  six. Thirty-one requests is the floor for that title.
+- There is no pager fallback. It was slower, it lost entries, and a short list that looks
+  complete is worse than a list that fails.
 
 ### 2026-09-08 — Chapter lists, off the argument channel entirely
 
