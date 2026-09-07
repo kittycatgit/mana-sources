@@ -203,7 +203,7 @@
 <li class="source" id="src-Comix">
   <div class="icon-slot"><img class="icon" src="assets/Comix.png" alt="" onerror="this.remove()"></div>
   <div class="body">
-    <h3>Comix <span class="ver">v1.0.2</span></h3>
+    <h3>Comix <span class="ver">v1.0.3</span></h3>
     <p>Reads manga, manhwa and manhua from comix.to</p>
     <div class="meta">
       <span class="r1"><i class="dot"></i>Mixed</span>
@@ -232,8 +232,11 @@
   <section>
   <h2>Changes</h2>
   <details>
-  <summary>Comix <span class="ver">1.0.2</span></summary>
+  <summary>Comix <span class="ver">1.0.3</span></summary>
   <div class="entry">
+    <h4>2026-09-08 — Chapter lists, without guessing at the host</h4>
+    <ul><li>The chapter list still failed to open on a device at v1.0.2, though every check passed here. Both earlier fixes tried to arrange evaluations so the host's <code>const args</code> could not be declared twice — one page per call, then one evaluation per method — and both rested on a model of when that declaration dies which was wrong each time.</li><li>The argument channel is no longer used at all: the values are written into the script text and <code>evaluateScript</code> is called with no arguments. Nothing is declared beside the script, so there is nothing to collide with, whatever the host does with the context.</li></ul>
+  </div><div class="entry">
     <h4>2026-09-08 — Long chapter lists open again, this time for real</h4>
     <ul><li>The previous fix gave each evaluation its own <code>WebViewPage</code>, which does not help: Mana gives a source one auxiliary WebView per method, so <code>create</code> after <code>close</code> hands back the same one and the host's <code>const args</code> is still redeclared. Only one evaluation per method avoids it, so the chapter list now walks its whole pager inside that one evaluation and the walk's budget grew to cover what the second round used to pick up. Two of the titles on the site's own home page — 4601 and 1099 uploads — were enough to hit this.</li><li>A pager click that does not take is retried rather than ending the walk, and the wait for one is bounded so a single dropped click cannot spend the budget the rest of the list needs. That recovery used to come from the second round, which no longer exists.</li><li>A title past about 110 pager pages still comes back partial: it is walked as far as sixty seconds reaches, newest uploads first. One sampled title is that long.</li></ul>
   </div><div class="entry">

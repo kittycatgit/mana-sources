@@ -4,7 +4,17 @@ Notable changes to the extensions in this repository, grouped by extension —
 each one versions independently (see `info.version` in its `main.ts`). Dates
 are UTC. Format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## Comix (current: v1.0.2)
+## Comix (current: v1.0.3)
+
+### 2026-09-08 — Chapter lists, without guessing at the host
+
+- The chapter list still failed to open on a device at v1.0.2, though every check passed
+  here. Both earlier fixes tried to arrange evaluations so the host's `const args` could
+  not be declared twice — one page per call, then one evaluation per method — and both
+  rested on a model of when that declaration dies which was wrong each time.
+- The argument channel is no longer used at all: the values are written into the script
+  text and `evaluateScript` is called with no arguments. Nothing is declared beside the
+  script, so there is nothing to collide with, whatever the host does with the context.
 
 ### 2026-09-08 — Long chapter lists open again, this time for real
 
