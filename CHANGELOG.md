@@ -4,6 +4,26 @@ Notable changes to the extensions in this repository, grouped by extension —
 each one versions independently (see `info.version` in its `main.ts`). Dates
 are UTC. Format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## Mangaball (current: v1.0.0)
+
+### 2026-09-07 — New source
+
+- Reads mangaball.net through the site's own JSON API rather than its markup: the home
+  page, search and the chapter list are all served by `/api/v1/`, which the page's own
+  JavaScript calls, so the source never has to render anything.
+- Home page carries seven rows — a Featured hero, Latest Updates, Recently Added, Most
+  Read Manga, Manhwa Updates, Manhua Updates and Finished Series — each backed by the same
+  query as its view-more listing.
+- Filters cover origin, publication status, demographic, translation language and the
+  site's ninety-six tags with include and exclude. Content rating, publication year and
+  the rating sorts are deliberately absent: the site accepts all four and returns the
+  unfiltered listing, so shipping them would have shown the reader controls that do
+  nothing.
+- A "Chapter Languages" setting decides which of the site's translations are listed. A
+  title on Manga Ball carries one chapter list per language, so unfiltered a long series
+  runs to a couple of thousand rows; the default is English, and clearing the selection
+  gives every language back.
+
 ## Nhentai (current: v1.1.0)
 
 ### 2026-09-07 — Language setting
