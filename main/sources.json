@@ -22,7 +22,7 @@
       "path": "Hiperdex",
       "environment": "source",
       "intents": 2104332,
-      "hash": "17a1d51017a1d51017a1d51017a1d51017a1d51017a1d51017a1d51017a1d510"
+      "hash": "10f9404210f9404210f9404210f9404210f9404210f9404210f9404210f94042"
     },
     {
       "id": "hitomi",
@@ -50,7 +50,7 @@
       "path": "Hitomi",
       "environment": "source",
       "intents": 2100237,
-      "hash": "0e6824e20e6824e20e6824e20e6824e20e6824e20e6824e20e6824e20e6824e2"
+      "hash": "07bf908c07bf908c07bf908c07bf908c07bf908c07bf908c07bf908c07bf908c"
     },
     {
       "id": "imhentai",
@@ -76,7 +76,7 @@
       "path": "Imhentai",
       "environment": "source",
       "intents": 2104328,
-      "hash": "4a42ec2b4a42ec2b4a42ec2b4a42ec2b4a42ec2b4a42ec2b4a42ec2b4a42ec2b"
+      "hash": "50eb7dba50eb7dba50eb7dba50eb7dba50eb7dba50eb7dba50eb7dba50eb7dba"
     },
     {
       "id": "madaradex",
@@ -98,7 +98,7 @@
       "path": "Madaradex",
       "environment": "source",
       "intents": 2104332,
-      "hash": "3d02527f3d02527f3d02527f3d02527f3d02527f3d02527f3d02527f3d02527f"
+      "hash": "3659bce73659bce73659bce73659bce73659bce73659bce73659bce73659bce7"
     },
     {
       "id": "manga18fx",
@@ -120,7 +120,7 @@
       "path": "Manga18fx",
       "environment": "source",
       "intents": 2100233,
-      "hash": "113161a9113161a9113161a9113161a9113161a9113161a9113161a9113161a9"
+      "hash": "0a88cbde0a88cbde0a88cbde0a88cbde0a88cbde0a88cbde0a88cbde0a88cbde"
     },
     {
       "id": "tailspace",
@@ -142,7 +142,7 @@
       "path": "Tailspace",
       "environment": "source",
       "intents": 2104328,
-      "hash": "54df41a854df41a854df41a854df41a854df41a854df41a854df41a854df41a8"
+      "hash": "4e36ac7b4e36ac7b4e36ac7b4e36ac7b4e36ac7b4e36ac7b4e36ac7b4e36ac7b"
     },
     {
       "id": "weebcentral",
@@ -164,7 +164,7 @@
       "path": "Weebcentral",
       "environment": "source",
       "intents": 2104328,
-      "hash": "1960ffa31960ffa31960ffa31960ffa31960ffa31960ffa31960ffa31960ffa3"
+      "hash": "200994d3200994d3200994d3200994d3200994d3200994d3200994d3200994d3"
     }
   ]
 }
