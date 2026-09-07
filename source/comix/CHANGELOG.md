@@ -4,7 +4,21 @@ Notable changes to the extensions in this repository, grouped by extension —
 each one versions independently (see `info.version` in its `main.ts`). Dates
 are UTC. Format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## Comix (current: v1.0.3)
+## Comix (current: v1.0.4)
+
+### 2026-09-08 — Chapter lists, off the argument channel entirely
+
+- `evaluateScript` delivers its arguments through an `args` variable the host declares
+  beside the script, and it declares it for every call whether arguments are passed or not.
+  That declaration outlives both the evaluation and the source method, so browsing the
+  catalogue spent the one evaluation a context allows and opening a title then failed with
+  `SyntaxError: Cannot declare a const variable twice: 'args'` before a line of the script
+  ran. Three fixes tried to arrange evaluations around it — a page per call, one evaluation
+  per method, then passing no arguments — and each passed every check off-device and failed
+  on a phone, because none of them stopped the host declaring the variable.
+- The page code is now a real function passed to `evaluate`, which takes its values as
+  parameters and declares nothing beside it. It lives in `fiber.ts`, unchecked here because
+  it runs in the loaded page rather than in this project.
 
 ### 2026-09-08 — Chapter lists, without guessing at the host
 
