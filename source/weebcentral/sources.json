@@ -21,12 +21,12 @@
       "path": "Tailspace",
       "environment": "source",
       "intents": 2104328,
-      "hash": "7c6c90837c6c90837c6c90837c6c90837c6c90837c6c90837c6c90837c6c9083"
+      "hash": "17701b6517701b6517701b6517701b6517701b6517701b6517701b6517701b65"
     },
     {
       "id": "weebcentral",
       "name": "Weebcentral",
-      "version": "1.0.0",
+      "version": "1.0.1",
       "description": "Pulls manga, manhwa and manhua from weebcentral.com",
       "website": "https://weebcentral.com",
       "rating": 1,
@@ -43,7 +43,7 @@
       "path": "Weebcentral",
       "environment": "source",
       "intents": 2104328,
-      "hash": "666c1f82666c1f82666c1f82666c1f82666c1f82666c1f82666c1f82666c1f82"
+      "hash": "7a4fa38d7a4fa38d7a4fa38d7a4fa38d7a4fa38d7a4fa38d7a4fa38d7a4fa38d"
     }
   ]
 }
