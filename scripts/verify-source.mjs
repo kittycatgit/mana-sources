@@ -25,6 +25,7 @@ import {
   WebViewPage,
   decodeIntents,
 } from "./harness/runtime.mjs";
+import { assisted, closeBrowser } from "./harness/browser.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const DIST_SOURCES = path.join(ROOT, "dist", "sources");
@@ -56,8 +57,9 @@ const SECTION_STYLE = [
 const HERO_STYLES = new Set([3, 4]);
 const MIN_HERO_ITEMS = 3;
 const MAX_SECTION_ITEMS = 20;
-/** Above this share of the smaller section, two sections are the same listing twice. */
+/** Two sections sharing more than this fraction of the smaller one are the same row twice. */
 const MAX_SECTION_OVERLAP = 2 / 3;
+const MIN_OVERLAP_ITEMS = 5;
 
 const PUBLICATION_STATUS = { 1: "ONGOING", 2: "COMPLETED", 3: "CANCELLED", 4: "HIATUS" };
 const CONTENT_RATING = { 0: "SAFE", 1: "SUGGESTIVE", 2: "MATURE", 3: "EXPLICIT" };
@@ -66,8 +68,9 @@ const CONTENT_RATING = { 0: "SAFE", 1: "SUGGESTIVE", 2: "MATURE", 3: "EXPLICIT" 
  * Fetches a handful of URLs and reports the ones that do not come back as images.
  *
  * A source with `willRequestImage` is telling the app how to ask for its images — most
- * often a referer a CDN refuses to serve without. Fetching bare would report 403 on a
- * source that works perfectly in the app, so the handler is applied here too.
+ * often a referer a CDN refuses to serve without, and sometimes cookies alongside it.
+ * Fetching bare would report 403 on a source that works perfectly in the app, so the
+ * handler is applied here too, `cookies` included.
  */
 async function checkImageUrls(urls, target) {
   const broken = [];
@@ -77,6 +80,10 @@ async function checkImageUrls(urls, target) {
       const headers = {};
       for (const [key, value] of Object.entries(request?.headers ?? {})) {
         headers[key] = String(value);
+      }
+      const cookies = request?.cookies ?? [];
+      if (cookies.length > 0) {
+        headers.cookie = cookies.map((cookie) => `${cookie.name}=${cookie.value}`).join("; ");
       }
       const response = await fetch(request?.url ?? url, { headers });
       const type = response.headers.get("content-type") ?? "";
@@ -217,6 +224,16 @@ function checkChapters(chapters) {
     assert(chapter.index === index, `chapter ${index}: index is ${chapter.index}, expected ${index}`);
     assert(isValidDate(chapter.date), `chapter ${index}: bad date`);
   });
+  // Sites render their chapter list newest-first and `index` has to run from the first
+  // chapter, so a list whose numbers only ever fall is that order left unreversed. The
+  // shape checks pass on it happily, and the app then offers the newest chapter as the
+  // place to start a series the user has never opened.
+  const steps = chapters.slice(1).map((c, i) => c.number - chapters[i].number);
+  assert(
+    !steps.some((s) => s < 0) || steps.some((s) => s > 0),
+    `chapters run newest-first (${chapters[0].number} down to ${chapters[chapters.length - 1].number}) — reverse the list so index 0 is the first chapter`,
+  );
+
   const dated = chapters.filter((c) => c.date.getTime() > 0).length;
   return `${chapters.length} chapters, ${dated} with real dates`;
 }
@@ -268,12 +285,14 @@ async function verify(name, probe, verbose) {
 
   let sections = [];
   if (target.getSectionsForPage && target.resolvePageSection) {
-    sections =
-      (await step(results, "getSectionsForPage", async () => {
-        const found = await target.getSectionsForPage({ id: "home" });
-        assert(Array.isArray(found) && found.length > 0, "no sections returned");
-        return found;
-      })) ?? [];
+    // The step's return value is its printed detail, so anything a step needs to hand
+    // onwards is stashed here instead — returning the array printed a blank detail.
+    await step(results, "getSectionsForPage", async () => {
+      const found = await target.getSectionsForPage({ id: "home" });
+      assert(Array.isArray(found) && found.length > 0, "no sections returned");
+      sections = found;
+      return `${found.length} sections`;
+    });
 
     if (Array.isArray(sections)) {
       if (target.willResolveSectionsForPage) {
@@ -316,29 +335,32 @@ async function verify(name, probe, verbose) {
       return `"${content.title}"${content.cover ? "" : " (no cover)"}`;
     });
 
+    let chapters;
     if (target.getChapters) {
       await step(results, "getChapters", async () => {
         const found = await target.getChapters(contentId);
         preview.chapters = found ?? [];
-        // The step's return value is the detail printed beside it, so this has to be the
-        // summary — returning the array left the line blank, hiding the one number that
-        // says how many chapters came back and how many carry a real date.
-        return checkChapters(found);
+        const detail = checkChapters(found);
+        chapters = found;
+        return detail;
       });
     }
 
-    // `||`, not `??`: the scaffold seeds `"chapterId": ""`, and `??` accepts the empty
-    // string, which dropped getChapterData silently with no line printed either way.
-    const chapterId = probe.chapterId || preview.chapters[0]?.chapterId;
+    // `new-source` seeds `"chapterId": ""`, and `??` accepts an empty string — which used
+    // to drop getChapterData entirely with no line printed to say so.
+    const chapterId =
+      probe.chapterId || (Array.isArray(chapters) ? chapters[0]?.chapterId : undefined);
 
     if (!chapterId) {
       results.push({
         name: "getChapterData",
         status: "skip",
-        detail: "no chapterId in probe and getChapters returned none",
+        detail: "no chapterId in probe and no chapters to take one from",
         ms: 0,
       });
-    } else {
+    }
+
+    if (chapterId) {
       await step(results, "getChapterData", async () => {
         // Some sources read pages through a third party that may have nothing
         // for a given issue. `"pagesDependOnUpstream": true` in the probe marks
@@ -386,9 +408,8 @@ async function verify(name, probe, verbose) {
         }
       }
 
-      // Two sections showing the same tiles are one query wearing two titles — usually a
-      // copied `load` that never had its sort changed. Same order is the obvious case;
-      // heavy overlap in any order is the one that actually ships.
+      // Two sections showing the same tiles in the same order are one query wearing
+      // two titles — usually a copied `load` that never had its sort changed.
       for (let i = 0; i < preview.sections.length; i++) {
         for (let j = i + 1; j < preview.sections.length; j++) {
           const a = preview.sections[i];
@@ -402,16 +423,15 @@ async function verify(name, probe, verbose) {
             continue;
           }
 
-          // Near-duplicates, which the same-order rule misses: a site's "recently added"
-          // and its "latest updates" hold the same titles in a different order, because a
-          // series arrives with its chapters.
-          const idsB = new Set(b.items.map((item) => item.id));
-          const shared = a.items.filter((item) => idsB.has(item.id)).length;
+          // Reordering the same titles clears the check above and is still two rows of
+          // the same thing: a site's "recently added" and its "latest updates" hold the
+          // same series, because a series arrives with its chapters.
+          const idsA = new Set(a.items.map((item) => item.id));
+          const shared = b.items.filter((item) => idsA.has(item.id)).length;
           const smaller = Math.min(a.items.length, b.items.length);
-          if (smaller > 0 && shared / smaller > MAX_SECTION_OVERLAP) {
-            const percent = Math.round((shared / smaller) * 100);
+          if (smaller >= MIN_OVERLAP_ITEMS && shared / smaller > MAX_SECTION_OVERLAP) {
             problems.push(
-              `"${a.section.title}" and "${b.section.title}" share ${shared} of ${smaller} titles (${percent}%) — they are near-duplicates. Give one of them a different query.`,
+              `"${a.section.title}" and "${b.section.title}" share ${shared} of ${smaller} titles — they are near-duplicates. Give one of them a query the other cannot answer.`,
             );
           }
         }
@@ -557,6 +577,16 @@ async function main() {
       totals.fail++;
     }
   }
+
+  // Worth saying plainly: these checks only passed because the request went round through
+  // a browser. The source did nothing different, but the app will be on its own.
+  if (assisted.length > 0) {
+    console.log(
+      `\n${YELLOW}${assisted.length} request(s) cleared a challenge through your browser${RESET}`,
+    );
+    for (const url of assisted) console.log(`  ${DIM}${url}${RESET}`);
+  }
+  closeBrowser();
 
   console.log(
     `\n${GREEN}${totals.pass} passed${RESET}, ${RED}${totals.fail} failed${RESET}, ${YELLOW}${totals.skip} skipped${RESET}`,

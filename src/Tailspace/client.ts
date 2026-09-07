@@ -7,9 +7,9 @@ export const ACCEPT_LANGUAGE = "en-US,en;q=0.9";
 
 // Markers only an interstitial carries. The bare hostname `challenges.cloudflare.com` is
 // deliberately not here: sites embed Turnstile on their own forms, so it sits in the
-// <head> of pages that answer 200 with the whole document — imhentai does exactly that,
-// and matching it reported every request to the site as blocked. Check anything added
-// here against a good page from the site as well as a challenged one.
+// <head> of pages that answer 200 with the whole document — every request to such a site
+// raised CloudflareError and the source looked dead while curl showed it working. Check
+// anything added here against a good page from the site as well as a challenged one.
 const CHALLENGE_PATTERNS: readonly RegExp[] = [
   /cf-browser-verification/i,
   /__cf_chl_/i,

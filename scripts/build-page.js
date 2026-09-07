@@ -100,6 +100,55 @@ const repoUrl = (() => {
 })();
 const requestUrl = repoUrl ? `${repoUrl}/issues/new?template=new-source.yml` : "";
 
+const pageBase = String(pkg.homepage ?? "").replace(/\/+$/, "");
+
+/**
+ * The issue thread for each source under test, by id.
+ *
+ * A search link is not good enough: an id is the hostname with its punctuation removed, so
+ * `ehentai` never matches the thread titled "e-hentai". The threads carry the site URL, and
+ * putting that URL through the same reduction the branch name came from identifies which
+ * is which exactly.
+ *
+ * Needs `gh` and a token, which the deploy has and a laptop may not; without them the rows
+ * fall back to a search, which is imprecise but still lands somewhere useful.
+ */
+const threads = (() => {
+  /** @type {Record<string,string>} */
+  const found = {};
+  try {
+    const raw = require("child_process").execFileSync(
+      "gh",
+      ["issue", "list", "--state", "all", "--limit", "100", "--json", "number,body,url"],
+      { encoding: "utf-8", timeout: 20000, stdio: ["ignore", "pipe", "ignore"] },
+    );
+    for (const issue of JSON.parse(raw)) {
+      const site = /https?:\/\/([^\s/)"']+)/.exec(String(issue.body ?? ""))?.[1];
+      if (!site) continue;
+      const id = (site.replace(/^www\./, "").split(".")[0] ?? "").replace(/[^a-zA-Z0-9]/g, "").toLowerCase();
+      // The first thread wins: issues list newest first, so that is the live one.
+      if (id && !found[id]) found[id] = issue.url;
+    }
+  } catch {
+    /* no gh, no token, no network */
+  }
+  return found;
+})();
+
+/** @param {string} id */
+function testingRow(id) {
+  const name = id.charAt(0).toUpperCase() + id.slice(1);
+  const install = pageBase ? `${pageBase}/source/${id}` : "";
+  const thread = threads[id] || (repoUrl ? `${repoUrl}/issues?q=is%3Aissue+${encodeURIComponent(id)}` : "");
+  return `<li class="testing">
+  <div class="body">
+    <h3>${escapeHtml(name)} <span class="tag">in testing</span></h3>
+    ${install ? `<div class="url-row"><code class="turl">${escapeHtml(install)}</code><button class="copy-one" type="button" data-url="${escapeHtml(install)}">Copy</button></div>` : ""}
+  </div>
+  ${thread ? `<a class="thread" href="${thread}" target="_blank" rel="noopener">Leave feedback</a>` : ""}
+</li>`;
+}
+
 // A source/<id> branch publishes a preview for reviewing that one source, so the
 // catalogue it serves must hold only that source — not everything already on main.
 const only = process.env.MANA_ONLY ?? "";
@@ -118,6 +167,36 @@ if (only) {
   }
   process.stdout.write(`[mana-dev] preview limited to ${only}\n`);
 }
+
+/**
+ * The sources publishing a preview right now — one `source/<id>` branch each.
+ *
+ * A branch is built, published and reviewed before it is merged, and until now the only
+ * people who knew one existed were whoever read the issue. Listing them here is how a
+ * reader finds something to try and where to say what they found.
+ *
+ * Read from the remote rather than a file, because the branch list is the truth: a merge
+ * deletes the branch, so a merged source drops off this list on the next deploy without
+ * anything having to remember to remove it.
+ */
+const inTesting = (() => {
+  if (only) return []; // A preview page is the thing under test; it does not list itself.
+  try {
+    const out = require("child_process")
+      .execFileSync("git", ["ls-remote", "--heads", "origin", "refs/heads/source/*"], {
+        encoding: "utf-8",
+        timeout: 20000,
+        stdio: ["ignore", "pipe", "ignore"],
+      });
+    return out
+      .split("\n")
+      .map((line) => /refs\/heads\/source\/(.+)$/.exec(line.trim())?.[1])
+      .filter((id) => typeof id === "string" && id.length > 0)
+      .sort();
+  } catch {
+    return []; // No network, no remote, a shallow clone: the page is still worth building.
+  }
+})();
 
 const RATING = ["Safe", "Mixed", "Explicit"];
 const LANG = /** @type {Record<string,string>} */ ({
@@ -380,6 +459,25 @@ const html = `<!doctype html>
   }
   .request a:hover { background: var(--ember); color: #150705; }
 
+  .testing { display: flex; align-items: center; justify-content: space-between; gap: 20px; flex-wrap: wrap; padding: 16px 0; border-bottom: 1px solid var(--line); }
+  .testing:last-child { border-bottom: none; }
+  .testing h3 { margin: 0 0 8px; font-size: 16px; font-weight: 600; display: flex; gap: 10px; align-items: baseline; }
+  .testing .tag { font: 700 10px/1 Archivo, sans-serif; letter-spacing: .12em; text-transform: uppercase; color: var(--amber); }
+  .url-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .turl { font: 400 12px "JetBrains Mono", ui-monospace, monospace; color: var(--muted); word-break: break-all; }
+  .copy-one {
+    flex: none; padding: 6px 12px; border-radius: 3px; cursor: pointer; background: none;
+    border: 1px solid var(--line); color: var(--muted);
+    font: 700 10px/1 Archivo, sans-serif; letter-spacing: .1em; text-transform: uppercase;
+  }
+  .copy-one:hover { border-color: var(--ember); color: var(--ember); }
+  .testing .thread {
+    flex: none; padding: 11px 18px; border-radius: 3px; text-decoration: none;
+    border: 1px solid var(--line); color: var(--muted);
+    font: 700 11px/1 Archivo, sans-serif; letter-spacing: .1em; text-transform: uppercase;
+  }
+  .testing .thread:hover { border-color: var(--ember); color: var(--ember); }
+
   details { border-bottom: 1px solid var(--line); }
   details summary { cursor: pointer; list-style: none; padding: 16px 0; font-size: 15px; font-weight: 500; display: flex; gap: 10px; align-items: baseline; }
   details summary::-webkit-details-marker { display: none; }
@@ -431,6 +529,15 @@ ${sources.map(sourceRow).join("\n")}
     </ul>
   </section>
 
+  ${inTesting.length ? `<section>
+    <h2>In testing</h2>
+    <p class="lede">Built and published, not in the catalogue yet. Add one the same way, try it,
+    and say on its thread what worked and what did not — that is what decides whether it ships.</p>
+    <ul class="sources">
+${inTesting.map(testingRow).join("\n")}
+    </ul>
+  </section>` : ""}
+
   <section>
     <h2>Requests</h2>
     <div class="request">
@@ -448,6 +555,15 @@ ${sources.map(sourceRow).join("\n")}
 <footer class="wrap">Updated ${built}</footer>
 
 <script>
+  Array.prototype.forEach.call(document.querySelectorAll(".copy-one"), function (b) {
+    b.addEventListener("click", function () {
+      navigator.clipboard.writeText(b.getAttribute("data-url")).then(function () {
+        b.textContent = "Copied";
+        setTimeout(function () { b.textContent = "Copy"; }, 1600);
+      });
+    });
+  });
+
   document.getElementById("copy").addEventListener("click", function () {
     var b = this;
     navigator.clipboard.writeText(document.getElementById("url").textContent.trim()).then(function () {
