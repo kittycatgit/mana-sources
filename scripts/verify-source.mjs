@@ -57,9 +57,18 @@ const SECTION_STYLE = [
 const HERO_STYLES = new Set([3, 4]);
 const MIN_HERO_ITEMS = 3;
 const MAX_SECTION_ITEMS = 20;
-/** Two sections sharing more than this fraction of the smaller one are the same row twice. */
-const MAX_SECTION_OVERLAP = 2 / 3;
-const MIN_OVERLAP_ITEMS = 5;
+/**
+ * Two sections sharing more than this fraction of the smaller one are the same row twice.
+ *
+ * Deliberately near-total, and only over a sample worth drawing a conclusion from. Sections
+ * that rank the same catalogue over different windows — "popular right now" against
+ * "popular this week" — share most of their titles by their nature, and at two thirds of
+ * five items that read as a duplicate and failed a source that was doing exactly what it
+ * should. Running the same query is what this is looking for, and the identical-order check
+ * above catches the honest form of that; this catches it reordered.
+ */
+const MAX_SECTION_OVERLAP = 0.9;
+const MIN_OVERLAP_ITEMS = 10;
 
 const PUBLICATION_STATUS = { 1: "ONGOING", 2: "COMPLETED", 3: "CANCELLED", 4: "HIATUS" };
 const CONTENT_RATING = { 0: "SAFE", 1: "SUGGESTIVE", 2: "MATURE", 3: "EXPLICIT" };

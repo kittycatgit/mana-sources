@@ -1,0 +1,6 @@
+# CHANGELOG and README gain a line per source, and a source branch is merged by taking
+# main's side of every shared file it clashes on — which silently dropped the entry the
+# branch had just added. Both files are append-only per source, so a union merge keeps
+# both sides instead of choosing one.
+CHANGELOG.md merge=union
+README.md merge=union
