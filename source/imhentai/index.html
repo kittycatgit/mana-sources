@@ -136,24 +136,15 @@
   }
   .request a:hover { background: var(--ember); color: #150705; }
 
-  .testing { display: flex; align-items: center; justify-content: space-between; gap: 20px; flex-wrap: wrap; padding: 16px 0; border-bottom: 1px solid var(--line); }
-  .testing:last-child { border-bottom: none; }
-  .testing h3 { margin: 0 0 8px; font-size: 16px; font-weight: 600; display: flex; gap: 10px; align-items: baseline; }
-  .testing .tag { font: 700 10px/1 Archivo, sans-serif; letter-spacing: .12em; text-transform: uppercase; color: var(--amber); }
-  .url-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .tag { font: 700 10px/1 Archivo, sans-serif; letter-spacing: .12em; text-transform: uppercase; color: var(--amber); }
+  .testing-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-top: 12px; }
   .turl { font: 400 12px "JetBrains Mono", ui-monospace, monospace; color: var(--muted); word-break: break-all; }
-  .copy-one {
-    flex: none; padding: 6px 12px; border-radius: 3px; cursor: pointer; background: none;
-    border: 1px solid var(--line); color: var(--muted);
+  .copy-one, .thread {
+    flex: none; padding: 7px 13px; border-radius: 3px; cursor: pointer; background: none;
+    border: 1px solid var(--line); color: var(--muted); text-decoration: none;
     font: 700 10px/1 Archivo, sans-serif; letter-spacing: .1em; text-transform: uppercase;
   }
-  .copy-one:hover { border-color: var(--ember); color: var(--ember); }
-  .testing .thread {
-    flex: none; padding: 11px 18px; border-radius: 3px; text-decoration: none;
-    border: 1px solid var(--line); color: var(--muted);
-    font: 700 11px/1 Archivo, sans-serif; letter-spacing: .1em; text-transform: uppercase;
-  }
-  .testing .thread:hover { border-color: var(--ember); color: var(--ember); }
+  .copy-one:hover, .thread:hover { border-color: var(--ember); color: var(--ember); }
 
   details { border-bottom: 1px solid var(--line); }
   details summary { cursor: pointer; list-style: none; padding: 16px 0; font-size: 15px; font-weight: 500; display: flex; gap: 10px; align-items: baseline; }
@@ -212,13 +203,14 @@
 <li class="source" id="src-Imhentai">
   <div class="icon-slot"><img class="icon" src="assets/Imhentai.png" alt="" onerror="this.remove()"></div>
   <div class="body">
-    <h3>Imhentai <span class="ver">v1.0.0</span></h3>
+    <h3>Imhentai <span class="ver">v1.1.0</span></h3>
     <p>Browses the doujinshi, manga and artist CG galleries on imhentai.xxx</p>
     <div class="meta">
       <span class="r2"><i class="dot"></i>Explicit</span>
-      <span style="color:var(--muted)">EN / JA / ES / FR / KO</span>
+      <span style="color:var(--muted)">EN / JA / ES / FR / KO / zh-CN / PT / DE / RU</span>
       <a href="https://imhentai.xxx" target="_blank" rel="noopener">imhentai.xxx &nearr;</a>
     </div>
+    
   </div>
 </li>
     </ul>
@@ -240,8 +232,44 @@
   <section>
   <h2>Changes</h2>
   <details>
-  <summary>Imhentai <span class="ver">1.0.0</span></summary>
+  <summary>Nhentai <span class="ver">1.1.0</span></summary>
   <div class="entry">
+    <h4>2026-09-07 — Language setting</h4>
+    <ul><li>The source's settings now carry a reading language, chosen from the four the site actually stocks: English, Japanese, Chinese, and Translated for anything carrying a translation at all.</li><li>The whole home page follows that choice — the hero becomes the language's most popular galleries, Recently Added its newest uploads, and Manga This Month its serialised manga. With nothing chosen the page is what it was, site-wide with an English week row.</li><li>Searches follow it too, wherever the search screen's own language filter is left on "Any language"; picking a language there still wins for that one search.</li><li>Stopped reading a Turnstile widget as a Cloudflare challenge, matching the fix the other sources already carried — this source was branched before it landed.</li></ul>
+  </div><div class="entry">
+    <h4>2026-09-06</h4>
+    <ul><li>Initial implementation, reading nhentai.net through its public <code>/api/v2</code> endpoints. The HTML site sits behind a Cloudflare interstitial the app cannot clear; the API answers unauthenticated and unchallenged, so the source parses no markup at all.</li><li>Home page carries Popular Right Now, Recently Added, Popular This Week and Manga This Month, each backed by the same query as its view-more listing.</li><li>Search supports a keyword query, the site's five sort orders, language, format, artist and parody filters, include/exclude across the 100 most used tags, and minimum page and favourite counts.</li><li>Each gallery is one work rather than a series, so it is exposed as a single chapter; the title view composes a summary from the metadata, since the API publishes none.</li><li>Covers and pages come from two CDN pools that are not interchangeable — thumbnails only from the thumb servers, full pages only from the image servers.</li></ul>
+  </div>
+</details>
+<details>
+  <summary>Ehentai <span class="ver">1.1.0</span></summary>
+  <div class="entry">
+    <h4>2026-09-07</h4>
+    <ul><li>Opening a chapter spent one request per page before the reader saw anything, which took 79 seconds on the 478-page gallery that led the home page — long enough to read as images that never load. The image URL only exists inside the <code>/s/</code> viewer page it belongs to and the site's bulk viewer refuses anyone not signed in, so those pages are now handed to the reader as-is and resolved one at a time in <code>willRequestImage</code>. The same gallery opens in seven seconds, and each image URL is minted when it is displayed rather than up to a minute beforehand.</li><li>Added a Hidden languages setting to the source's preferences. A hidden language is left out of every listing, dropped from the search form's language picker, and — for the listings the site lets a query reach — excluded server-side as <code>-language:"x"$</code> so the page still comes back full.</li><li>Hiding Japanese hides galleries carrying no language tag at all, which is what an untranslated Japanese work looks like on this site; there is no <code>-language:</code> term that can express that, so those rows are dropped from the listing instead.</li><li>Home sections now page until they have the tiles they advertise. Hiding a language can leave a 25-row page holding one gallery, and the month's toplist was showing a single item where it promised twelve.</li></ul>
+  </div><div class="entry">
+    <h4>2026-09-06</h4>
+    <ul><li>Opening any gallery failed with "E-Hentai rejected the metadata request: No method provided". The <code>gdata</code> body was stringified by the source and then serialised again by the host, so the API received a quoted string instead of a request object. The body is now handed over as an object.</li></ul>
+  </div><div class="entry">
+    <h4>2026-09-06</h4>
+    <ul><li>Initial implementation, reading e-hentai.org's listings from its markup and every gallery's metadata from <code>api.e-hentai.org/api.php</code> (<code>gdata</code>), which carries the title, category, uploader, page count, rating and full tag list in one request.</li><li>Home page carries Popular Right Now, Latest Galleries and the Yesterday, This Month and All-Time gallery toplists, each backed by the same query as its view-more listing.</li><li>Listings are cursor-paged rather than offset-paged — <code>?page=</code> is accepted and ignored, and the only way to page 2 is the <code>next=&lt;gid&gt;</code> link page 1 printed. The source walks and remembers that trail, so ordinary forwards paging still costs one request per page.</li><li>Search supports a keyword query, the ten categories, include/exclude tags, parody, the translation language, gallery length, a minimum rating, "has a torrent" and "expunged only". Length is a picker rather than a pair of steppers because the site refuses any range narrower than 20 pages.</li><li>No sort control: listings are always newest first and the site offers no alternative.</li><li>Each gallery is exposed as a single chapter, matching the site's one-upload model, and its pages are resolved from the <code>/s/</code> page each thumbnail links to.</li><li>Responses are accepted at HTTP 451 as well as 2xx. The site serves the complete page under that status where local law makes it add an age notice, and rejecting it would leave those readers with an empty app.</li></ul>
+  </div>
+</details>
+<details>
+  <summary>Manga18fx <span class="ver">1.1.0</span></summary>
+  <div class="entry">
+    <h4>2026-09-07 — Hiding raw releases</h4>
+    <ul><li>New source setting, "Hide raw releases". The site publishes the untranslated Korean edition of a title as a separate series, and those editions are mixed through every listing it has — 13 of the 24 rows on the second page of Latest Updates, 11 of 24 on the popular archive — so a reader who only wants translated titles could not avoid them. With the setting on they are filtered out of every listing and the Manhwa Raw home row is dropped with them; a raw title already in a library still opens.</li><li>A raw edition carries no marker of its own in a listing row, so it is recognised by its slug's <code>-raw</code> suffix or a heading ending in the word. Across the site's whole 1,086-title raw archive the two together miss four titles that carry no marker at all, and across 525 titles from the ordinary listings neither matches anything that is not a raw edition.</li><li>A listing now decides it has reached the end from what the page held rather than from what survived filtering, so a page filtered down to nothing no longer reports itself as the last one. This was already reachable through the app's content-rating filter.</li></ul>
+  </div><div class="entry">
+    <h4>2026-09-06</h4>
+    <ul><li>Initial implementation, reading manga18fx.com's markup.</li><li>Home page carries Popular Manhwa, Latest Updates, Manhwa Raw and Uncensored, each backed by the same route as its view-more listing.</li><li>Search supports a title query and a genre picker. The two cannot be combined: search results and genre archives are separate routes and neither reads the other's parameter, so a genre applies only when the search box is empty.</li><li>The genre vocabulary is harvested from the home page's own navigation — the site has no genre index and an unknown slug is a hard 404 — and unioned with the two genres it only ever links from a title page.</li><li>Content type comes from the genre tags: the title page's own Type row reads Manhwa on every title, including ones filed under the manhua genre.</li></ul>
+  </div>
+</details>
+<details>
+  <summary>Imhentai <span class="ver">1.1.0</span></summary>
+  <div class="entry">
+    <h4>2026-09-07 — Language setting</h4>
+    <ul><li>The source's settings now carry a reading language, chosen from the seven the site's own search form offers: English, Japanese, Spanish, French, Korean, German and Russian. Each was checked to return full pages, both on its own and alongside every category the home page uses.</li><li>All six home rows follow that choice, and their subtitles say so. The site accepts a language and a category in the same query, so New Manga, New Western and New Artist CG narrow as well rather than dropping back to everything.</li><li>Searches follow it too, wherever the search screen's own Languages picker is left empty; picking languages there still wins for that one search. The picker's subtitle reads "Leave empty for &lt;language&gt;" once a language is set, because an empty picker no longer means everything.</li><li><code>supportedLanguages</code> is now derived from the language table the source reads galleries with, so it lists German, Russian, Chinese and Portuguese — all four were already being reported as chapter languages while the source declared it did not support them.</li></ul>
+  </div><div class="entry">
     <h4>2026-09-06</h4>
     <ul><li>Initial implementation. Cloudflare challenges every route on imhentai.xxx except <code>/search/</code>, so search and all six home sections are built on that one route, which accepts the same sort and category flags as the listing pages it replaces.</li><li>Home page carries Popular Now (hero), Latest Uploads, Top Rated, New Manga, New Western and New Artist CG. Most Downloaded was left out: it shares 55% of its titles with Popular, and two sections holding the same galleries are one section wearing two names.</li><li>Search supports a comma-separated tag query, the site's four sort orders, and its category and language facets. Both facets are submitted as complete groups with an explicit 1 or 0 per member — a lone <code>m=1</code> is accepted and returns the unfiltered listing, so a partial group reads as the site ignoring the filter.</li><li>A gallery is one finished work, so it is modelled as a single chapter holding every page, and its status is COMPLETED unless the uploader wrote <code>[ongoing]</code> in the title.</li><li>Page URLs take their extension from the per-page type letter in the gallery's <code>g_th</code> manifest. It varies within a single gallery — 1733050 is mostly webp with jpg scattered through it — so assuming one extension 404s a fifth of its pages.</li><li>Titles are decoded twice. The site stores them already-escaped and escapes them again, so an apostrophe arrives as <code>&amp;amp;#039;</code> and cheerio's own decode leaves <code>&amp;#039;</code> behind.</li><li><code>getContent</code>, <code>getChapters</code> and <code>getChapterData</code> **SKIP under <code>npm run verify</code>**: they read <code>/gallery/&lt;id&gt;/</code>, which is challenged to every HTTP client, and the harness runs on Node. In the app they fall back to <code>WebViewPage</code>, whose WebView carries the clearance the user establishes through <code>cloudflareResolutionURL</code>. All three were checked before release by driving the built bundle against gallery HTML captured from a real browser, and the cover and page URLs they produced were fetched to confirm they serve.</li></ul>
   </div>
