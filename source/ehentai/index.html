@@ -136,6 +136,16 @@
   }
   .request a:hover { background: var(--ember); color: #150705; }
 
+  .tag { font: 700 10px/1 Archivo, sans-serif; letter-spacing: .12em; text-transform: uppercase; color: var(--amber); }
+  .testing-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-top: 12px; }
+  .turl { font: 400 12px "JetBrains Mono", ui-monospace, monospace; color: var(--muted); word-break: break-all; }
+  .copy-one, .thread {
+    flex: none; padding: 7px 13px; border-radius: 3px; cursor: pointer; background: none;
+    border: 1px solid var(--line); color: var(--muted); text-decoration: none;
+    font: 700 10px/1 Archivo, sans-serif; letter-spacing: .1em; text-transform: uppercase;
+  }
+  .copy-one:hover, .thread:hover { border-color: var(--ember); color: var(--ember); }
+
   details { border-bottom: 1px solid var(--line); }
   details summary { cursor: pointer; list-style: none; padding: 16px 0; font-size: 15px; font-weight: 500; display: flex; gap: 10px; align-items: baseline; }
   details summary::-webkit-details-marker { display: none; }
@@ -200,10 +210,13 @@
       <span style="color:var(--muted)">JA / EN / zh-CN / KO / ES</span>
       <a href="https://e-hentai.org" target="_blank" rel="noopener">e-hentai.org &nearr;</a>
     </div>
+    
   </div>
 </li>
     </ul>
   </section>
+
+  
 
   <section>
     <h2>Requests</h2>
@@ -254,6 +267,15 @@
 <footer class="wrap">Updated 2026-09-07</footer>
 
 <script>
+  Array.prototype.forEach.call(document.querySelectorAll(".copy-one"), function (b) {
+    b.addEventListener("click", function () {
+      navigator.clipboard.writeText(b.getAttribute("data-url")).then(function () {
+        b.textContent = "Copied";
+        setTimeout(function () { b.textContent = "Copy"; }, 1600);
+      });
+    });
+  });
+
   document.getElementById("copy").addEventListener("click", function () {
     var b = this;
     navigator.clipboard.writeText(document.getElementById("url").textContent.trim()).then(function () {
