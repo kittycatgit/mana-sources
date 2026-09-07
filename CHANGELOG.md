@@ -4,33 +4,27 @@ Notable changes to the extensions in this repository, grouped by extension —
 each one versions independently (see `info.version` in its `main.ts`). Dates
 are UTC. Format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## Madaradex (current: v1.0.1)
+## Weebcentral (current: v1.0.1)
 
-### 2026-09-06 — v1.0.1
+### 2026-09-07
 
-- Chapter images load again. The site added a `madaradex-shield` plugin that gates
-  cdn.madaradex.org on two cookies its reader page sets from an inline script, so the
-  referer the source already sent stopped being enough and every page 403'd — a chapter
-  that opened and then never finished loading.
-- The source now performs the same handshake: it mints an `mdx_fp` fingerprint, trades it
-  at `admin-ajax.php` for the short-lived `mdx_auth` token, and sends both alongside the
-  referer. The grant is shared across a chapter's pages and renewed before it expires.
+- Index the chapters from the first one. The site renders `full-chapter-list` newest-first
+  and that order was kept verbatim, so the newest chapter arrived as index 0 — which made
+  the title view offer it as the place to start a series nobody had read yet.
 
-### 2026-09-06 — v1.0.0
+### 2026-09-06
 
-- Initial implementation, reading madaradex.org — a stock Madara WordPress install whose
-  manga post type is mounted at `/title/<slug>/` rather than the usual `/manga/<slug>/`.
-- One listing shape backs search, sorting, filters and every home section, so a section
-  and its view-more page can never disagree.
-- Home page carries New Manga, Latest Updates, Most Read and Top Rated. The site's
-  `trending` order was left out: it shares two thirds of its first page with `views`.
-- Search supports a title query, the site's seven sort orders, its 25 genres with an
-  all-or-any switch, status, an adult-content picker, and author and artist by name.
-- The advanced-search form's "Year" box is not offered — the install never populates a
-  release year, so every year returns nothing.
-- Chapter pages are requested with the site as their referer, without which the CDN
-  answers 403 with the site's own error page.
-
+- Initial implementation, reading weebcentral.com through the htmx endpoints its own
+  pages call (`/search/data`, `/series/<id>/full-chapter-list`, `/chapters/<id>/images`)
+  rather than the rendered documents.
+- Home page carries Hot Updates (hero), Latest Updates, Most Popular and Popular
+  Webtoons; each of the latter three is backed by the same search query as its view-more
+  listing.
+- Search supports a title query, an author field, type and status multi-pickers,
+  include/exclude tags, the Official Translation / Anime Adaptation / Adult Content
+  toggles, and the site's six sort orders in either direction.
+- Honours the host's content-rating policy by asking the site for non-adult results when
+  mature content is not allowed.
 ## Hiperdex (current: v1.0.0)
 
 ### 2026-09-06
