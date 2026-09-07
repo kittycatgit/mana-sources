@@ -17,7 +17,7 @@ from there.
 | ------ | ------- | -------- | ------ |
 | Tailspace | 1.1.0 | English | Explicit |
 | Hiperdex | 1.0.0 | English | Mixed |
-| Ehentai | 1.0.1 | Multiple | Explicit |
+| Ehentai | 1.1.0 | Multiple | Explicit |
 
 See [CHANGELOG.md](CHANGELOG.md) for what changed and when.
 

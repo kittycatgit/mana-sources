@@ -12,7 +12,10 @@ import {
   type ChapterSource,
   type Content,
   type DeepLinkContext,
+  type Form,
   type Highlight,
+  type ImageRequestHandler,
+  type NetworkRequest,
   type PageLink,
   type PageLinkResolver,
   type PageSection,
@@ -24,6 +27,7 @@ import {
   type SourceConfig,
   type SourceContext,
   type SourceInfo,
+  type SourcePreferenceProvider,
   type Tag,
 } from "@mana-app/types";
 import { load, type Cheerio, type CheerioAPI } from "cheerio";
@@ -32,12 +36,15 @@ import type { AnyNode } from "domhandler";
 import { HTML_ACCEPT, JSON_ACCEPT, buildClient } from "./client.ts";
 import {
   FilterReader,
+  PreferenceStore,
+  buildPreferenceMenu,
   buildSearchForm,
   listResults,
   pageOf,
-  resolveSection,
+  sectionById,
   toPageSections,
   withQuery,
+  type PreferenceSection,
   type SectionSpec,
 } from "./forms/index.ts";
 import {
@@ -47,15 +54,23 @@ import {
   BASE_URL,
   CATEGORIES,
   FilterID,
+  HIDDEN_LANGUAGE_OPTIONS,
+  INDEX_BATCH,
+  JAPANESE_LANGUAGE,
   LANGUAGE_CODES,
+  LANGUAGE_NAMESPACE,
   LENGTH_RANGES,
   ListID,
-  PAGE_BATCH,
-  SEARCH_FIELDS,
+  PREFERENCE_DEFAULTS,
+  PREFERENCE_NAMESPACE,
+  PreferenceID,
+  SECTION_PAGE_LIMIT,
   TAGS_FIELD,
   THUMBS_PER_PAGE,
   TOPLIST_PAGE_LIMIT,
   Toplist,
+  languageName,
+  searchFields,
   tagTitle,
   type Category,
   type Gallery,
@@ -65,7 +80,7 @@ import {
 const info: SourceInfo = {
   id: "ehentai",
   name: "Ehentai",
-  version: "1.0.1",
+  version: "1.1.0",
   description: "Reads the doujinshi, manga and image galleries hosted on e-hentai.org",
   website: BASE_URL,
   rating: CatalogRating.EXPLICIT,
@@ -86,13 +101,44 @@ const config: SourceConfig = {
   owningLinks: ["e-hentai.org"],
 };
 
-type Listing = {
+type Rows = {
   results: Highlight[];
+  /**
+   * Galleries the page held before hidden languages were dropped. An offset-paged listing
+   * ends on a page with no rows at all, which a fully hidden page would otherwise imitate.
+   */
+  matched: number;
+};
+
+type Listing = Rows & {
   /** The site's own `var nexturl`; empty on the last page. */
   next: string;
 };
 
-class EhentaiSource implements ChapterSource, SearchProvider, PageLinkResolver {
+const PREFERENCE_SECTIONS: readonly PreferenceSection[] = [
+  {
+    header: "Languages",
+    footer:
+      "Galleries in a hidden language are left out of every listing, and hidden languages are dropped from the search filter. The site never tags an original Japanese work, so hiding Japanese hides everything that carries no language tag at all.",
+    fields: [
+      {
+        type: "multiselect",
+        key: PreferenceID.HiddenLanguages,
+        title: "Hidden languages",
+        options: HIDDEN_LANGUAGE_OPTIONS,
+      },
+    ],
+  },
+];
+
+class EhentaiSource
+  implements
+    ChapterSource,
+    SearchProvider,
+    PageLinkResolver,
+    ImageRequestHandler,
+    SourcePreferenceProvider
+{
   readonly info = info;
   readonly config = config;
 
@@ -103,6 +149,7 @@ class EhentaiSource implements ChapterSource, SearchProvider, PageLinkResolver {
    * URLs already walked for it, so the usual forwards paging costs one request a page.
    */
   private readonly trails = new Map<string, string[]>();
+  private readonly preferences = new PreferenceStore(PREFERENCE_NAMESPACE, PREFERENCE_DEFAULTS);
   private gallery: Gallery | undefined;
 
   private get http(): NetworkClient {
@@ -131,7 +178,7 @@ class EhentaiSource implements ChapterSource, SearchProvider, PageLinkResolver {
         subtitle: "Everything, in the order it was uploaded",
         style: SectionStyle.DetailedVerticalListGrouped,
         limit: 12,
-        load: (page) => this.browse(`${BASE_URL}/`, page),
+        load: (page) => this.latest(page),
       },
       {
         id: ListID.TopYesterday,
@@ -160,10 +207,14 @@ class EhentaiSource implements ChapterSource, SearchProvider, PageLinkResolver {
     ];
   }
 
+  async getPreferenceMenu(): Promise<Form> {
+    return buildPreferenceMenu(this.preferences, PREFERENCE_SECTIONS);
+  }
+
   async getSearchForm(): Promise<SearchForm> {
     return buildSearchForm({
       header: "Filters",
-      fields: SEARCH_FIELDS,
+      fields: searchFields(await this.hiddenLanguages()),
       tags: TAGS_FIELD,
       tagsHeader: "Tags",
       // Listings are always ordered newest first; the site offers no other ordering.
@@ -175,8 +226,24 @@ class EhentaiSource implements ChapterSource, SearchProvider, PageLinkResolver {
     return toPageSections(this.sections());
   }
 
+  /**
+   * Sections are filled from as many listing pages as it takes, because hiding a language
+   * can leave a 25-row page holding one usable gallery and a home row of one reads as a
+   * broken section. Without a hidden language the first page always covers the limit, so
+   * this still costs a single request.
+   */
   async resolvePageSection(_link: PageLink, sectionID: string): Promise<ResolvedPageSection> {
-    return resolveSection(this.sections(), sectionID);
+    const spec = sectionById(this.sections(), sectionID);
+    if (!spec) return { items: [] };
+    if (spec.limit === undefined) return { items: (await spec.load(1)).results };
+
+    const items: Highlight[] = [];
+    for (let page = 1; page <= SECTION_PAGE_LIMIT && items.length < spec.limit; page++) {
+      const listing = await spec.load(page);
+      items.push(...listing.results);
+      if (listing.isLastPage) break;
+    }
+    return { items: items.slice(0, spec.limit) };
   }
 
   async search(request: SearchRequest): Promise<PagedSearchResult> {
@@ -184,8 +251,12 @@ class EhentaiSource implements ChapterSource, SearchProvider, PageLinkResolver {
     if (list) return this.filtered(await list, request.context);
 
     const filters = new FilterReader(request);
+    const hidden = await this.hiddenLanguages();
     const tags = filters.excludable(FilterID.Tags);
-    const language = filters.option(FilterID.Language, ANY);
+    // A selection saved before the language was hidden can still arrive here; honouring it
+    // alongside the exclusion below would ask the site for and against the same tag.
+    const selected = filters.option(FilterID.Language, ANY);
+    const language = hidden.has(languageName(selected)) ? ANY : selected;
     const query = request.query?.trim() ?? "";
 
     const search: SearchQuery = {
@@ -195,6 +266,7 @@ class EhentaiSource implements ChapterSource, SearchProvider, PageLinkResolver {
         ...filters.options(FilterID.Parody).map((id) => tagTerm(id, false)),
         ...(language === ANY ? [] : [tagTerm(language, false)]),
         ...tags.excluded.map((id) => tagTerm(id, true)),
+        ...hiddenLanguageTerms(hidden),
       ],
       categories: filters.options(FilterID.Categories),
       minimumRating: filters.option(FilterID.Rating, ANY),
@@ -250,6 +322,14 @@ class EhentaiSource implements ChapterSource, SearchProvider, PageLinkResolver {
     ];
   }
 
+  /**
+   * The pages handed back are the gallery's `/s/` viewer pages, not images. There is no
+   * image URL to derive — each one exists only inside the page it belongs to, and the
+   * site's bulk viewer answers `eeenope` to anyone not signed in — so resolving them here
+   * cost one request per page before the reader saw anything: 79 seconds on the 478-page
+   * gallery that led the home page. `willRequestImage` resolves a page at the moment the
+   * app asks for it instead, which is also when the image URL's `keystamp` is freshest.
+   */
   async getChapterData(contentId: string, _chapterId: string): Promise<ChapterData> {
     const gallery = await this.metadata(contentId);
     const links = await this.pageLinks(contentId, gallery.fileCount);
@@ -260,14 +340,13 @@ class EhentaiSource implements ChapterSource, SearchProvider, PageLinkResolver {
       );
     }
 
-    const pages: ChapterPage[] = [];
-    for (let start = 0; start < links.length; start += PAGE_BATCH) {
-      const batch = links.slice(start, start + PAGE_BATCH);
-      for (const url of await Promise.all(batch.map((link) => this.imageOn(link)))) {
-        pages.push({ url });
-      }
-    }
+    const pages: ChapterPage[] = links.map((url) => ({ url }));
     return { pages };
+  }
+
+  async willRequestImage(imageURL: string): Promise<NetworkRequest> {
+    if (!isViewerUrl(imageURL)) return { url: imageURL };
+    return { url: await this.imageOn(imageURL) };
   }
 
   async handleURL(url: string): Promise<DeepLinkContext | null> {
@@ -294,6 +373,16 @@ class EhentaiSource implements ChapterSource, SearchProvider, PageLinkResolver {
   private async popular(): Promise<PagedSearchResult> {
     const listing = await this.listing(`${BASE_URL}/popular`);
     return { results: listing.results, isLastPage: true };
+  }
+
+  /**
+   * The front page carries no query at all, so a hidden language has to be pushed into a
+   * search for the listing to stay dense — dropping the rows afterwards can leave a page
+   * of 25 nearly empty. The order is unchanged either way: every listing is newest first.
+   */
+  private async latest(page: number): Promise<PagedSearchResult> {
+    const terms = hiddenLanguageTerms(await this.hiddenLanguages());
+    return this.browse(terms.length === 0 ? `${BASE_URL}/` : searchUrl({ terms }), page);
   }
 
   /**
@@ -325,13 +414,17 @@ class EhentaiSource implements ChapterSource, SearchProvider, PageLinkResolver {
     );
     return {
       results: listing.results,
-      isLastPage: clamped >= TOPLIST_PAGE_LIMIT || listing.results.length === 0,
+      isLastPage: clamped >= TOPLIST_PAGE_LIMIT || listing.matched === 0,
     };
   }
 
   private async listing(url: string): Promise<Listing> {
     const html = await this.get(url);
-    return { results: parseRows(load(html)), next: nextUrl(html) };
+    return { ...parseRows(load(html), await this.hiddenLanguages()), next: nextUrl(html) };
+  }
+
+  private async hiddenLanguages(): Promise<ReadonlySet<string>> {
+    return new Set(await this.preferences.get(PreferenceID.HiddenLanguages));
   }
 
   private filtered(page: PagedSearchResult, context: SourceContext | undefined): PagedSearchResult {
@@ -378,17 +471,24 @@ class EhentaiSource implements ChapterSource, SearchProvider, PageLinkResolver {
 
   private async pageLinks(contentId: string, fileCount: number): Promise<string[]> {
     const url = contentUrl(contentId);
-    const pages = Math.max(1, Math.ceil(fileCount / THUMBS_PER_PAGE));
+    const count = Math.max(1, Math.ceil(fileCount / THUMBS_PER_PAGE));
+    const indexes = Array.from({ length: count }, (_, index) => index);
     const links: string[] = [];
     const seen = new Set<string>();
 
-    for (let index = 0; index < pages; index++) {
-      const $ = load(await this.get(index === 0 ? url : withQuery(url, { p: index })));
-      for (const anchor of $("#gdt a[href*='/s/']").toArray()) {
-        const href = absolute($(anchor).attr("href") ?? "");
-        if (href !== "" && !seen.has(href)) {
-          seen.add(href);
-          links.push(href);
+    for (let start = 0; start < indexes.length; start += INDEX_BATCH) {
+      const batch = indexes.slice(start, start + INDEX_BATCH);
+      const documents = await Promise.all(
+        batch.map((index) => this.get(index === 0 ? url : withQuery(url, { p: index }))),
+      );
+      for (const html of documents) {
+        const $ = load(html);
+        for (const anchor of $("#gdt a[href*='/s/']").toArray()) {
+          const href = absolute($(anchor).attr("href") ?? "");
+          if (href !== "" && !seen.has(href)) {
+            seen.add(href);
+            links.push(href);
+          }
         }
       }
     }
@@ -428,13 +528,28 @@ function searchUrl(query: SearchQuery): string {
   return withQuery(`${BASE_URL}/`, {
     f_search: query.terms.join(" "),
     advsearch: 1,
-    f_cats: excludedCategoryBits(query.categories),
+    f_cats: excludedCategoryBits(query.categories ?? []),
     f_srdd: query.minimumRating === ANY ? undefined : query.minimumRating,
     f_spf: query.length?.from,
     f_spt: query.length?.to,
     f_sto: query.requireTorrent ? "on" : undefined,
     f_sh: query.expungedOnly ? "on" : undefined,
   });
+}
+
+/**
+ * `-language:"x"$` only bites on a language the site actually tags. An original Japanese
+ * work carries no language tag at all, so hiding Japanese is left to the row filter.
+ */
+function hiddenLanguageTerms(hidden: ReadonlySet<string>): string[] {
+  return [...hidden]
+    .filter((name) => name !== JAPANESE_LANGUAGE)
+    .map((name) => tagTerm(`${LANGUAGE_NAMESPACE}${name}`, true));
+}
+
+/** A page handed to the reader is a `/s/` viewer page the source still has to resolve. */
+function isViewerUrl(url: string): boolean {
+  return url.startsWith(`${BASE_URL}/s/`);
 }
 
 /** `f_cats` names the categories to leave out, so an empty or complete pick means "omit". */
@@ -458,7 +573,7 @@ function tagTerm(id: string, exclude: boolean): string {
 // -- parsing -----------------------------------------------------------------
 
 /** Every listing — front page, search, category, popular and the toplists — shares this table. */
-function parseRows($: CheerioAPI): Highlight[] {
+function parseRows($: CheerioAPI, hidden: ReadonlySet<string>): Rows {
   const results: Highlight[] = [];
   const seen = new Set<string>();
 
@@ -471,6 +586,7 @@ function parseRows($: CheerioAPI): Highlight[] {
     const title = text($row.find("div.glink").first());
     if (title === "") continue;
     seen.add(contentId);
+    if (hidden.has(galleryLanguage(rowTags($, $row)))) continue;
 
     const category = text($row.find("td.gl1c div").first());
     const posted = text($row.find("[id^='posted_']").first()).slice(0, 10);
@@ -484,7 +600,7 @@ function parseRows($: CheerioAPI): Highlight[] {
       subtitle: highlightSubtitle(category, pageCount($, $row), posted),
     });
   }
-  return results;
+  return { results, matched: seen.size };
 }
 
 /**
@@ -563,16 +679,28 @@ function formatSize(bytes: number): string {
   return `${Math.max(1, Math.round(bytes / 1024))} KB`;
 }
 
-/** The site tags a translation but never the original: an untagged gallery is Japanese. */
-function languageOf(tags: readonly string[]): string {
-  const languages = tags
-    .filter((tag) => tag.startsWith("language:"))
-    .map((tag) => tag.slice("language:".length))
-    .filter((name) => name !== "translated" && name !== "rewrite");
+/**
+ * A listing row prints the gallery's tags as `title="namespace:name"`, which is the only
+ * place a listing says what language it is in.
+ */
+function rowTags($: CheerioAPI, row: Cheerio<AnyNode>): string[] {
+  return row
+    .find("div.gt")
+    .toArray()
+    .map((node) => $(node).attr("title") ?? "");
+}
 
-  const named = languages[0];
-  if (named === undefined) return DefinedLanguages.JAPANESE;
-  return LANGUAGE_CODES[named] ?? DefinedLanguages.UNIVERSAL;
+/** The site tags a translation but never the original: an untagged gallery is Japanese. */
+function galleryLanguage(tags: readonly string[]): string {
+  const named = tags
+    .filter((tag) => tag.startsWith(LANGUAGE_NAMESPACE))
+    .map((tag) => tag.slice(LANGUAGE_NAMESPACE.length))
+    .find((name) => name !== "translated" && name !== "rewrite");
+  return named ?? JAPANESE_LANGUAGE;
+}
+
+function languageOf(tags: readonly string[]): string {
+  return LANGUAGE_CODES[galleryLanguage(tags)] ?? DefinedLanguages.UNIVERSAL;
 }
 
 function categoryByTitle(title: string): Category | undefined {

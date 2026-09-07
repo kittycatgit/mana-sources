@@ -22,8 +22,11 @@ export const THUMBS_PER_PAGE = 20;
 /** The toplist pager stops at 200; its jump box says so and page 201 repeats page 200. */
 export const TOPLIST_PAGE_LIMIT = 200;
 
-/** How many `/s/` pages are resolved at once when building a chapter. */
-export const PAGE_BATCH = 5;
+/** How many gallery thumbnail pages are read at once when collecting a chapter's pages. */
+export const INDEX_BATCH = 5;
+
+/** How far a home section will page to reach its limit once a language is hidden. */
+export const SECTION_PAGE_LIMIT = 4;
 
 /** The id a picker uses for "no filter" — the site wants the parameter omitted. */
 export const ANY = "any";
@@ -39,6 +42,12 @@ export const FilterID = {
   Rating: "rating",
   Torrent: "torrent",
   Expunged: "expunged",
+} as const;
+
+export const PREFERENCE_NAMESPACE = "ehentai";
+
+export const PreferenceID = {
+  HiddenLanguages: "hiddenLanguages",
 } as const;
 
 export const ListID = {
@@ -158,29 +167,50 @@ export const CATEGORY_OPTIONS: Option[] = CATEGORIES.map((category) => ({
   title: category.title,
 }));
 
+/** The site's `language:` namespace, restricted to values confirmed to return results. */
+const TRANSLATION_LANGUAGES: readonly { name: string; title: string }[] = [
+  { name: "english", title: "English" },
+  { name: "chinese", title: "Chinese" },
+  { name: "korean", title: "Korean" },
+  { name: "spanish", title: "Spanish" },
+  { name: "portuguese", title: "Portuguese" },
+  { name: "russian", title: "Russian" },
+  { name: "french", title: "French" },
+  { name: "german", title: "German" },
+  { name: "italian", title: "Italian" },
+  { name: "vietnamese", title: "Vietnamese" },
+  { name: "thai", title: "Thai" },
+  { name: "indonesian", title: "Indonesian" },
+  { name: "polish", title: "Polish" },
+  { name: "dutch", title: "Dutch" },
+  { name: "turkish", title: "Turkish" },
+];
+
 /**
- * The site's `language:` namespace, restricted to the values that were confirmed to return
- * results. Japanese is deliberately absent: the tag is only applied to the handful of
- * galleries that carry it explicitly, because an untagged gallery *is* Japanese.
+ * A gallery the site gives no `language:` tag to is an untranslated Japanese work, so this
+ * name stands for "carries no language tag" everywhere the source reasons about language.
+ */
+export const JAPANESE_LANGUAGE = "japanese";
+
+export const LANGUAGE_NAMESPACE = "language:";
+
+/**
+ * Japanese is deliberately absent from the search picker: the tag is only applied to the
+ * handful of galleries that carry it explicitly, so asking for it finds almost nothing.
  */
 export const LANGUAGE_OPTIONS: Option[] = [
   { id: ANY, title: "Any language" },
-  { id: "language:english", title: "English" },
-  { id: "language:chinese", title: "Chinese" },
-  { id: "language:korean", title: "Korean" },
-  { id: "language:spanish", title: "Spanish" },
-  { id: "language:portuguese", title: "Portuguese" },
-  { id: "language:russian", title: "Russian" },
-  { id: "language:french", title: "French" },
-  { id: "language:german", title: "German" },
-  { id: "language:italian", title: "Italian" },
-  { id: "language:vietnamese", title: "Vietnamese" },
-  { id: "language:thai", title: "Thai" },
-  { id: "language:indonesian", title: "Indonesian" },
-  { id: "language:polish", title: "Polish" },
-  { id: "language:dutch", title: "Dutch" },
-  { id: "language:turkish", title: "Turkish" },
-  { id: "language:translated", title: "Translated (any)" },
+  ...TRANSLATION_LANGUAGES.map((language) => ({
+    id: `${LANGUAGE_NAMESPACE}${language.name}`,
+    title: language.title,
+  })),
+  { id: `${LANGUAGE_NAMESPACE}translated`, title: "Translated (any)" },
+];
+
+/** The preference picker names languages bare, because Japanese has no tag to prefix. */
+export const HIDDEN_LANGUAGE_OPTIONS: Option[] = [
+  { id: JAPANESE_LANGUAGE, title: "Japanese (untranslated)" },
+  ...TRANSLATION_LANGUAGES.map((language) => ({ id: language.name, title: language.title })),
 ];
 
 export type PageRange = { from: number; to: number };
@@ -335,30 +365,42 @@ function tagOptions(ids: readonly string[]): Option[] {
 export const TAG_OPTIONS: Option[] = tagOptions(CONTENT_TAGS);
 export const PARODY_OPTIONS: Option[] = tagOptions(PARODY_TAGS);
 
-export const SEARCH_FIELDS: SearchListField[] = [
-  SearchMultiPicker({
-    id: FilterID.Categories,
-    title: "Categories",
-    subtitle: "Leave empty to search all ten",
-    options: CATEGORY_OPTIONS,
-  }),
-  SearchMultiPickerSheet({
-    id: FilterID.Parody,
-    title: "Parody",
-    subtitle: "The series a gallery is drawn from",
-    options: PARODY_OPTIONS,
-  }),
-  SearchMenuPicker({
-    id: FilterID.Language,
-    title: "Language",
-    subtitle: "Galleries with no language tag are Japanese",
-    options: LANGUAGE_OPTIONS,
-  }),
-  SearchMenuPicker({ id: FilterID.Length, title: "Length", options: LENGTH_OPTIONS }),
-  SearchMenuPicker({ id: FilterID.Rating, title: "Minimum rating", options: RATING_OPTIONS }),
-  SearchToggle({ id: FilterID.Torrent, title: "Has a torrent" }),
-  SearchToggle({ id: FilterID.Expunged, title: "Expunged galleries only" }),
-];
+/**
+ * Languages hidden in the source's settings are dropped from the picker rather than left
+ * in it: asking for one the source is about to filter out would return an empty page with
+ * nothing on screen to explain it.
+ */
+export function searchFields(hidden: ReadonlySet<string>): SearchListField[] {
+  return [
+    SearchMultiPicker({
+      id: FilterID.Categories,
+      title: "Categories",
+      subtitle: "Leave empty to search all ten",
+      options: CATEGORY_OPTIONS,
+    }),
+    SearchMultiPickerSheet({
+      id: FilterID.Parody,
+      title: "Parody",
+      subtitle: "The series a gallery is drawn from",
+      options: PARODY_OPTIONS,
+    }),
+    SearchMenuPicker({
+      id: FilterID.Language,
+      title: "Language",
+      subtitle: "Galleries with no language tag are Japanese",
+      options: LANGUAGE_OPTIONS.filter((option) => !hidden.has(languageName(option.id))),
+    }),
+    SearchMenuPicker({ id: FilterID.Length, title: "Length", options: LENGTH_OPTIONS }),
+    SearchMenuPicker({ id: FilterID.Rating, title: "Minimum rating", options: RATING_OPTIONS }),
+    SearchToggle({ id: FilterID.Torrent, title: "Has a torrent" }),
+    SearchToggle({ id: FilterID.Expunged, title: "Expunged galleries only" }),
+  ];
+}
+
+/** `language:chinese` and the bare `chinese` the preference stores name the same thing. */
+export function languageName(id: string): string {
+  return id.startsWith(LANGUAGE_NAMESPACE) ? id.slice(LANGUAGE_NAMESPACE.length) : id;
+}
 
 export const TAGS_FIELD: SearchOptionField = SearchExcludableMultiPickerSheet({
   id: FilterID.Tags,
@@ -395,11 +437,18 @@ export type Gallery = {
   tags: string[];
 };
 
+export type Preferences = {
+  hiddenLanguages: string[];
+};
+
+export const PREFERENCE_DEFAULTS: Preferences = { hiddenLanguages: [] };
+
+/** Only `terms` is always meaningful: a listing may be nothing but excluded languages. */
 export type SearchQuery = {
   terms: string[];
-  categories: string[];
-  minimumRating: string;
-  length: PageRange | undefined;
-  requireTorrent: boolean;
-  expungedOnly: boolean;
+  categories?: string[];
+  minimumRating?: string;
+  length?: PageRange | undefined;
+  requireTorrent?: boolean;
+  expungedOnly?: boolean;
 };

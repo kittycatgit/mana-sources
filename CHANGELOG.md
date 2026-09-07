@@ -4,7 +4,27 @@ Notable changes to the extensions in this repository, grouped by extension —
 each one versions independently (see `info.version` in its `main.ts`). Dates
 are UTC. Format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## Ehentai (current: v1.0.1)
+## Ehentai (current: v1.1.0)
+
+### 2026-09-07
+
+- Opening a chapter spent one request per page before the reader saw anything, which took
+  79 seconds on the 478-page gallery that led the home page — long enough to read as
+  images that never load. The image URL only exists inside the `/s/` viewer page it
+  belongs to and the site's bulk viewer refuses anyone not signed in, so those pages are
+  now handed to the reader as-is and resolved one at a time in `willRequestImage`. The
+  same gallery opens in seven seconds, and each image URL is minted when it is displayed
+  rather than up to a minute beforehand.
+- Added a Hidden languages setting to the source's preferences. A hidden language is left
+  out of every listing, dropped from the search form's language picker, and — for the
+  listings the site lets a query reach — excluded server-side as `-language:"x"$` so the
+  page still comes back full.
+- Hiding Japanese hides galleries carrying no language tag at all, which is what an
+  untranslated Japanese work looks like on this site; there is no `-language:` term that
+  can express that, so those rows are dropped from the listing instead.
+- Home sections now page until they have the tiles they advertise. Hiding a language can
+  leave a 25-row page holding one gallery, and the month's toplist was showing a single
+  item where it promised twelve.
 
 ### 2026-09-06
 
