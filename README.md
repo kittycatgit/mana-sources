@@ -19,10 +19,14 @@ from there.
 | Tailspace | 1.1.0 | English | Explicit |
 | Hiperdex | 1.0.0 | English | Mixed |
 <<<<<<< HEAD
+| Manga18fx | 1.1.0 | English | Explicit |
+=======
+<<<<<<< HEAD
 | Imhentai | 1.0.0 | Multi | Explicit |
 =======
 | Weebcentral | 1.0.1 | English | Mixed |
 | Madaradex | 1.0.1 | English | Explicit |
+>>>>>>> origin/main
 >>>>>>> origin/main
 
 See [CHANGELOG.md](CHANGELOG.md) for what changed and when.
