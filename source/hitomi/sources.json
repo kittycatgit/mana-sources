@@ -5,7 +5,7 @@
     {
       "id": "hitomi",
       "name": "Hitomi",
-      "version": "1.0.0",
+      "version": "1.1.0",
       "description": "Reads doujinshi, manga and CG sets from hitomi.la",
       "website": "https://hitomi.la",
       "rating": 2,
@@ -27,8 +27,8 @@
       ],
       "path": "Hitomi",
       "environment": "source",
-      "intents": 2100236,
-      "hash": "15ba816015ba816015ba816015ba816015ba816015ba816015ba816015ba8160"
+      "intents": 2100237,
+      "hash": "45a6fa8945a6fa8945a6fa8945a6fa8945a6fa8945a6fa8945a6fa8945a6fa89"
     }
   ]
 }
