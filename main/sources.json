@@ -22,7 +22,7 @@
       "path": "Hiperdex",
       "environment": "source",
       "intents": 2104332,
-      "hash": "27afa63227afa63227afa63227afa63227afa63227afa63227afa63227afa632"
+      "hash": "17a1d51017a1d51017a1d51017a1d51017a1d51017a1d51017a1d51017a1d510"
     },
     {
       "id": "hitomi",
@@ -50,7 +50,7 @@
       "path": "Hitomi",
       "environment": "source",
       "intents": 2100237,
-      "hash": "30e9562130e9562130e9562130e9562130e9562130e9562130e9562130e95621"
+      "hash": "0e6824e20e6824e20e6824e20e6824e20e6824e20e6824e20e6824e20e6824e2"
     },
     {
       "id": "imhentai",
@@ -76,7 +76,7 @@
       "path": "Imhentai",
       "environment": "source",
       "intents": 2104328,
-      "hash": "766b9b24766b9b24766b9b24766b9b24766b9b24766b9b24766b9b24766b9b24"
+      "hash": "4a42ec2b4a42ec2b4a42ec2b4a42ec2b4a42ec2b4a42ec2b4a42ec2b4a42ec2b"
     },
     {
       "id": "madaradex",
@@ -98,7 +98,29 @@
       "path": "Madaradex",
       "environment": "source",
       "intents": 2104332,
-      "hash": "024f2a1b024f2a1b024f2a1b024f2a1b024f2a1b024f2a1b024f2a1b024f2a1b"
+      "hash": "3d02527f3d02527f3d02527f3d02527f3d02527f3d02527f3d02527f3d02527f"
+    },
+    {
+      "id": "manga18fx",
+      "name": "Manga18fx",
+      "version": "1.1.0",
+      "description": "Pulls adult manhwa, manhua and manga from manga18fx.com",
+      "website": "https://manga18fx.com",
+      "rating": 2,
+      "supportedLanguages": [
+        "en_US"
+      ],
+      "thumbnail": "Manga18fx.png",
+      "developers": [
+        {
+          "name": "Demon",
+          "github": "https://github.com/kittycatgit"
+        }
+      ],
+      "path": "Manga18fx",
+      "environment": "source",
+      "intents": 2100233,
+      "hash": "113161a9113161a9113161a9113161a9113161a9113161a9113161a9113161a9"
     },
     {
       "id": "tailspace",
@@ -120,7 +142,7 @@
       "path": "Tailspace",
       "environment": "source",
       "intents": 2104328,
-      "hash": "158dc5cd158dc5cd158dc5cd158dc5cd158dc5cd158dc5cd158dc5cd158dc5cd"
+      "hash": "54df41a854df41a854df41a854df41a854df41a854df41a854df41a854df41a8"
     },
     {
       "id": "weebcentral",
@@ -142,7 +164,7 @@
       "path": "Weebcentral",
       "environment": "source",
       "intents": 2104328,
-      "hash": "58b27b8358b27b8358b27b8358b27b8358b27b8358b27b8358b27b8358b27b83"
+      "hash": "1960ffa31960ffa31960ffa31960ffa31960ffa31960ffa31960ffa31960ffa3"
     }
   ]
 }
