@@ -4,7 +4,16 @@ Notable changes to the extensions in this repository, grouped by extension —
 each one versions independently (see `info.version` in its `main.ts`). Dates
 are UTC. Format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## Comix (current: v1.0.0)
+## Comix (current: v1.0.1)
+
+### 2026-09-08 — Long chapter lists open again
+
+- Opening a title whose chapter list ran past one round of pager walking failed with
+  `SyntaxError: Cannot declare a const variable twice: 'args'` instead of showing chapters.
+  Mana passes a script its arguments by declaring `args` for it, and that declaration
+  outlives the page it was made in, so the walk's second evaluation in the same WebView
+  redeclared it and took the whole chapter list down. Each evaluation now gets its own
+  WebView. A title with 274 uploads across 14 pager pages is what the report was opening.
 
 ### 2026-09-08
 

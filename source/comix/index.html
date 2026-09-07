@@ -203,7 +203,7 @@
 <li class="source" id="src-Comix">
   <div class="icon-slot"><img class="icon" src="assets/Comix.png" alt="" onerror="this.remove()"></div>
   <div class="body">
-    <h3>Comix <span class="ver">v1.0.0</span></h3>
+    <h3>Comix <span class="ver">v1.0.1</span></h3>
     <p>Reads manga, manhwa and manhua from comix.to</p>
     <div class="meta">
       <span class="r1"><i class="dot"></i>Mixed</span>
@@ -232,8 +232,11 @@
   <section>
   <h2>Changes</h2>
   <details>
-  <summary>Comix <span class="ver">1.0.0</span></summary>
+  <summary>Comix <span class="ver">1.0.1</span></summary>
   <div class="entry">
+    <h4>2026-09-08 — Long chapter lists open again</h4>
+    <ul><li>Opening a title whose chapter list ran past one round of pager walking failed with <code>SyntaxError: Cannot declare a const variable twice: 'args'</code> instead of showing chapters. Mana passes a script its arguments by declaring <code>args</code> for it, and that declaration outlives the page it was made in, so the walk's second evaluation in the same WebView redeclared it and took the whole chapter list down. Each evaluation now gets its own WebView. A title with 274 uploads across 14 pager pages is what the report was opening.</li></ul>
+  </div><div class="entry">
     <h4>2026-09-08</h4>
     <ul><li>Initial implementation, reading comix.to. The site is a React app over a Laravel API whose every listing route is signed per request by an obfuscated module versioned with the bundle, so nothing on that half can be called directly.</li><li>The home page and the title view need no browser at all: every document route inlines the app's dehydrated query cache, which a plain request already carries. Home is four rows — Trending Today, Latest Updates, Most Followed and Recently Added — out of one request.</li><li>Browse, chapters and pages come out of the running app instead: the source loads the page in a WebView and reads the decrypted reply out of React's fiber tree. That is about two seconds and no image downloads for a chapter, against a minute for scrolling the reader.</li><li>The chapter list walks its own pager by clicking it, one navigation instead of one per page, so a title with 707 uploads across 36 pages comes back complete in about twenty seconds. A chapter number appears once per scanlation group and every upload is kept, with the group carried as the chapter's provider.</li><li>Chapter dates are reconstructed from the site's relative wording — "1mo ago", "2w ago" — which is the only date its chapter payload carries.</li><li>Search covers the keyword query, all thirteen of the site's sorts, and its type, status, demographic, format, content rating, genre include/exclude, genre matching mode, year range and minimum chapter count filters.</li><li>Page images need comix.to as their referer or the CDN answers 403 with an error page.</li></ul>
   </div>
