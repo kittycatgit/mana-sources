@@ -69,11 +69,12 @@ import {
   type Suggestion,
   type TermTarget,
 } from "./model.ts";
+import { searchIndexIds } from "./search-index.ts";
 
 const info: SourceInfo = {
   id: "hitomi",
   name: "Hitomi",
-  version: "1.1.0",
+  version: "1.2.0",
   description: "Reads doujinshi, manga and CG sets from hitomi.la",
   website: BASE_URL,
   rating: CatalogRating.EXPLICIT,
@@ -98,7 +99,10 @@ const config: SourceConfig = {
 
 /** How many galleries the site puts in one Atom feed, and so in one listing. */
 const FEED_SIZE = 25;
+/** A query is answered from a list of ids, so it pages; the site shows 25 to a page too. */
+const SEARCH_PAGE_SIZE = 25;
 const GALLERY_CACHE_SIZE = 200;
+const SEARCH_CACHE_SIZE = 20;
 
 class HitomiSource
   implements ChapterSource, SearchProvider, PageLinkResolver, SourcePreferenceProvider
@@ -110,6 +114,7 @@ class HitomiSource
   private tagOptions: Option[] | undefined;
   private imageKey: ImageKey | undefined;
   private readonly galleries = new Map<string, GalleryInfo>();
+  private readonly searches = new Map<string, string[]>();
   private readonly preferences = new PreferenceStore<Record<string, PreferenceValue>>(
     info.id,
     PREFERENCE_DEFAULTS,
@@ -203,9 +208,10 @@ class HitomiSource
     return buildSearchForm({
       header: "Filters",
       footer:
-        "Hitomi lists one term at a time. Anything typed in the search box wins over the " +
-        "tag picked below, and the search box matches tags, artists, series, characters " +
-        "and groups — not gallery titles.",
+        "The search box takes the same terms the site's own does: several words narrow " +
+        "each other, -word excludes one, and namespace:value picks a namespace — tag, " +
+        "female, male, artist, series, character, group, type or language. Anything typed " +
+        "wins over the tag picked below.",
       fields: searchFields(await this.preferredLanguage()),
       tags: SearchPicker({
         id: FilterID.Tag,
@@ -237,9 +243,13 @@ class HitomiSource
     const query = request.query?.trim() ?? "";
 
     if (query) {
+      const ids = await this.queryIds(query, language);
+      if (ids) return this.idPage(ids, pageOf(request));
+
+      // Only reached when the WebView the site's own index needs is unavailable. The tag
+      // index answers over plain HTTP but knows tags, artists, series, characters and
+      // groups and not gallery titles, so a query naming none of them has no results.
       const term = await this.resolveTerm(query);
-      // Hitomi indexes tags, artists, series, characters and groups, not gallery titles, so
-      // a query naming none of them has no results rather than having gone wrong.
       if (!term) return { results: [], isLastPage: true };
       return this.listing({ ...term, language: term.language ?? language }, pageOf(request));
     }
@@ -338,6 +348,36 @@ class HitomiSource
     // Both image CDNs answer 404 — not 403 — to a request without the site as its referer,
     // which reads as a missing file rather than a rejection.
     return { url: imageURL, headers: { origin: BASE_URL, referer: `${BASE_URL}/` } };
+  }
+
+  /**
+   * The ids a typed query matches, held for as long as the reader keeps paging through
+   * them: the descent behind them is a dozen round trips and a WebView, and page two of the
+   * same query would otherwise pay for it again.
+   */
+  private async queryIds(query: string, language: string): Promise<string[] | undefined> {
+    const key = `${language}\n${query.toLowerCase()}`;
+    const cached = this.searches.get(key);
+    if (cached) return cached;
+
+    const ids = await searchIndexIds(query, language);
+    if (!ids) return undefined;
+
+    if (this.searches.size >= SEARCH_CACHE_SIZE) this.searches.clear();
+    this.searches.set(key, ids);
+    return ids;
+  }
+
+  private async idPage(ids: readonly string[], page: number): Promise<PagedSearchResult> {
+    const start = (page - 1) * SEARCH_PAGE_SIZE;
+    const wanted = ids.slice(start, start + SEARCH_PAGE_SIZE);
+    if (wanted.length === 0) return { results: [], isLastPage: true };
+
+    const galleries = await Promise.all(
+      wanted.map((id) => this.gallery(id).catch((): GalleryInfo | undefined => undefined)),
+    );
+    const found = galleries.filter((gallery): gallery is GalleryInfo => gallery !== undefined);
+    return { results: found.map(toHighlight), isLastPage: start + wanted.length >= ids.length };
   }
 
   private async listing(feed: Listing, page: number): Promise<PagedSearchResult> {
@@ -439,8 +479,9 @@ class HitomiSource
 
   /**
    * Turns what the user typed into the one namespaced term a feed can carry, the way the
-   * site's own search box does: an explicit `namespace:value` is taken as written, and a
-   * bare word is looked up in the tag index one character per path segment.
+   * site's own suggestion list does: an explicit `namespace:value` is taken as written, and
+   * a bare word is looked up in the tag index one character per path segment. This is the
+   * fallback for a query the real search index could not be reached for.
    */
   private async resolveTerm(query: string): Promise<TermTarget | undefined> {
     const typed = query.toLowerCase().replace(/_/g, " ");
