@@ -342,7 +342,7 @@
     </div>
     <div class="testing-changes">
       <h4>New in this version</h4>
-      <ul><li>Added Top This Year. The site publishes four gallery toplists and the source carried three; <code>toplist.php?tl=12</code> is a separate ranking from the yesterday, month and all-time ones it sits beside, and none of the four shares a title with another today.</li><li>Added a home row for each of the ten categories the front page's own chips scope to — Doujinshi, Manga, Artist CG, Game CG, Western, Non-H, Image Set, Cosplay, Asian Porn and Misc. The site reaches these as <code>/manga</code>, <code>/cosplay</code> and so on; each is an <code>f_cats</code> mask on the front page under another path, so they go through the same search URL the filters already build and inherit the hidden-language handling with it.</li><li>Nothing else on the site is a gallery listing: Watched, Favorites and My Home need an account, Torrents lists torrents rather than galleries, and the browse page offers no ordering at all — every listing it serves is newest first.</li></ul>
+      <ul><li>Added Top This Year.</li><li>Added a row for each of the ten front-page categories: Doujinshi, Manga, Artist CG, Game CG, Western, Non-H, Image Set, Cosplay, Asian Porn and Misc.</li></ul>
       
     </div><div class="testing-actions">
       <code class="turl">https://kittycatgit.github.io/mana-sources/source/ehentai</code><button class="copy-one" type="button" data-url="https://kittycatgit.github.io/mana-sources/source/ehentai">Copy</button>
@@ -402,7 +402,7 @@
     </div>
     <div class="testing-changes">
       <h4>New in this version</h4>
-      <ul><li>Reading a gallery the site challenged used <code>evaluateScript</code>, and the host declares a <code>const args</code> beside a script for every call, whether arguments are passed or not. That declaration outlives both the evaluation and the method, so the first challenged gallery in a session opened and the second died on <code>SyntaxError: Cannot declare a const variable twice: 'args'</code> before reading anything.</li><li>It uses <code>evaluate</code> with a function instead, which declares nothing beside it. The callback lives in its own module because its <code>document</code> cannot typecheck against a source tsconfig with no DOM lib — which is what the string form was working around.</li></ul>
+      <ul><li>Fixed the second challenged gallery in a session failing to open.</li></ul>
       
     </div><div class="testing-actions">
       <code class="turl">https://kittycatgit.github.io/mana-sources/source/imhentai</code><button class="copy-one" type="button" data-url="https://kittycatgit.github.io/mana-sources/source/imhentai">Copy</button>
@@ -442,7 +442,7 @@
     </div>
     <div class="testing-changes">
       <h4>New in this version</h4>
-      <ul><li>Added a Manhua row to the home page, reading the site's own <code>manhua</code> archive. It is the one scope in the site's top menu the source did not already carry that is a different query rather than the latest-updates pool relabelled: its titles overlap the other four rows by at most one out of fifteen.</li><li>Re-enumerated what the site actually publishes while checking a report that the home page was short of listings. There are two rows on its own home page and seven scopes in its menu, no sort control anywhere, and no trending or most-viewed listing of any kind. Of the three menu scopes still missing, only Manhua was added: <code>manga-genre/manhwa</code> is the home page under another name (23 of 24 titles shared), and the Drama and Action archives are the newest updates filtered — every one of their first fifteen titles sits inside the site's own two most recent pages — so either would have shipped as a row that duplicates Latest Updates on a busy day.</li></ul>
+      <ul><li>Added a Manhua row.</li></ul>
       
     </div><div class="testing-actions">
       <code class="turl">https://kittycatgit.github.io/mana-sources/source/manga18fx</code><button class="copy-one" type="button" data-url="https://kittycatgit.github.io/mana-sources/source/manga18fx">Copy</button>
@@ -482,7 +482,7 @@
     </div>
     <div class="testing-changes">
       <h4>New in this version</h4>
-      <ul><li>The home page grew from five rows to fourteen, and now carries every listing mangafire.to offers without a keyword: Trending over each of the three windows the site's own row is scoped to — today, this week and this month — the Hot tab of Latest Updates, Most Viewed over 30 days and all time, Most Followed, Newest Series, and the catalogue A to Z and Z to A.</li><li>Two of the site's listings were left off after checking what each query returns rather than what it is labelled: the browse page's Trending sort is its 7-day view ranking under another name, and its Year (oldest) sort puts the titles carrying no year at all first.</li></ul>
+      <ul><li>Added Trending Today, This Week and This Month, Hot, Most Viewed (30 days), Most Viewed (all time), Most Followed, Newest Series, A–Z and Z–A.</li><li>Chapters show whether they are the official release or a fan translation.</li><li>Chapter titles no longer end with “· Fan translation”.</li></ul>
       
     </div><div class="testing-actions">
       <code class="turl">https://kittycatgit.github.io/mana-sources/source/mangafire</code><button class="copy-one" type="button" data-url="https://kittycatgit.github.io/mana-sources/source/mangafire">Copy</button>
