@@ -38,7 +38,7 @@ import {
   listResults,
   pageOf,
   resolveSection,
-  toPageSections,
+  fillPageSections,
   type PreferenceValue,
   type SectionSpec,
 } from "./forms/index.ts";
@@ -78,7 +78,7 @@ import { searchIndexIds } from "./search-index.ts";
 const info: SourceInfo = {
   id: "hitomi",
   name: "Hitomi",
-  version: "1.3.0",
+  version: "1.3.1",
   description: "Reads doujinshi, manga and CG sets from hitomi.la",
   website: BASE_URL,
   rating: CatalogRating.EXPLICIT,
@@ -268,7 +268,7 @@ class HitomiSource
   }
 
   async getSectionsForPage(_link: PageLink): Promise<PageSection[]> {
-    return toPageSections(await this.sections());
+    return fillPageSections(await this.sections());
   }
 
   async resolvePageSection(_link: PageLink, sectionID: string): Promise<ResolvedPageSection> {
@@ -450,7 +450,7 @@ class HitomiSource
     const ids = (await this.rankings(language))?.get(window) ?? [];
     if (ids.length === 0) return { results: [], isLastPage: true };
 
-    const found = await this.galleriesFor(ids);
+    const found = await this.galleriesFor(ids.slice(0, 12));
     return { results: found.map(toHighlight), isLastPage: true };
   }
 
