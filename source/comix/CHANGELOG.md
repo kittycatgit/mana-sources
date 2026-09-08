@@ -4,7 +4,15 @@ Notable changes to the extensions in this repository, grouped by extension —
 each one versions independently (see `info.version` in its `main.ts`). Dates
 are UTC. Format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## Comix (current: v1.0.9)
+## Comix (current: v1.0.10)
+
+### 2026-09-08 — Long lists get the time they need
+
+- A 1194-chapter title loaded 1020 of them and needed a second open to finish. The walk had
+  sixty seconds and that title is sixty pager pages; a phone renders about fifty of them in
+  the time allowed, and what is not reached is simply missing. The walk now has 150 seconds
+  and the WebView 180, which covers a list of that length on a first open.
+- Nothing else changed: same walk, same clicks, same reads.
 
 ### 2026-09-08 — Back to the walk that worked
 

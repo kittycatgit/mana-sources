@@ -203,7 +203,7 @@
 <li class="source" id="src-Comix">
   <div class="icon-slot"><img class="icon" src="assets/Comix.png" alt="" onerror="this.remove()"></div>
   <div class="body">
-    <h3>Comix <span class="ver">v1.0.9</span></h3>
+    <h3>Comix <span class="ver">v1.0.10</span></h3>
     <p>Reads manga, manhwa and manhua from comix.to</p>
     <div class="meta">
       <span class="r1"><i class="dot"></i>Mixed</span>
@@ -232,8 +232,11 @@
   <section>
   <h2>Changes</h2>
   <details>
-  <summary>Comix <span class="ver">1.0.9</span></summary>
+  <summary>Comix <span class="ver">1.0.10</span></summary>
   <div class="entry">
+    <h4>2026-09-08 — Long lists get the time they need</h4>
+    <ul><li>A 1194-chapter title loaded 1020 of them and needed a second open to finish. The walk had sixty seconds and that title is sixty pager pages; a phone renders about fifty of them in the time allowed, and what is not reached is simply missing. The walk now has 150 seconds and the WebView 180, which covers a list of that length on a first open.</li><li>Nothing else changed: same walk, same clicks, same reads.</li></ul>
+  </div><div class="entry">
     <h4>2026-09-08 — Back to the walk that worked</h4>
     <ul><li>Everything from v1.0.5 to v1.0.8 is reverted: the source is the v1.0.4 code again, which is the version that read chapter lists correctly on a device, slowly and completely.</li><li>v1.0.5 to v1.0.7 fetched pages through the app's own query function, which is bound to the parameters it was built with — page two returned page one, and a device showed twenty chapters. v1.0.8 walked the pager again but was a fresh implementation of it, and its behaviour on a device was worse than the one it replaced.</li></ul>
   </div><div class="entry">
