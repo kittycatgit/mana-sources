@@ -4,8 +4,51 @@ Notable changes to the extensions in this repository, grouped by extension —
 each one versions independently (see `info.version` in its `main.ts`). Dates
 are UTC. Format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-<<<<<<< HEAD
-## Ehentai (current: v1.1.0)
+## Nhentai (current: v1.1.0)
+
+### 2026-09-07 — Language setting
+
+- The source's settings now carry a reading language, chosen from the four the site
+  actually stocks: English, Japanese, Chinese, and Translated for anything carrying a
+  translation at all.
+- The whole home page follows that choice — the hero becomes the language's most popular
+  galleries, Recently Added its newest uploads, and Manga This Month its serialised manga.
+  With nothing chosen the page is what it was, site-wide with an English week row.
+- Searches follow it too, wherever the search screen's own language filter is left on
+  "Any language"; picking a language there still wins for that one search.
+- Stopped reading a Turnstile widget as a Cloudflare challenge, matching the fix the other
+  sources already carried — this source was branched before it landed.
+
+### 2026-09-06
+
+- Initial implementation, reading nhentai.net through its public `/api/v2` endpoints. The
+  HTML site sits behind a Cloudflare interstitial the app cannot clear; the API answers
+  unauthenticated and unchallenged, so the source parses no markup at all.
+- Home page carries Popular Right Now, Recently Added, Popular This Week and Manga This
+  Month, each backed by the same query as its view-more listing.
+- Search supports a keyword query, the site's five sort orders, language, format, artist
+  and parody filters, include/exclude across the 100 most used tags, and minimum page and
+  favourite counts.
+- Each gallery is one work rather than a series, so it is exposed as a single chapter; the
+  title view composes a summary from the metadata, since the API publishes none.
+- Covers and pages come from two CDN pools that are not interchangeable — thumbnails only
+  from the thumb servers, full pages only from the image servers.
+
+## Ehentai (current: v1.2.0)
+
+### 2026-09-08 — The rest of the site's listings
+
+- Added Top This Year. The site publishes four gallery toplists and the source carried
+  three; `toplist.php?tl=12` is a separate ranking from the yesterday, month and all-time
+  ones it sits beside, and none of the four shares a title with another today.
+- Added a home row for each of the ten categories the front page's own chips scope to —
+  Doujinshi, Manga, Artist CG, Game CG, Western, Non-H, Image Set, Cosplay, Asian Porn and
+  Misc. The site reaches these as `/manga`, `/cosplay` and so on; each is an `f_cats` mask
+  on the front page under another path, so they go through the same search URL the filters
+  already build and inherit the hidden-language handling with it.
+- Nothing else on the site is a gallery listing: Watched, Favorites and My Home need an
+  account, Torrents lists torrents rather than galleries, and the browse page offers no
+  ordering at all — every listing it serves is newest first.
 
 ### 2026-09-07
 
@@ -55,8 +98,6 @@ are UTC. Format loosely follows [Keep a Changelog](https://keepachangelog.com/en
   under that status where local law makes it add an age notice, and rejecting it would
   leave those readers with an empty app.
 
-=======
-<<<<<<< HEAD
 ## Manga18fx (current: v1.1.0)
 
 ### 2026-09-07 — Hiding raw releases
@@ -90,8 +131,6 @@ are UTC. Format loosely follows [Keep a Changelog](https://keepachangelog.com/en
 - Content type comes from the genre tags: the title page's own Type row reads Manhwa on
   every title, including ones filed under the manhua genre.
 
-=======
-<<<<<<< HEAD
 ## Imhentai (current: v1.0.0)
 
 ### 2026-09-06
@@ -120,7 +159,6 @@ are UTC. Format loosely follows [Keep a Changelog](https://keepachangelog.com/en
   by driving the built bundle against gallery HTML captured from a real browser, and the
   cover and page URLs they produced were fetched to confirm they serve.
 
-=======
 ## Madaradex (current: v1.0.1)
 
 ### 2026-09-06
@@ -209,10 +247,13 @@ are UTC. Format loosely follows [Keep a Changelog](https://keepachangelog.com/en
   toggles, and the site's six sort orders in either direction.
 - Honours the host's content-rating policy by asking the site for non-adult results when
   mature content is not allowed.
->>>>>>> origin/main
->>>>>>> origin/main
->>>>>>> origin/main
-## Hiperdex (current: v1.0.0)
+## Hiperdex (current: v1.0.1)
+
+### 2026-09-08
+
+- The chapter-count badge on a listing tile is written as text. `@mana-app/types@0.0.26`
+  redefines a badge as a short label the source supplies, where it used to be a count and a
+  colour the host rendered itself.
 
 ### 2026-09-06
 

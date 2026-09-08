@@ -203,7 +203,7 @@
 <li class="source" id="src-Ehentai">
   <div class="icon-slot"><img class="icon" src="assets/Ehentai.png" alt="" onerror="this.remove()"></div>
   <div class="body">
-    <h3>Ehentai <span class="ver">v1.1.0</span></h3>
+    <h3>Ehentai <span class="ver">v1.2.0</span></h3>
     <p>Reads the doujinshi, manga and image galleries hosted on e-hentai.org</p>
     <div class="meta">
       <span class="r2"><i class="dot"></i>Explicit</span>
@@ -232,8 +232,21 @@
   <section>
   <h2>Changes</h2>
   <details>
-  <summary>Ehentai <span class="ver">1.1.0</span></summary>
+  <summary>Nhentai <span class="ver">1.1.0</span></summary>
   <div class="entry">
+    <h4>2026-09-07 — Language setting</h4>
+    <ul><li>The source's settings now carry a reading language, chosen from the four the site actually stocks: English, Japanese, Chinese, and Translated for anything carrying a translation at all.</li><li>The whole home page follows that choice — the hero becomes the language's most popular galleries, Recently Added its newest uploads, and Manga This Month its serialised manga. With nothing chosen the page is what it was, site-wide with an English week row.</li><li>Searches follow it too, wherever the search screen's own language filter is left on "Any language"; picking a language there still wins for that one search.</li><li>Stopped reading a Turnstile widget as a Cloudflare challenge, matching the fix the other sources already carried — this source was branched before it landed.</li></ul>
+  </div><div class="entry">
+    <h4>2026-09-06</h4>
+    <ul><li>Initial implementation, reading nhentai.net through its public <code>/api/v2</code> endpoints. The HTML site sits behind a Cloudflare interstitial the app cannot clear; the API answers unauthenticated and unchallenged, so the source parses no markup at all.</li><li>Home page carries Popular Right Now, Recently Added, Popular This Week and Manga This Month, each backed by the same query as its view-more listing.</li><li>Search supports a keyword query, the site's five sort orders, language, format, artist and parody filters, include/exclude across the 100 most used tags, and minimum page and favourite counts.</li><li>Each gallery is one work rather than a series, so it is exposed as a single chapter; the title view composes a summary from the metadata, since the API publishes none.</li><li>Covers and pages come from two CDN pools that are not interchangeable — thumbnails only from the thumb servers, full pages only from the image servers.</li></ul>
+  </div>
+</details>
+<details>
+  <summary>Ehentai <span class="ver">1.2.0</span></summary>
+  <div class="entry">
+    <h4>2026-09-08 — The rest of the site's listings</h4>
+    <ul><li>Added Top This Year. The site publishes four gallery toplists and the source carried three; <code>toplist.php?tl=12</code> is a separate ranking from the yesterday, month and all-time ones it sits beside, and none of the four shares a title with another today.</li><li>Added a home row for each of the ten categories the front page's own chips scope to — Doujinshi, Manga, Artist CG, Game CG, Western, Non-H, Image Set, Cosplay, Asian Porn and Misc. The site reaches these as <code>/manga</code>, <code>/cosplay</code> and so on; each is an <code>f_cats</code> mask on the front page under another path, so they go through the same search URL the filters already build and inherit the hidden-language handling with it.</li><li>Nothing else on the site is a gallery listing: Watched, Favorites and My Home need an account, Torrents lists torrents rather than galleries, and the browse page offers no ordering at all — every listing it serves is newest first.</li></ul>
+  </div><div class="entry">
     <h4>2026-09-07</h4>
     <ul><li>Opening a chapter spent one request per page before the reader saw anything, which took 79 seconds on the 478-page gallery that led the home page — long enough to read as images that never load. The image URL only exists inside the <code>/s/</code> viewer page it belongs to and the site's bulk viewer refuses anyone not signed in, so those pages are now handed to the reader as-is and resolved one at a time in <code>willRequestImage</code>. The same gallery opens in seven seconds, and each image URL is minted when it is displayed rather than up to a minute beforehand.</li><li>Added a Hidden languages setting to the source's preferences. A hidden language is left out of every listing, dropped from the search form's language picker, and — for the listings the site lets a query reach — excluded server-side as <code>-language:"x"$</code> so the page still comes back full.</li><li>Hiding Japanese hides galleries carrying no language tag at all, which is what an untranslated Japanese work looks like on this site; there is no <code>-language:</code> term that can express that, so those rows are dropped from the listing instead.</li><li>Home sections now page until they have the tiles they advertise. Hiding a language can leave a 25-row page holding one gallery, and the month's toplist was showing a single item where it promised twelve.</li></ul>
   </div><div class="entry">
@@ -289,8 +302,11 @@
   </div>
 </details>
 <details>
-  <summary>Hiperdex <span class="ver">1.0.0</span></summary>
+  <summary>Hiperdex <span class="ver">1.0.1</span></summary>
   <div class="entry">
+    <h4>2026-09-08</h4>
+    <ul><li>The chapter-count badge on a listing tile is written as text. <code>@mana-app/types@0.0.26</code> redefines a badge as a short label the source supplies, where it used to be a count and a colour the host rendered itself.</li></ul>
+  </div><div class="entry">
     <h4>2026-09-06</h4>
     <ul><li>Initial implementation, reading hiperdex.com through its tRPC API at <code>/api/trpc</code> rather than the markup — the site is now a client-rendered SPA whose pages contain no content.</li><li>Every API call carries the <code>__st</code> session cookie, which the server only issues in the <code>Set-Cookie</code> of a document request; the source fetches the landing page once for it and re-fetches on a 401.</li><li>Home page carries Trending Today, Latest Updates, Most Popular, Top Rated and Recently Added, each backed by the same query as its view-more listing.</li><li>Search supports a title query, the site's seven sort orders, and type, status, rating and genre filters; the status picker adds "Releasing", which the site's own filter panel omits despite 284 titles carrying it.</li><li>Covers and chapter pages are requested with the site as their referer, without which both CDNs answer 403.</li></ul>
   </div>
@@ -308,7 +324,7 @@
 </section>
 </main>
 
-<footer class="wrap">Updated 2026-09-07</footer>
+<footer class="wrap">Updated 2026-09-08</footer>
 
 <script>
   Array.prototype.forEach.call(document.querySelectorAll(".copy-one"), function (b) {
