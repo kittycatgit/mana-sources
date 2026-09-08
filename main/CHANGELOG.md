@@ -176,7 +176,16 @@ are UTC. Format loosely follows [Keep a Changelog](https://keepachangelog.com/en
   newest-first.
 - Chapter images need the site as referer.
 
-## Weebcentral (current: v1.0.1)
+## Weebcentral (current: v1.2.1)
+
+### 2026-09-09
+
+- The home page arrives with every row already filled.
+
+
+### 2026-09-08
+
+- Added Hot This Week, Hot This Month, All-Time Most Viewed, Recently Added, Most Subscribed and Recommendations.
 
 ### 2026-09-07
 
