@@ -47,7 +47,7 @@ import {
   pageOf,
   resolveSection,
   resolveSortId,
-  fillPageSections,
+  toPageSections,
   type SectionSpec,
 } from "./forms/index.ts";
 import {
@@ -88,7 +88,7 @@ import {
 const info: SourceInfo = {
   id: "mangafire",
   name: "Mangafire",
-  version: "1.2.1",
+  version: "1.2.2",
   description: "Reads manga, manhwa and manhua from mangafire.to",
   website: BASE_URL,
   rating: CatalogRating.MIXED,
@@ -313,7 +313,7 @@ class MangafireSource implements ChapterSource, SearchProvider, PageLinkResolver
   }
 
   async getSectionsForPage(_link: PageLink): Promise<PageSection[]> {
-    return fillPageSections(this.sections());
+    return toPageSections(this.sections());
   }
 
   async resolvePageSection(_link: PageLink, sectionID: string): Promise<ResolvedPageSection> {

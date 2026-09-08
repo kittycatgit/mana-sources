@@ -36,7 +36,7 @@ import {
   pageOf,
   resolveSortId,
   resolveSection,
-  fillPageSections,
+  toPageSections,
   withQuery,
   type SectionSpec,
 } from "./forms/index.ts";
@@ -58,7 +58,7 @@ import {
 const info: SourceInfo = {
   id: "tailspace",
   name: "Tailspace",
-  version: "1.1.1",
+  version: "1.1.2",
   description: "Pulls furry comics from tailspace.com",
   website: BASE_URL,
   rating: CatalogRating.EXPLICIT,
@@ -135,7 +135,7 @@ class TailspaceSource implements ChapterSource, SearchProvider, PageLinkResolver
   }
 
   async getSectionsForPage(_link: PageLink): Promise<PageSection[]> {
-    return fillPageSections(this.sections());
+    return toPageSections(this.sections());
   }
 
   async resolvePageSection(_link: PageLink, sectionID: string): Promise<ResolvedPageSection> {

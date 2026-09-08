@@ -89,7 +89,7 @@ const SESSION_TTL_MS = 20 * 60 * 1000;
 const info: SourceInfo = {
   id: "mangaball",
   name: "Mangaball",
-  version: "1.3.5",
+  version: "1.3.6",
   description: "Pulls manga, manhwa and manhua from mangaball.net",
   website: BASE_URL,
   rating: CatalogRating.MIXED,
@@ -312,33 +312,11 @@ class MangaballSource implements ChapterSource, SearchProvider, PageLinkResolver
     return SORT_OPTIONS;
   }
 
-  /**
-   * The home page comes back with its rows already filled.
-   *
-   * `PageSection.items` is optional, and a section returned without it is resolved by the
-   * app one `resolvePageSection` call at a time — eighteen round trips in sequence, about
-   * sixteen seconds, with the page filling in a row at a time. Mana's own sources return
-   * every row in this one call instead, and the site answers all eighteen requests at once
-   * in about two seconds, so that is what happens here.
-   *
-   * A row whose request fails is returned without `items`, so the app resolves that one on
-   * its own and its error is shown on that row rather than taking the page down.
-   */
   async getSectionsForPage(_link: PageLink): Promise<PageSection[]> {
     await this.credentials();
-    const specs = this.sections();
-    const loaded = await Promise.allSettled(specs.map((spec) => spec.load(1)));
-    return toPageSections(specs).map((section, index) => {
-      const outcome = loaded[index];
-      if (outcome?.status !== "fulfilled") return section;
-      const spec = specs[index];
-      const { results } = outcome.value;
-      const items = spec?.limit === undefined ? results : results.slice(0, spec.limit);
-      return { ...section, items };
-    });
+    return toPageSections(this.sections());
   }
 
-  /** Only reached for a row `getSectionsForPage` could not fill; it is tried again here. */
   async resolvePageSection(_link: PageLink, sectionID: string): Promise<ResolvedPageSection> {
     const spec = this.sections().find((section) => section.id === sectionID);
     if (!spec) return { items: [] };

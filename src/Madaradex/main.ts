@@ -41,7 +41,7 @@ import {
   pageOf,
   resolveSection,
   resolveSortId,
-  fillPageSections,
+  toPageSections,
   withQuery,
   type SectionSpec,
 } from "./forms/index.ts";
@@ -72,7 +72,7 @@ import {
 const info: SourceInfo = {
   id: "madaradex",
   name: "Madaradex",
-  version: "1.1.1",
+  version: "1.1.2",
   description: "Pulls manga, manhwa and manhua from madaradex.org",
   website: BASE_URL,
   rating: CatalogRating.EXPLICIT,
@@ -180,7 +180,7 @@ class MadaradexSource implements ChapterSource, SearchProvider, PageLinkResolver
   }
 
   async getSectionsForPage(link: PageLink): Promise<PageSection[]> {
-    return fillPageSections(this.sections(this.adultCeiling(link.context)));
+    return toPageSections(this.sections(this.adultCeiling(link.context)));
   }
 
   async resolvePageSection(link: PageLink, sectionID: string): Promise<ResolvedPageSection> {

@@ -38,7 +38,7 @@ import {
   pageOf,
   resolveSection,
   resolveSortId,
-  fillPageSections,
+  toPageSections,
   withQuery,
   type SectionSpec,
 } from "./forms/index.ts";
@@ -67,7 +67,7 @@ import {
 const info: SourceInfo = {
   id: "imhentai",
   name: "Imhentai",
-  version: "1.0.2",
+  version: "1.0.3",
   description: "Browses the doujinshi, manga and artist CG galleries on imhentai.xxx",
   website: BASE_URL,
   rating: CatalogRating.EXPLICIT,
@@ -166,7 +166,7 @@ class ImhentaiSource implements ChapterSource, SearchProvider, PageLinkResolver 
   }
 
   async getSectionsForPage(_link: PageLink): Promise<PageSection[]> {
-    return fillPageSections(this.sections());
+    return toPageSections(this.sections());
   }
 
   async resolvePageSection(_link: PageLink, sectionID: string): Promise<ResolvedPageSection> {

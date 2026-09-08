@@ -42,7 +42,7 @@ import {
   listResults,
   pageOf,
   sectionById,
-  fillPageSections,
+  toPageSections,
   withQuery,
   type PreferenceSection,
   type SectionSpec,
@@ -81,7 +81,7 @@ import {
 const info: SourceInfo = {
   id: "ehentai",
   name: "Ehentai",
-  version: "1.2.1",
+  version: "1.2.2",
   description: "Reads the doujinshi, manga and image galleries hosted on e-hentai.org",
   website: BASE_URL,
   rating: CatalogRating.EXPLICIT,
@@ -240,7 +240,7 @@ class EhentaiSource
   }
 
   async getSectionsForPage(_link: PageLink): Promise<PageSection[]> {
-    return fillPageSections(this.sections());
+    return toPageSections(this.sections());
   }
 
   /**
