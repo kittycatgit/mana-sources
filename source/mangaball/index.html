@@ -203,7 +203,7 @@
 <li class="source" id="src-Mangaball">
   <div class="icon-slot"><img class="icon" src="assets/Mangaball.png" alt="" onerror="this.remove()"></div>
   <div class="body">
-    <h3>Mangaball <span class="ver">v1.1.0</span></h3>
+    <h3>Mangaball <span class="ver">v1.2.0</span></h3>
     <p>Pulls manga, manhwa and manhua from mangaball.net</p>
     <div class="meta">
       <span class="r1"><i class="dot"></i>Mixed</span>
@@ -232,8 +232,11 @@
   <section>
   <h2>Changes</h2>
   <details>
-  <summary>Mangaball <span class="ver">1.1.0</span></summary>
+  <summary>Mangaball <span class="ver">1.2.0</span></summary>
   <div class="entry">
+    <h4>2026-09-08 — Home page rows</h4>
+    <ul><li>Five rows the site offers and the source did not carry: Recommended Titles (<code>getRecommend</code>), Most Read Today (<code>getRecentChapterRead</code> over the day window), Most Viewed (<code>getPopular</code>), Manga Updates and Comics Updates (the Japanese and English scopes of the site's "By Origin" row).</li><li>The Featured hero's subtitle now says what it is. <code>getFeatured</code> is not an editorial pick: its twelve titles are the top twelve of <code>getRecentRead&amp;search_time=week</code> reshuffled, which is why none of the "Top Viewed Titles" windows was added — <code>day</code> and <code>month</code> come back eleven of those same twelve, and <code>week</code> is the row itself.</li><li>The site heads its own view ranking "Popular This Season", but <code>getPopular</code> returns the catalogue ranked by total views — byte-identical to <code>views_desc</code> on the browse page — so the row is named Most Viewed for what it returns.</li><li>Most Read Today shows status alone in its subtitle. <code>getRecentChapterRead</code> answers with the same <code>updated_at</code> on every row — 10mo ago on all twenty, a stats-table stamp rather than the title's — so printing it put "updated 10mo ago" under One Piece while the row below it correctly said 16h ago.</li><li><code>getByOrigin</code> is not used for the four origin rows even though they are its scopes: it ignores <code>search_limit</code>, always answers twelve and carries no pagination, while the browse API returns the same titles in the same order and pages, so those rows keep a view-more.</li></ul>
+  </div><div class="entry">
     <h4>2026-09-08</h4>
     <ul><li>Chapters now report the scanlation group that made them as <code>Chapter.provider</code>, so several scans of one chapter show up as versions of it rather than as identical rows. Manga Ball aggregates: across the twenty-four most-read titles, every one of them carries the same chapter number twice or more in English alone, and one Blue Lock chapter has fifty-six English scans. The group's page on the site is reported alongside as a provider link.</li><li>The group is no longer appended to the chapter title, which was the old way of telling two scans apart and would now print its name twice in the same row.</li><li><code>es-la</code> is reported as <code>es-419</code>. The site uses both codes and labels both of them "Spanish (Latin America)", which split one language into two in the reader; <code>es-la</code> is not a valid tag either. Both stay selectable in the Chapter Languages setting.</li></ul>
   </div><div class="entry">
