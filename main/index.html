@@ -137,6 +137,11 @@
   .request a:hover { background: var(--ember); color: #150705; }
 
   .tag { font: 700 10px/1 Archivo, sans-serif; letter-spacing: .12em; text-transform: uppercase; color: var(--amber); }
+  .testing-changes { margin-top: 12px; }
+  .testing-changes h4 { margin: 0 0 6px; font: 400 11px "JetBrains Mono", ui-monospace, monospace; color: var(--amber); letter-spacing: .1em; text-transform: uppercase; }
+  .testing-changes ul { margin: 0; padding-left: 18px; }
+  .testing-changes li { font-size: 14px; color: var(--muted); margin-bottom: 4px; }
+  .testing-changes .more { margin: 6px 0 0; font-size: 13px; color: var(--muted); opacity: .75; }
   .testing-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-top: 12px; }
   .turl { font: 400 12px "JetBrains Mono", ui-monospace, monospace; color: var(--muted); word-break: break-all; }
   .copy-one, .thread {
@@ -335,7 +340,11 @@
       <span style="color:var(--muted)">JA / EN / zh-CN / KO / ES</span>
       <a href="https://e-hentai.org" target="_blank" rel="noopener">e-hentai.org &nearr;</a>
     </div>
-    <div class="testing-actions">
+    <div class="testing-changes">
+      <h4>New in this version</h4>
+      <ul><li>Added Top This Year. The site publishes four gallery toplists and the source carried three; <code>toplist.php?tl=12</code> is a separate ranking from the yesterday, month and all-time ones it sits beside, and none of the four shares a title with another today.</li><li>Added a home row for each of the ten categories the front page's own chips scope to — Doujinshi, Manga, Artist CG, Game CG, Western, Non-H, Image Set, Cosplay, Asian Porn and Misc. The site reaches these as <code>/manga</code>, <code>/cosplay</code> and so on; each is an <code>f_cats</code> mask on the front page under another path, so they go through the same search URL the filters already build and inherit the hidden-language handling with it.</li><li>Nothing else on the site is a gallery listing: Watched, Favorites and My Home need an account, Torrents lists torrents rather than galleries, and the browse page offers no ordering at all — every listing it serves is newest first.</li></ul>
+      
+    </div><div class="testing-actions">
       <code class="turl">https://kittycatgit.github.io/mana-sources/source/ehentai</code><button class="copy-one" type="button" data-url="https://kittycatgit.github.io/mana-sources/source/ehentai">Copy</button>
       <a class="thread" href="https://github.com/kittycatgit/mana-sources/issues/6" target="_blank" rel="noopener">Leave feedback</a>
     </div>
@@ -351,7 +360,11 @@
       <span style="color:var(--muted)">EN</span>
       <a href="https://hiperdex.com" target="_blank" rel="noopener">hiperdex.com &nearr;</a>
     </div>
-    <div class="testing-actions">
+    <div class="testing-changes">
+      <h4>New in this version</h4>
+      <ul><li>Latest Manga and Recently Updated are back on the home page. Both were dropped for holding much of what a neighbouring row holds today, which is a fact about this week's catalogue rather than about the query: the Manga scope is applied by the site, and <code>sort:"recent"</code> orders by last chapter where Recently Added orders by series id, so an older series that updates appears on one and not the other.</li><li>Only <code>sort:"relevance"</code> stays out. With an empty query the API answers it byte for byte with <code>sort:"popular"</code> — it is the Most Popular row under a second name, not a listing of its own.</li><li>The three trending rows are fifteen tiles again, like every other row. They were cut to twelve to hold their overlap down, and how much two windows over one ranking happen to share this week is not a reason to show less of either.</li></ul>
+      
+    </div><div class="testing-actions">
       <code class="turl">https://kittycatgit.github.io/mana-sources/source/hiperdex</code><button class="copy-one" type="button" data-url="https://kittycatgit.github.io/mana-sources/source/hiperdex">Copy</button>
       <a class="thread" href="https://github.com/kittycatgit/mana-sources/issues?q=is%3Aissue+hiperdex" target="_blank" rel="noopener">Leave feedback</a>
     </div>
@@ -367,7 +380,11 @@
       <span style="color:var(--muted)">JA / EN / zh-CN / KO / ES / PT / FR</span>
       <a href="https://hitomi.la" target="_blank" rel="noopener">hitomi.la &nearr;</a>
     </div>
-    <div class="testing-actions">
+    <div class="testing-changes">
+      <h4>New in this version</h4>
+      <ul><li>The home page now carries the four popularity windows the site's own order-by dropdown offers — Popular Today, This Week, This Month and This Year. They are four separate rankings of the whole catalogue rather than slices of one another: the day's list and the week's shared two of twelve titles the day this was written.</li><li>Those four are published as <code>.nozomi</code> only, with no Atom counterpart, so they are read through the same auxiliary WebView the search index already uses — all four in one visit, because a listing's head is a hundred bytes and opening the page is the whole cost.</li><li>Where there is no WebView to open, those four rows are left off the home page rather than shown empty. There is no plain-HTTP route to fall back to, and a row a device cannot fill reads as a broken source rather than as a listing the site declined to serve.</li><li>Artist CG and Image Sets rows, the two content types the site lists that the home page did not carry.</li><li>Date Published, the dropdown's remaining order, is deliberately not a row: it ranks the same catalogue by a date that is almost always the day a gallery was added, and it held eight of Just Added's ten titles. Anime is left out too — those galleries are an mp4 the app cannot read, with a poster and a still standing in for pages.</li></ul>
+      
+    </div><div class="testing-actions">
       <code class="turl">https://kittycatgit.github.io/mana-sources/source/hitomi</code><button class="copy-one" type="button" data-url="https://kittycatgit.github.io/mana-sources/source/hitomi">Copy</button>
       <a class="thread" href="https://github.com/kittycatgit/mana-sources/issues/8" target="_blank" rel="noopener">Leave feedback</a>
     </div>
@@ -383,7 +400,11 @@
       <span style="color:var(--muted)">EN / JA / ES / FR / KO</span>
       <a href="https://imhentai.xxx" target="_blank" rel="noopener">imhentai.xxx &nearr;</a>
     </div>
-    <div class="testing-actions">
+    <div class="testing-changes">
+      <h4>New in this version</h4>
+      <ul><li>Reading a gallery the site challenged used <code>evaluateScript</code>, and the host declares a <code>const args</code> beside a script for every call, whether arguments are passed or not. That declaration outlives both the evaluation and the method, so the first challenged gallery in a session opened and the second died on <code>SyntaxError: Cannot declare a const variable twice: 'args'</code> before reading anything.</li><li>It uses <code>evaluate</code> with a function instead, which declares nothing beside it. The callback lives in its own module because its <code>document</code> cannot typecheck against a source tsconfig with no DOM lib — which is what the string form was working around.</li></ul>
+      
+    </div><div class="testing-actions">
       <code class="turl">https://kittycatgit.github.io/mana-sources/source/imhentai</code><button class="copy-one" type="button" data-url="https://kittycatgit.github.io/mana-sources/source/imhentai">Copy</button>
       <a class="thread" href="https://github.com/kittycatgit/mana-sources/issues/7" target="_blank" rel="noopener">Leave feedback</a>
     </div>
@@ -399,7 +420,11 @@
       <span style="color:var(--muted)">EN</span>
       <a href="https://madaradex.org" target="_blank" rel="noopener">madaradex.org &nearr;</a>
     </div>
-    <div class="testing-actions">
+    <div class="testing-changes">
+      <h4>New in this version</h4>
+      <ul><li>The home page carried four of the six listings the site browses by. Added Trending and A–Z, so every <code>m_orderby</code> tab the site's own browse page offers now has a row and a view-more listing behind it.</li><li>Trending and Most Read are two different queries the site keeps apart, and they are kept apart here: they shared 10 of their first 17 titles when this was measured, in a different order, which is the ordinary overlap between a recent window and an all-time one rather than one query wearing two titles.</li><li>The site has no time-scoped listings — <code>time=day</code> and <code>time=week</code> are ignored on every sort, and an unrecognised <code>m_orderby</code> silently falls back to the default ordering — so there is no "trending today"/"trending this week" pair to carry, and nothing was added for them.</li></ul>
+      
+    </div><div class="testing-actions">
       <code class="turl">https://kittycatgit.github.io/mana-sources/source/madaradex</code><button class="copy-one" type="button" data-url="https://kittycatgit.github.io/mana-sources/source/madaradex">Copy</button>
       <a class="thread" href="https://github.com/kittycatgit/mana-sources/issues/4" target="_blank" rel="noopener">Leave feedback</a>
     </div>
@@ -415,7 +440,11 @@
       <span style="color:var(--muted)">EN</span>
       <a href="https://manga18fx.com" target="_blank" rel="noopener">manga18fx.com &nearr;</a>
     </div>
-    <div class="testing-actions">
+    <div class="testing-changes">
+      <h4>New in this version</h4>
+      <ul><li>Added a Manhua row to the home page, reading the site's own <code>manhua</code> archive. It is the one scope in the site's top menu the source did not already carry that is a different query rather than the latest-updates pool relabelled: its titles overlap the other four rows by at most one out of fifteen.</li><li>Re-enumerated what the site actually publishes while checking a report that the home page was short of listings. There are two rows on its own home page and seven scopes in its menu, no sort control anywhere, and no trending or most-viewed listing of any kind. Of the three menu scopes still missing, only Manhua was added: <code>manga-genre/manhwa</code> is the home page under another name (23 of 24 titles shared), and the Drama and Action archives are the newest updates filtered — every one of their first fifteen titles sits inside the site's own two most recent pages — so either would have shipped as a row that duplicates Latest Updates on a busy day.</li></ul>
+      
+    </div><div class="testing-actions">
       <code class="turl">https://kittycatgit.github.io/mana-sources/source/manga18fx</code><button class="copy-one" type="button" data-url="https://kittycatgit.github.io/mana-sources/source/manga18fx">Copy</button>
       <a class="thread" href="https://github.com/kittycatgit/mana-sources/issues/3" target="_blank" rel="noopener">Leave feedback</a>
     </div>
@@ -431,7 +460,11 @@
       <span style="color:var(--muted)">EN / ES / PT / FR / zh-CN</span>
       <a href="https://mangaball.net" target="_blank" rel="noopener">mangaball.net &nearr;</a>
     </div>
-    <div class="testing-actions">
+    <div class="testing-changes">
+      <h4>New in this version</h4>
+      <ul><li>Six rows back: Most Read This Week, This Month and This Year (<code>getRecentChapterRead</code> over its three remaining windows) and Most Viewed Today, This Month and This Year (<code>getRecentRead</code>). They were left out last pass because their titles largely coincided with the Featured hero and with each other on the day they were measured, which is not a reason — "most viewed this week" and "most viewed this month" are different questions, and they answer differently the moment something new breaks through. Overlap between two rows is reported rather than judged.</li><li>Still out, and for the only reason a row should be: <code>getRecentRead&amp;search_time=week</code> is <code>getFeatured</code> reshuffled — measured again this pass, all twelve featured titles are the weekly top twelve in another order — so shipping it would be the hero row twice. <code>getLatestTable</code> and <code>getByOrigin</code> stay out on the same grounds: <code>getByOrigin</code> with no scope is <code>getLatestTable</code> is <code>updated_chapters_desc</code>, which Latest Updates already runs, and its four scopes are that sort plus an origin filter, which the four origin rows run.</li><li><code>getRecentRead</code>'s rows print their update date; unlike <code>getRecentChapterRead</code> it reports the title's own stamp — sixteen distinct values across twenty rows, agreeing with what <code>getPopular</code> says about the same title.</li><li>Two rows renamed now that there are four view rankings to tell apart: Most Viewed is "Most Viewed of All Time" (it is the whole catalogue by total views, not a window), and Most Read Manga is "Most Viewed Manga" — it sorts on views, not chapters read, which the Most Read rows above it do.</li></ul>
+      
+    </div><div class="testing-actions">
       <code class="turl">https://kittycatgit.github.io/mana-sources/source/mangaball</code><button class="copy-one" type="button" data-url="https://kittycatgit.github.io/mana-sources/source/mangaball">Copy</button>
       <a class="thread" href="https://github.com/kittycatgit/mana-sources/issues/9" target="_blank" rel="noopener">Leave feedback</a>
     </div>
@@ -447,7 +480,11 @@
       <span style="color:var(--muted)">EN / ES / FR / PT / JA</span>
       <a href="https://mangafire.to" target="_blank" rel="noopener">mangafire.to &nearr;</a>
     </div>
-    <div class="testing-actions">
+    <div class="testing-changes">
+      <h4>New in this version</h4>
+      <ul><li>The home page grew from five rows to fourteen, and now carries every listing mangafire.to offers without a keyword: Trending over each of the three windows the site's own row is scoped to — today, this week and this month — the Hot tab of Latest Updates, Most Viewed over 30 days and all time, Most Followed, Newest Series, and the catalogue A to Z and Z to A.</li><li>Two of the site's listings were left off after checking what each query returns rather than what it is labelled: the browse page's Trending sort is its 7-day view ranking under another name, and its Year (oldest) sort puts the titles carrying no year at all first.</li></ul>
+      
+    </div><div class="testing-actions">
       <code class="turl">https://kittycatgit.github.io/mana-sources/source/mangafire</code><button class="copy-one" type="button" data-url="https://kittycatgit.github.io/mana-sources/source/mangafire">Copy</button>
       <a class="thread" href="https://github.com/kittycatgit/mana-sources/issues/10" target="_blank" rel="noopener">Leave feedback</a>
     </div>
@@ -463,7 +500,11 @@
       <span style="color:var(--muted)">EN / JA / zh-CN</span>
       <a href="https://nhentai.net" target="_blank" rel="noopener">nhentai.net &nearr;</a>
     </div>
-    <div class="testing-actions">
+    <div class="testing-changes">
+      <h4>New in this version</h4>
+      <ul><li>The site ranks every listing four ways — recent, today, this week and all time — and the home page only carried three of them. It now carries the fourth as its own row: Popular of All Time site-wide, or Popular Today once a reading language is chosen, whichever the hero is not already showing.</li><li>The row has to flip because the hero flips: the site's featured five are today's popular, while a chosen language turns the hero into that language's all-time popular. Site-wide all-time popular is English all-time popular to the last entry, so a fixed row would have repeated one or the other.</li></ul>
+      
+    </div><div class="testing-actions">
       <code class="turl">https://kittycatgit.github.io/mana-sources/source/nhentai</code><button class="copy-one" type="button" data-url="https://kittycatgit.github.io/mana-sources/source/nhentai">Copy</button>
       <a class="thread" href="https://github.com/kittycatgit/mana-sources/issues/5" target="_blank" rel="noopener">Leave feedback</a>
     </div>
@@ -479,7 +520,11 @@
       <span style="color:var(--muted)">EN</span>
       <a href="https://weebcentral.com" target="_blank" rel="noopener">weebcentral.com &nearr;</a>
     </div>
-    <div class="testing-actions">
+    <div class="testing-changes">
+      <h4>New in this version</h4>
+      <ul><li>Home page carries Hot This Month, the last of the site's three Hot Series tabs. It was left out for holding the same ten series as Most Popular, which it does today and ranks in a different order; but "most viewed this month" is a question the site answers for itself and its answer parts from the overall ranking the moment something new breaks through, so the row is the site's to offer and not this source's to withhold.</li><li>Still not carried, because each is a query already on the page rather than another one: <code>/hot-series</code> with no <code>sort</code>, which is the weekly tab again; <code>/recently-added/&lt;n&gt;</code>, which returns the Recently Added sort in the same order, link-only and ten to a page; and <code>/latest-updates/&lt;n&gt;</code>, the same feed behind Latest Updates, keyed by chapter rather than by series.</li></ul>
+      
+    </div><div class="testing-actions">
       <code class="turl">https://kittycatgit.github.io/mana-sources/source/weebcentral</code><button class="copy-one" type="button" data-url="https://kittycatgit.github.io/mana-sources/source/weebcentral">Copy</button>
       <a class="thread" href="https://github.com/kittycatgit/mana-sources/issues/2" target="_blank" rel="noopener">Leave feedback</a>
     </div>
