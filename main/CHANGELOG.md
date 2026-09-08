@@ -172,7 +172,11 @@ are UTC. Format loosely follows [Keep a Changelog](https://keepachangelog.com/en
 - Chapter images carry the site as referer plus the `mdx_fp`/`mdx_auth` cookies the CDN
   requires.
 
-## Hitomi (current: v1.3.1)
+## Hitomi (current: v1.3.2)
+
+### 2026-09-09
+
+- The home page no longer waits for the Popular rows; they fill in after the rest.
 
 ### 2026-09-09
 
