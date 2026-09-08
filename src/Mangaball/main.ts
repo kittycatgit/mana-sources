@@ -43,7 +43,6 @@ import {
   encodeForm,
   listResults,
   pageOf,
-  resolveSection,
   resolveSortId,
   toPageSections,
   type SectionSpec,
@@ -83,10 +82,14 @@ import {
   type SearchQuery,
 } from "./model.ts";
 
+/** Where the last session is kept between instances, and for how long it is trusted. */
+const SESSION_KEY = "mangaball:session";
+const SESSION_TTL_MS = 20 * 60 * 1000;
+
 const info: SourceInfo = {
   id: "mangaball",
   name: "Mangaball",
-  version: "1.3.3",
+  version: "1.3.4",
   description: "Pulls manga, manhwa and manhua from mangaball.net",
   website: BASE_URL,
   rating: CatalogRating.MIXED,
@@ -116,12 +119,17 @@ class MangaballSource implements ChapterSource, SearchProvider, PageLinkResolver
   private client: NetworkClient | undefined;
   private session: Session | undefined;
   private pending: Promise<Session> | undefined;
+  /** Home rows fetched together in `willResolveSectionsForPage`, handed out by `resolvePageSection`. */
+  private prefetched = new Map<string, Promise<PagedSearchResult>>();
   private readonly preferences = new PreferenceStore(PREFERENCE_NAMESPACE, PREFERENCE_DEFAULTS);
 
   private get http(): NetworkClient {
     this.client ??= buildClient({
       baseUrl: BASE_URL,
-      requests: 4,
+      // Eighteen rows resolve together. At four a second the last of them was not even sent
+      // until five seconds in; the site answers all eighteen at once in about two seconds,
+      // measured, with no errors and no rate limiting.
+      requests: 12,
       interval: 1,
       accept: HTML_ACCEPT,
     });
@@ -310,8 +318,33 @@ class MangaballSource implements ChapterSource, SearchProvider, PageLinkResolver
     return toPageSections(this.sections());
   }
 
+  /**
+   * Every row is requested here, together, before any is resolved.
+   *
+   * Resolved one after another, eighteen rows are the sum of eighteen round trips — about
+   * sixteen seconds, measured — and the reader sees the page fill in one row at a time. The
+   * site answers all of them at once in about two seconds, so they are asked for at once.
+   * Each result is kept as a promise: a row that is still in flight is simply awaited by
+   * `resolvePageSection`, and one that failed fails there, with its own error, not here.
+   */
+  async willResolveSectionsForPage(_link: PageLink): Promise<void> {
+    await this.credentials();
+    this.prefetched = new Map();
+    for (const spec of this.sections()) {
+      const load = spec.load(1);
+      // Nothing awaits these until a row is resolved; an unobserved rejection must not
+      // surface as an unhandled one in the meantime.
+      load.catch(() => undefined);
+      this.prefetched.set(spec.id, load);
+    }
+  }
+
   async resolvePageSection(_link: PageLink, sectionID: string): Promise<ResolvedPageSection> {
-    return resolveSection(this.sections(), sectionID);
+    const spec = this.sections().find((section) => section.id === sectionID);
+    if (!spec) return { items: [] };
+    const pending = this.prefetched.get(sectionID);
+    const { results } = pending ? await pending : await spec.load(1);
+    return { items: spec.limit === undefined ? results : results.slice(0, spec.limit) };
   }
 
   async search(request: SearchRequest): Promise<PagedSearchResult> {
@@ -585,6 +618,15 @@ class MangaballSource implements ChapterSource, SearchProvider, PageLinkResolver
    * and an explicit cookie would override whatever the jar holds.
    */
   private async bootstrap(): Promise<Session> {
+    // A token outlives a source instance. Keep the last one, so opening the source again
+    // does not spend a 377 KB page fetch before the first row can be asked for.
+    const kept = (await ObjectStore.get(SESSION_KEY)) as (Session & { at?: number }) | null;
+    if (kept?.token && typeof kept.at === "number" && Date.now() - kept.at < SESSION_TTL_MS) {
+      const { at: _at, ...session } = kept;
+      this.session = session;
+      return this.session;
+    }
+
     const response = await this.http.get(`${BASE_URL}/`);
     const token = /name="csrf-token"\s+content="([^"]+)"/.exec(response.data)?.[1] ?? "";
     if (!token) {
@@ -595,6 +637,7 @@ class MangaballSource implements ChapterSource, SearchProvider, PageLinkResolver
 
     const value = sessionCookie(response.headers);
     this.session = { token, ...(value ? { cookie: { name: "PHPSESSID", value } } : {}) };
+    await ObjectStore.set(SESSION_KEY, { ...this.session, at: Date.now() });
     return this.session;
   }
 
@@ -602,6 +645,7 @@ class MangaballSource implements ChapterSource, SearchProvider, PageLinkResolver
   private invalidate(): void {
     this.session = undefined;
     this.pending = undefined;
+    void ObjectStore.remove(SESSION_KEY);
   }
 
   private async page(url: string): Promise<CheerioAPI> {
