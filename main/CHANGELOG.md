@@ -4,9 +4,24 @@ Notable changes to the extensions in this repository, grouped by extension —
 each one versions independently (see `info.version` in its `main.ts`). Dates
 are UTC. Format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## Mangaball (current: v1.3.5)
-## Nhentai (current: v1.2.1)
-## Mangafire (current: v1.2.1)
+## Mangaball (current: v1.3.6)
+
+### 2026-09-09
+
+- Home rows load one at a time again, as the app asks for them.
+
+## Nhentai (current: v1.2.2)
+
+### 2026-09-09
+
+- Home rows load one at a time again, as the app asks for them.
+
+## Mangafire (current: v1.2.2)
+
+### 2026-09-09
+
+- Home rows load one at a time again, as the app asks for them.
+
 
 ### 2026-09-09
 
@@ -74,7 +89,12 @@ are UTC. Format loosely follows [Keep a Changelog](https://keepachangelog.com/en
   include/exclude across the 100 most used tags, minimum page and favourite counts.
 - Each gallery is one chapter, with a summary composed from its metadata.
 
-## Ehentai (current: v1.2.1)
+## Ehentai (current: v1.2.2)
+
+### 2026-09-09
+
+- Home rows load one at a time again, as the app asks for them.
+
 
 ### 2026-09-09
 
@@ -105,7 +125,12 @@ are UTC. Format loosely follows [Keep a Changelog](https://keepachangelog.com/en
 - Each gallery is one chapter.
 - Pages served under HTTP 451 are accepted, so age-notice regions still work.
 
-## Manga18fx (current: v1.2.1)
+## Manga18fx (current: v1.2.2)
+
+### 2026-09-09
+
+- Home rows load one at a time again, as the app asks for them.
+
 
 ### 2026-09-09
 
@@ -132,7 +157,12 @@ are UTC. Format loosely follows [Keep a Changelog](https://keepachangelog.com/en
 - Content type comes from the genre tags; the site's own Type row reads Manhwa on
   everything.
 
-## Imhentai (current: v1.0.2)
+## Imhentai (current: v1.0.3)
+
+### 2026-09-09
+
+- Home rows load one at a time again, as the app asks for them.
+
 
 ### 2026-09-09
 
@@ -154,7 +184,12 @@ are UTC. Format loosely follows [Keep a Changelog](https://keepachangelog.com/en
 - `getContent`, `getChapters` and `getChapterData` SKIP under `npm run verify` — they read
   a challenged route. All three were checked against gallery HTML captured from a browser.
 
-## Madaradex (current: v1.1.1)
+## Madaradex (current: v1.1.2)
+
+### 2026-09-09
+
+- Home rows load one at a time again, as the app asks for them.
+
 
 ### 2026-09-09
 
@@ -176,7 +211,7 @@ are UTC. Format loosely follows [Keep a Changelog](https://keepachangelog.com/en
 
 ### 2026-09-09
 
-- The home page no longer waits for the Popular rows; they fill in after the rest.
+- Home rows load one at a time again, as the app asks for them.
 
 ### 2026-09-09
 
@@ -213,7 +248,12 @@ are UTC. Format loosely follows [Keep a Changelog](https://keepachangelog.com/en
   newest-first.
 - Chapter images need the site as referer.
 
-## Weebcentral (current: v1.2.1)
+## Weebcentral (current: v1.2.2)
+
+### 2026-09-09
+
+- Home rows load one at a time again, as the app asks for them.
+
 
 ### 2026-09-09
 
@@ -236,7 +276,12 @@ are UTC. Format loosely follows [Keep a Changelog](https://keepachangelog.com/en
   Translation / Anime Adaptation / Adult Content toggles, six sort orders either way.
 - Asks the site for non-adult results when the app's content rating requires it.
 
-## Hiperdex (current: v1.2.1)
+## Hiperdex (current: v1.2.2)
+
+### 2026-09-09
+
+- Home rows load one at a time again, as the app asks for them.
+
 
 ### 2026-09-09
 
@@ -265,7 +310,12 @@ are UTC. Format loosely follows [Keep a Changelog](https://keepachangelog.com/en
   status picker adds "Releasing", which the site's own panel omits.
 - Covers and chapter images carry the site as referer.
 
-## Tailspace (current: v1.1.1)
+## Tailspace (current: v1.1.2)
+
+### 2026-09-09
+
+- Home rows load one at a time again, as the app asks for them.
+
 
 ### 2026-09-09
 
