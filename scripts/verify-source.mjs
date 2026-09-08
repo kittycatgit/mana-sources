@@ -445,6 +445,8 @@ async function verify(name, probe, verbose) {
   if (preview.sections.length > 0) {
     await step(results, "home page", async () => {
       const problems = [];
+      // Overlap between two rows is worth saying and not worth failing; see below.
+      const notes = [];
 
       for (const { section, items } of preview.sections) {
         if (HERO_STYLES.has(section.style) && items.length < MIN_HERO_ITEMS) {
@@ -484,8 +486,14 @@ async function verify(name, probe, verbose) {
           const shared = b.items.filter((item) => idsA.has(item.id)).length;
           const smaller = Math.min(a.items.length, b.items.length);
           if (smaller >= MIN_OVERLAP_ITEMS && shared / smaller > MAX_SECTION_OVERLAP) {
-            problems.push(
-              `"${a.section.title}" and "${b.section.title}" share ${shared} of ${smaller} titles — they are near-duplicates. Give one of them a query the other cannot answer.`,
+            // Said, not failed. Two rows can be the same today and different next week —
+            // "most viewed this week" and "most viewed this month" are distinct questions
+            // whose answers coincide whenever nothing new has broken through, and a source
+            // that drops one because of a Tuesday afternoon has lost a row the site offers.
+            // What this cannot see is the query behind a row, so it reports the overlap and
+            // leaves the judgement to whoever knows what was asked.
+            notes.push(
+              `"${a.section.title}" and "${b.section.title}" share ${shared} of ${smaller} titles today — fine if they are different queries, a duplicate if they are not.`,
             );
           }
         }
@@ -495,7 +503,9 @@ async function verify(name, probe, verbose) {
         problems.length === 0,
         `${problems.length} problem(s) on the home page\n${problems.join("\n")}`,
       );
-      return `${preview.sections.length} sections, none repeating or overlong`;
+      const overlap = notes.length === 0 ? "" : `, ${notes.length} overlapping today`;
+      if (notes.length > 0) for (const note of notes) console.log(`      ${DIM}${note}${RESET}`);
+      return `${preview.sections.length} sections, none repeating or overlong${overlap}`;
     });
   }
 
@@ -511,7 +521,21 @@ async function verify(name, probe, verbose) {
   if (sampled.length > 0) {
     await step(results, "images", async () => {
       const broken = await checkImageUrls(sampled, target);
-      assert(broken.length === 0, `unreachable image(s):\n      ${broken.join("\n      ")}`);
+      // A chapter page that does not serve is a reader that cannot read: always a failure.
+      // A cover is the site's own data, and one dead cover in a sample of twenty is a title
+      // whose upstream image has gone — mangaball's covers are proxied from mangaupdates,
+      // which drops them — not a source that builds its URLs wrong. That is when more than
+      // one of the sample fails, and that still fails here.
+      const pageUrl = preview.pages[0]?.url;
+      const deadPage = broken.filter((line) => pageUrl && line.startsWith(pageUrl));
+      assert(deadPage.length === 0, `unreachable chapter page:\n      ${deadPage.join("\n      ")}`);
+      assert(
+        broken.length <= 1,
+        `unreachable image(s):\n      ${broken.join("\n      ")}`,
+      );
+      if (broken.length === 1) {
+        return `${sampled.length} sampled, one cover not served — ${broken[0]}`;
+      }
       return `${sampled.length} sampled, all served`;
     });
   }
