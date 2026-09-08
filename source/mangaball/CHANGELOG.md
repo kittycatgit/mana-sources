@@ -4,7 +4,12 @@ Notable changes to the extensions in this repository, grouped by extension —
 each one versions independently (see `info.version` in its `main.ts`). Dates
 are UTC. Format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## Mangaball (current: v1.3.3)
+## Mangaball (current: v1.3.4)
+
+### 2026-09-08
+
+- The home page loads all its rows at once instead of one after another.
+- Opening the source again reuses its session instead of reloading the home page.
 
 ### 2026-09-08 — Most Read rows no longer time out
 
