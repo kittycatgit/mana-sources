@@ -4,7 +4,7 @@ Notable changes to the extensions in this repository, grouped by extension —
 each one versions independently (see `info.version` in its `main.ts`). Dates
 are UTC. Format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## Mangaball (current: v1.2.0)
+## Mangaball (current: v1.3.0)
 
 ### 2026-09-08
 
