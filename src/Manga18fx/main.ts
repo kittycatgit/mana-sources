@@ -41,7 +41,7 @@ import {
   listResults,
   pageOf,
   resolveSection,
-  toPageSections,
+  fillPageSections,
   withQuery,
   type SectionSpec,
 } from "./forms/index.ts";
@@ -74,7 +74,7 @@ import {
 const info: SourceInfo = {
   id: "manga18fx",
   name: "Manga18fx",
-  version: "1.2.0",
+  version: "1.2.1",
   description: "Pulls adult manhwa, manhua and manga from manga18fx.com",
   website: BASE_URL,
   rating: CatalogRating.EXPLICIT,
@@ -195,7 +195,7 @@ class Manga18fxSource
   }
 
   async getSectionsForPage(link: PageLink): Promise<PageSection[]> {
-    return toPageSections(await this.sections(link.context));
+    return fillPageSections(await this.sections(link.context));
   }
 
   async resolvePageSection(link: PageLink, sectionID: string): Promise<ResolvedPageSection> {
