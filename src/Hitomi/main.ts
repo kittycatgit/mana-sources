@@ -78,7 +78,7 @@ import { searchIndexIds } from "./search-index.ts";
 const info: SourceInfo = {
   id: "hitomi",
   name: "Hitomi",
-  version: "1.3.2",
+  version: "1.4.0",
   description: "Reads doujinshi, manga and CG sets from hitomi.la",
   website: BASE_URL,
   rating: CatalogRating.EXPLICIT,
@@ -107,14 +107,14 @@ const FEED_SIZE = 25;
 const SEARCH_PAGE_SIZE = 25;
 const GALLERY_CACHE_SIZE = 200;
 const SEARCH_CACHE_SIZE = 20;
-/** Long enough that one home page opens one WebView, short enough that a refresh moves. */
+/** Long enough that one home page reads the rankings once, short enough that a refresh moves. */
 const POPULAR_TTL = 5 * 60 * 1000;
 
 /** The four popularity windows as one held request, keyed by window. */
 type PopularLists = {
   language: string;
   fetchedAt: number;
-  lists: Promise<Map<PopularWindow, string[]> | undefined>;
+  lists: Promise<Map<PopularWindow, string[]>>;
 };
 
 class HitomiSource
@@ -151,7 +151,6 @@ class HitomiSource
     const language = await this.preferredLanguage();
     const everything = language === ALL_LANGUAGES;
     const scope = everything ? "" : ` in ${languageTitle(language)}`;
-    const rankings = await this.rankings(language);
 
     return [
       {
@@ -164,19 +163,14 @@ class HitomiSource
         limit: 10,
         load: (page) => this.listing({ language }, page),
       },
-      // The popularity rows are only claimed when the WebView that reads them answered. A
-      // device without one cannot fill them, and four rows that stay empty read as a broken
-      // home page rather than as a listing the site declined to serve.
-      ...(rankings === undefined
-        ? []
-        : POPULAR_ROWS.map((row) => ({
-            id: row.id,
-            title: row.title,
-            subtitle: `${row.subtitle}${scope}`,
-            style: SectionStyle.DetailedTripleRowPaged,
-            limit: 12,
-            load: (page: number) => this.ranking(row.window, language, page),
-          }))),
+      ...POPULAR_ROWS.map((row) => ({
+        id: row.id,
+        title: row.title,
+        subtitle: `${row.subtitle}${scope}`,
+        style: SectionStyle.DetailedTripleRowPaged,
+        limit: 12,
+        load: (page: number) => this.ranking(row.window, language, page),
+      })),
       // The English shortcut only earns its place while no language is set: with one set it
       // is either the same feed as Just Added or the one language the reader ruled out.
       ...(everything
@@ -289,8 +283,8 @@ class HitomiSource
       const ids = await this.queryIds(query, language);
       if (ids) return this.idPage(ids, pageOf(request));
 
-      // Only reached when the WebView the site's own index needs is unavailable. The tag
-      // index answers over plain HTTP but knows tags, artists, series, characters and
+      // Only reached when the site's own search index could not be read at all. The tag
+      // index is a different host, but it knows tags, artists, series, characters and
       // groups and not gallery titles, so a query naming none of them has no results.
       const term = await this.resolveTerm(query);
       if (!term) return { results: [], isLastPage: true };
@@ -395,15 +389,15 @@ class HitomiSource
 
   /**
    * The ids a typed query matches, held for as long as the reader keeps paging through
-   * them: the descent behind them is a dozen round trips and a WebView, and page two of the
-   * same query would otherwise pay for it again.
+   * them: the descent behind them is a dozen round trips, and page two of the same query
+   * would otherwise pay for it again.
    */
   private async queryIds(query: string, language: string): Promise<string[] | undefined> {
     const key = `${language}\n${query.toLowerCase()}`;
     const cached = this.searches.get(key);
     if (cached) return cached;
 
-    const ids = await searchIndexIds(query, language);
+    const ids = await searchIndexIds(this.http, query, language);
     if (!ids) return undefined;
 
     if (this.searches.size >= SEARCH_CACHE_SIZE) this.searches.clear();
@@ -421,9 +415,8 @@ class HitomiSource
   }
 
   private async listing(feed: Listing, page: number): Promise<PagedSearchResult> {
-    // An Atom feed is the only listing endpoint that answers as text: the paged ones are
-    // `.nozomi` files, arrays of big-endian int32 gallery ids, and the runtime hands every
-    // response back as a UTF-8 string that mangles them. So a listing is one feed deep.
+    // A listing is read from its Atom feed, which is the newest 25 galleries and carries no
+    // continuation of any kind, so there is never a second page to ask for.
     if (page > 1) return { results: [], isLastPage: true };
 
     const ids = await this.feedIds(feed);
@@ -447,7 +440,7 @@ class HitomiSource
   ): Promise<PagedSearchResult> {
     if (page > 1) return { results: [], isLastPage: true };
 
-    const ids = (await this.rankings(language))?.get(window) ?? [];
+    const ids = (await this.rankings(language)).get(window) ?? [];
     if (ids.length === 0) return { results: [], isLastPage: true };
 
     const found = await this.galleriesFor(ids.slice(0, 12));
@@ -455,27 +448,22 @@ class HitomiSource
   }
 
   /**
-   * All four windows in one WebView visit: each ranking's head is a hundred bytes and
-   * opening the page is the whole cost, so a home page carrying the four of them opens one.
-   *
-   * `undefined` means there was no WebView to open. These rankings are published as
-   * `.nozomi` only — arrays of big-endian int32 that `NetworkResponse.data` mangles into a
-   * UTF-8 string — so there is no plain-HTTP route to fall back to, and the caller drops the
-   * rows instead.
+   * All four windows as one held request: each ranking's head is a hundred bytes, and the
+   * home page asks for its rows one at a time, so the four of them share one read.
    */
-  private rankings(language: string): Promise<Map<PopularWindow, string[]> | undefined> {
+  private rankings(language: string): Promise<Map<PopularWindow, string[]>> {
     const held = this.popular;
     if (held && held.language === language && Date.now() - held.fetchedAt < POPULAR_TTL) {
       return held.lists;
     }
 
     const lists = nozomiIds(
+      this.http,
       POPULAR_ROWS.map((row) => popularPath(row, language)),
       FEED_SIZE,
-    ).then((raw) =>
-      raw === undefined
-        ? undefined
-        : new Map(POPULAR_ROWS.map((row, index) => [row.window, (raw[index] ?? []).map(String)])),
+    ).then(
+      (raw) =>
+        new Map(POPULAR_ROWS.map((row, index) => [row.window, (raw[index] ?? []).map(String)])),
     );
 
     this.popular = { language, fetchedAt: Date.now(), lists };
