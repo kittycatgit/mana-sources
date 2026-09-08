@@ -445,6 +445,8 @@ async function verify(name, probe, verbose) {
   if (preview.sections.length > 0) {
     await step(results, "home page", async () => {
       const problems = [];
+      // Overlap between two rows is worth saying and not worth failing; see below.
+      const notes = [];
 
       for (const { section, items } of preview.sections) {
         if (HERO_STYLES.has(section.style) && items.length < MIN_HERO_ITEMS) {
@@ -484,8 +486,14 @@ async function verify(name, probe, verbose) {
           const shared = b.items.filter((item) => idsA.has(item.id)).length;
           const smaller = Math.min(a.items.length, b.items.length);
           if (smaller >= MIN_OVERLAP_ITEMS && shared / smaller > MAX_SECTION_OVERLAP) {
-            problems.push(
-              `"${a.section.title}" and "${b.section.title}" share ${shared} of ${smaller} titles — they are near-duplicates. Give one of them a query the other cannot answer.`,
+            // Said, not failed. Two rows can be the same today and different next week —
+            // "most viewed this week" and "most viewed this month" are distinct questions
+            // whose answers coincide whenever nothing new has broken through, and a source
+            // that drops one because of a Tuesday afternoon has lost a row the site offers.
+            // What this cannot see is the query behind a row, so it reports the overlap and
+            // leaves the judgement to whoever knows what was asked.
+            notes.push(
+              `"${a.section.title}" and "${b.section.title}" share ${shared} of ${smaller} titles today — fine if they are different queries, a duplicate if they are not.`,
             );
           }
         }
@@ -495,7 +503,9 @@ async function verify(name, probe, verbose) {
         problems.length === 0,
         `${problems.length} problem(s) on the home page\n${problems.join("\n")}`,
       );
-      return `${preview.sections.length} sections, none repeating or overlong`;
+      const overlap = notes.length === 0 ? "" : `, ${notes.length} overlapping today`;
+      if (notes.length > 0) for (const note of notes) console.log(`      ${DIM}${note}${RESET}`);
+      return `${preview.sections.length} sections, none repeating or overlong${overlap}`;
     });
   }
 
