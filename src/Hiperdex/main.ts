@@ -707,7 +707,7 @@ function updateHighlight(entry: Record<string, unknown>): Highlight | undefined 
     cover: readString(entry["seriesCoverUrl"]),
     webUrl: contentUrl(slug),
     ...(subtitle === "" ? {} : { subtitle }),
-    ...(chapters.length <= 1 ? {} : { badge: { count: chapters.length } }),
+    ...(chapters.length <= 1 ? {} : { badge: { text: `${chapters.length}` } }),
   };
 }
 

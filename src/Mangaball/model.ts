@@ -347,12 +347,21 @@ export const CONTENT_TYPE_BY_FLAG: Record<string, ContentType> = {
   us: ContentType.COMIC,
 };
 
-/** The site writes a few chapter languages in codes that are not ISO 639-1. */
+/**
+ * The site writes a few chapter languages in codes that are not ISO 639-1, and spells two
+ * of them both ways at once: `kr` and `ko` are both Korean, and `es-la` and `es-419` are
+ * both labelled "Spanish (Latin America)" by the site itself. Left alone, each pair splits
+ * one language across two codes in the reader.
+ *
+ * This rewrites only what is reported. The `chapterLanguages` preference filters on the raw
+ * site code before `languageOf` runs, so both spellings stay selectable.
+ */
 export const LANGUAGE_ALIASES: Record<string, string> = {
   jp: "ja",
   kr: "ko",
   cn: "zh",
   ib: "is",
+  "es-la": "es-419",
 };
 
 export type SearchQuery = {
@@ -399,12 +408,24 @@ export type ApiSearchResponse = {
   pagination?: ApiPagination;
 };
 
+/**
+ * `_id` is the stable key: it is an upstream site slug (`comick`, `mangadot`, `bato`) for
+ * the groups the site mirrors and a 24-hex id for user-created ones. `name` is a Pokémon
+ * alias the site substitutes for the real group name, and it is not stable — one id was
+ * seen under two names in a single listing — so it names the provider but never keys it.
+ */
+export type ApiGroup = {
+  _id?: string;
+  name?: string;
+  icon?: string;
+};
+
 export type ApiTranslation = {
   id?: string;
   name?: string;
   language?: string;
   languageName?: string;
-  group?: { name?: string };
+  group?: ApiGroup;
   date?: string;
   pages?: number;
   url?: string;

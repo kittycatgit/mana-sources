@@ -3,6 +3,7 @@ import {
   ContentRating,
   ContentType,
   DefinedLanguages,
+  ProviderLinkType,
   PublicationStatus,
   ReadingMode,
   SectionStyle,
@@ -19,6 +20,7 @@ import {
   type PageLinkResolver,
   type PageSection,
   type PagedSearchResult,
+  type Provider,
   type ResolvedPageSection,
   type SearchForm,
   type SearchProvider,
@@ -69,6 +71,7 @@ import {
   SortID,
   TAGS_FIELD,
   type ApiChapterListing,
+  type ApiGroup,
   type ApiSearchResponse,
   type ApiTitle,
   type SearchQuery,
@@ -77,7 +80,7 @@ import {
 const info: SourceInfo = {
   id: "mangaball",
   name: "Mangaball",
-  version: "1.0.0",
+  version: "1.1.0",
   description: "Pulls manga, manhwa and manhua from mangaball.net",
   website: BASE_URL,
   rating: CatalogRating.MIXED,
@@ -321,14 +324,16 @@ class MangaballSource implements ChapterSource, SearchProvider, PageLinkResolver
       for (const translation of translations) {
         const chapterId = translation.id ?? "";
         const volume = translation.volume ?? 0;
+        const provider = providerFrom(translation.group);
         flattened.push({
           chapterId,
           number: chapterNumber(entry, entries.length - flattened.length),
           date: parsePublishDate(translation.date) ?? new Date(0),
           language: languageOf(translation.language),
-          title: chapterTitle(entry, translation, translations.length > 1),
+          title: chapterTitle(entry, translation),
           webUrl: chapterUrl(chapterId),
           ...(volume > 0 ? { volume } : {}),
+          ...(provider === undefined ? {} : { provider }),
         });
       }
     }
@@ -488,6 +493,28 @@ function titleUrl(contentId: string): string {
 
 function chapterUrl(chapterId: string): string {
   return `${BASE_URL}/chapter-detail/${encodeURIComponent(chapterId)}/`;
+}
+
+function groupUrl(groupId: string): string {
+  return `${BASE_URL}/group/${encodeURIComponent(groupId)}`;
+}
+
+/**
+ * Manga Ball aggregates, so one chapter number arrives once per language *per group* — a
+ * busy title carries twenty-odd groups and the same English chapter from five of them.
+ * Reporting the group is what lets the app show those as versions of one chapter and keep
+ * a reader on the group they started with; deciding between them is the app's to make.
+ *
+ * The only link the site offers for a group is its own page, which is server-rendered for
+ * every id the listing hands out. A group's external site, where it has one, is on that
+ * page rather than in this reply and is not worth a 367 KB fetch per group per listing —
+ * see `recon/mangaball.md`.
+ */
+function providerFrom(group: ApiGroup | undefined): Provider | undefined {
+  const id = clean(group?._id ?? "");
+  const name = clean(group?.name ?? "");
+  if (!id || !name) return undefined;
+  return { id, name, links: [{ url: groupUrl(id), type: ProviderLinkType.WEBSITE }] };
 }
 
 /**
@@ -660,25 +687,20 @@ function chapterNumber(
 /**
  * One chapter number can carry several translations, each named by whoever uploaded it —
  * sometimes "Chapter 202", sometimes the group's own banner. The number is prefixed when
- * the name does not already carry it, and the group appended when the same number appears
- * more than once, so no two rows in the list read identically.
+ * the name does not already carry it.
+ *
+ * The group is deliberately not appended. It used to be, as the only way to tell two scans
+ * of one chapter apart in a flat list; `provider` now carries it as a field, so repeating
+ * it here would print the group's name twice in the same row.
  */
-function chapterTitle(
-  entry: { number?: string },
-  translation: { name?: string; group?: { name?: string } },
-  shared: boolean,
-): string {
+function chapterTitle(entry: { number?: string }, translation: { name?: string }): string {
   const number = clean(entry.number ?? "");
   const name = clean(translation.name ?? "");
   const digits = /\d+(?:\.\d+)?/.exec(number)?.[0] ?? "";
 
-  const head =
-    name === "" || (digits !== "" && name.includes(digits))
-      ? name || number
-      : [number, name].filter(Boolean).join(" · ");
-
-  const group = clean(translation.group?.name ?? "");
-  return shared && group ? `${head} · ${group}` : head;
+  return name === "" || (digits !== "" && name.includes(digits))
+    ? name || number
+    : [number, name].filter(Boolean).join(" · ");
 }
 
 /** `2026-01-10 04:11:41`, read as UTC so the day does not shift with the device timezone. */
