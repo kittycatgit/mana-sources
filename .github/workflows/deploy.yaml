@@ -12,12 +12,15 @@ permissions:
   # The page lists what is in testing and links each to its thread, which means reading them.
   issues: read
 
-# Every branch deploys to the same gh-pages ref, so grouping by branch let a main deploy
-# and a source/<id> deploy run at once and race for it — the loser died on "cannot lock
-# ref" and its publish was simply lost. One group for all of them, and no cancelling:
-# these are publishes, and the one being cancelled is as real as the one arriving.
+# One group per branch. A single group for everything serialises them, which sounds right —
+# they all push to gh-pages — but a group holds one running and one pending run and cancels
+# the rest, so ten branches pushed together deploy twice and drop eight. Per branch, a
+# publish only ever waits behind another publish of the same preview.
+#
+# Two branches can still collide on the gh-pages ref, which fails the push rather than
+# corrupting anything; re-running the failed deploy is the fix.
 concurrency:
-  group: pages
+  group: pages-${{ github.ref_name }}
   cancel-in-progress: false
 
 jobs:
