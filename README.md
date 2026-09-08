@@ -15,14 +15,22 @@ from there.
 
 | Source | Version | Language | Rating |
 | ------ | ------- | -------- | ------ |
-| Ehentai | 1.1.0 | Multi-language | Explicit |
+| Ehentai | 1.2.1 | Multi-language | Explicit |
 | Hiperdex | 1.0.1 | English | Explicit |
 | Hitomi | 1.2.0 | Multi-language | Explicit |
+| Imhentai | 1.0.2 | Multi-language | Explicit |
+| Hitomi | 1.3.1 | Multi-language | Explicit |
 | Imhentai | 1.0.0 | Multi-language | Explicit |
 | Madaradex | 1.0.1 | English | Explicit |
 | Manga18fx | 1.2.1 | English | Explicit |
 | Nhentai | 1.1.0 | Multi-language | Explicit |
+| Madaradex | 1.1.1 | English | Explicit |
+| Manga18fx | 1.1.0 | English | Explicit |
+| Nhentai | 1.2.1 | Multi-language | Explicit |
 | Tailspace | 1.1.0 | English | Explicit |
+| Mangafire | 1.2.1 | Multi-language | Mixed |
+| Nhentai | 1.1.0 | Multi-language | Explicit |
+| Tailspace | 1.1.1 | English | Explicit |
 | Weebcentral | 1.0.1 | English | Mixed |
 
 See [CHANGELOG.md](CHANGELOG.md) for what changed and when.

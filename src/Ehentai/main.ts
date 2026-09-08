@@ -42,7 +42,7 @@ import {
   listResults,
   pageOf,
   sectionById,
-  toPageSections,
+  fillPageSections,
   withQuery,
   type PreferenceSection,
   type SectionSpec,
@@ -69,6 +69,7 @@ import {
   THUMBS_PER_PAGE,
   TOPLIST_PAGE_LIMIT,
   Toplist,
+  categoryListId,
   languageName,
   searchFields,
   tagTitle,
@@ -80,7 +81,7 @@ import {
 const info: SourceInfo = {
   id: "ehentai",
   name: "Ehentai",
-  version: "1.1.0",
+  version: "1.2.1",
   description: "Reads the doujinshi, manga and image galleries hosted on e-hentai.org",
   website: BASE_URL,
   rating: CatalogRating.EXPLICIT,
@@ -197,6 +198,14 @@ class EhentaiSource
         load: (page) => this.toplist(Toplist.Month, page),
       },
       {
+        id: ListID.TopYear,
+        title: "Top This Year",
+        subtitle: "The year's most-viewed galleries",
+        style: SectionStyle.SimpleTripleRow,
+        limit: 12,
+        load: (page) => this.toplist(Toplist.Year, page),
+      },
+      {
         id: ListID.TopAllTime,
         title: "All-Time Favourites",
         subtitle: "The most-viewed galleries the site has ever hosted",
@@ -204,6 +213,14 @@ class EhentaiSource
         limit: 12,
         load: (page) => this.toplist(Toplist.AllTime, page),
       },
+      ...CATEGORIES.map((category) => ({
+        id: categoryListId(category),
+        title: category.title,
+        subtitle: category.blurb,
+        style: SectionStyle.SimpleTripleRow,
+        limit: 12,
+        load: (page: number) => this.category(category, page),
+      })),
     ];
   }
 
@@ -223,7 +240,7 @@ class EhentaiSource
   }
 
   async getSectionsForPage(_link: PageLink): Promise<PageSection[]> {
-    return toPageSections(this.sections());
+    return fillPageSections(this.sections());
   }
 
   /**
@@ -383,6 +400,16 @@ class EhentaiSource
   private async latest(page: number): Promise<PagedSearchResult> {
     const terms = hiddenLanguageTerms(await this.hiddenLanguages());
     return this.browse(terms.length === 0 ? `${BASE_URL}/` : searchUrl({ terms }), page);
+  }
+
+  /**
+   * The site's own category pages — `/manga`, `/cosplay` — are `f_cats` masks on the front
+   * page under another path: `/manga` prints `f_cats=1019` in its own pager. Going through
+   * `searchUrl` gets the identical listing and the hidden-language terms for free.
+   */
+  private async category(category: Category, page: number): Promise<PagedSearchResult> {
+    const terms = hiddenLanguageTerms(await this.hiddenLanguages());
+    return this.browse(searchUrl({ terms, categories: [category.id] }), page);
   }
 
   /**
