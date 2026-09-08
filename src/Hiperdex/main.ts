@@ -39,7 +39,7 @@ import {
   pageOf,
   resolveSection,
   resolveSortId,
-  toPageSections,
+  fillPageSections,
   withQuery,
   type SectionSpec,
 } from "./forms/index.ts";
@@ -50,6 +50,7 @@ import {
   API_URL,
   BASE_URL,
   CONTENT_TYPE_BY_NAME,
+  DEAD_COVER_PATH,
   FilterID,
   LATEST_PAGE_SIZE,
   ListID,
@@ -66,12 +67,14 @@ import {
   TRENDING_PAGE_SIZE,
   TYPE_OPTIONS,
   type SearchQuery,
+  type SeriesScope,
+  type TrendingPeriod,
 } from "./model.ts";
 
 const info: SourceInfo = {
   id: "hiperdex",
   name: "Hiperdex",
-  version: "1.0.1",
+  version: "1.2.1",
   description: "Pulls manga, manhwa and manhua from hiperdex.com",
   website: BASE_URL,
   rating: CatalogRating.EXPLICIT,
@@ -120,7 +123,23 @@ class HiperdexSource implements ChapterSource, SearchProvider, PageLinkResolver 
         subtitle: "What the site is reading right now",
         style: SectionStyle.SimpleHero,
         limit: 10,
-        load: (page) => this.trending(page, policy),
+        load: (page) => this.trending(page, "day", policy),
+      },
+      {
+        id: ListID.TrendingWeek,
+        title: "Trending This Week",
+        subtitle: "The last seven days of reading",
+        style: SectionStyle.DetailedTripleRowPaged,
+        limit: 15,
+        load: (page) => this.trending(page, "week", policy),
+      },
+      {
+        id: ListID.TrendingMonth,
+        title: "Trending This Month",
+        subtitle: "What has held its readers for a month",
+        style: SectionStyle.SimpleTripleRow,
+        limit: 15,
+        load: (page) => this.trending(page, "month", policy),
       },
       {
         id: ListID.Latest,
@@ -128,7 +147,31 @@ class HiperdexSource implements ChapterSource, SearchProvider, PageLinkResolver 
         subtitle: "Series with a chapter added today",
         style: SectionStyle.DetailedVerticalListGrouped,
         limit: 15,
-        load: (page) => this.latest(page, policy),
+        load: (page) => this.latest(page, "all", policy),
+      },
+      {
+        id: ListID.LatestManga,
+        title: "Latest Manga",
+        subtitle: "New chapters on the Japanese shelf",
+        style: SectionStyle.DetailedTripleRowPaged,
+        limit: 15,
+        load: (page) => this.latest(page, "manga", policy),
+      },
+      {
+        id: ListID.LatestManhwa,
+        title: "Latest Manhwa",
+        subtitle: "New chapters on the Korean shelf",
+        style: SectionStyle.DetailedTripleRowPaged,
+        limit: 15,
+        load: (page) => this.latest(page, "manhwa", policy),
+      },
+      {
+        id: ListID.LatestManhua,
+        title: "Latest Manhua",
+        subtitle: "New chapters on the Chinese shelf",
+        style: SectionStyle.DetailedTripleRowPaged,
+        limit: 15,
+        load: (page) => this.latest(page, "manhua", policy),
       },
       {
         id: ListID.Popular,
@@ -154,6 +197,31 @@ class HiperdexSource implements ChapterSource, SearchProvider, PageLinkResolver 
         limit: 15,
         load: (page) => this.browse({ page, sort: SortID.Newest, maxRating: policy.max }, policy),
       },
+      {
+        id: ListID.Updated,
+        title: "Recently Updated",
+        subtitle: "The catalogue by its most recent chapter",
+        style: SectionStyle.SimpleTripleRow,
+        limit: 15,
+        load: (page) => this.browse({ page, sort: SortID.Recent, maxRating: policy.max }, policy),
+      },
+      {
+        id: ListID.Oldest,
+        title: "From the Archive",
+        subtitle: "The titles that have been here longest",
+        style: SectionStyle.SimpleTripleRow,
+        limit: 15,
+        load: (page) => this.browse({ page, sort: SortID.Oldest, maxRating: policy.max }, policy),
+      },
+      {
+        id: ListID.Alphabetical,
+        title: "Browse A–Z",
+        subtitle: "The whole catalogue, by title",
+        style: SectionStyle.SimpleTripleRow,
+        limit: 15,
+        load: (page) =>
+          this.browse({ page, sort: SortID.Alphabetical, maxRating: policy.max }, policy),
+      },
     ];
   }
 
@@ -176,7 +244,7 @@ class HiperdexSource implements ChapterSource, SearchProvider, PageLinkResolver 
   }
 
   async getSectionsForPage(link: PageLink): Promise<PageSection[]> {
-    return toPageSections(this.sections(this.policy(link.context)));
+    return fillPageSections(this.sections(this.policy(link.context)));
   }
 
   async resolvePageSection(link: PageLink, sectionID: string): Promise<ResolvedPageSection> {
@@ -225,7 +293,7 @@ class HiperdexSource implements ChapterSource, SearchProvider, PageLinkResolver 
 
     return {
       title: readString(series["title"]) || contentId,
-      cover: readString(series["coverUrl"]),
+      cover: coverUrl(series["coverUrl"]),
       summary: readString(series["synopsis"]).trim(),
       tags,
       contentType: CONTENT_TYPE_BY_NAME[type] ?? ContentType.MANGA,
@@ -349,13 +417,17 @@ class HiperdexSource implements ChapterSource, SearchProvider, PageLinkResolver 
     };
   }
 
-  private async trending(page: number, policy: RatingPolicy): Promise<PagedSearchResult> {
+  private async trending(
+    page: number,
+    period: TrendingPeriod,
+    policy: RatingPolicy,
+  ): Promise<PagedSearchResult> {
     const items = readArray(
       await this.call(Procedure.Trending, {
         limit: TRENDING_PAGE_SIZE,
         page,
         maxRating: policy.max,
-        period: "day",
+        period,
       }),
     ).map(readRecord);
 
@@ -365,13 +437,17 @@ class HiperdexSource implements ChapterSource, SearchProvider, PageLinkResolver 
     };
   }
 
-  private async latest(page: number, policy: RatingPolicy): Promise<PagedSearchResult> {
+  private async latest(
+    page: number,
+    scope: SeriesScope,
+    policy: RatingPolicy,
+  ): Promise<PagedSearchResult> {
     const items = readArray(
       await this.call(Procedure.LatestChapters, {
         limit: LATEST_PAGE_SIZE,
         page,
         maxRating: policy.max,
-        seriesType: "all",
+        seriesType: scope,
         hasSponsoredSlot: false,
       }),
     ).map(readRecord);
@@ -649,6 +725,11 @@ function contentUrl(contentId: string): string {
   return `${BASE_URL}/manga/${encodeURIComponent(contentId)}`;
 }
 
+function coverUrl(value: unknown): string {
+  const url = readString(value);
+  return url.includes(DEAD_COVER_PATH) ? "" : url;
+}
+
 /** A picker's "Any" row means "omit the parameter", which is not a value the API takes. */
 function chosen(value: string): string | undefined {
   return value === "" || value === ANY ? undefined : value;
@@ -682,7 +763,7 @@ function seriesHighlight(series: Record<string, unknown>): Highlight {
   return {
     id: slug,
     title: readString(series["title"]) || slug,
-    cover: readString(series["coverUrl"]),
+    cover: coverUrl(series["coverUrl"]),
     webUrl: contentUrl(slug),
     ...(rating === undefined ? {} : { contentRating: rating }),
     ...(subtitle === "" ? {} : { subtitle }),
@@ -704,7 +785,7 @@ function updateHighlight(entry: Record<string, unknown>): Highlight | undefined 
   return {
     id: slug,
     title: readString(entry["seriesTitle"]) || slug,
-    cover: readString(entry["seriesCoverUrl"]),
+    cover: coverUrl(entry["seriesCoverUrl"]),
     webUrl: contentUrl(slug),
     ...(subtitle === "" ? {} : { subtitle }),
     // A badge is a short text label as of @mana-app/types 0.0.26; it used to be a count and

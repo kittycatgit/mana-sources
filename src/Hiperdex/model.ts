@@ -52,17 +52,43 @@ export const SortID = {
   Alphabetical: "alphabetical",
 } as const;
 
+// The site's own home page is two rows with a toggle each — Trending over day/week/month and
+// Recent Updates scoped to a series type — and its browse page is `search.query` under seven
+// sorts. Every one of those fourteen queries is a row here except `sort:"relevance"`, which
+// on an empty query is not a sort of its own: the API answers it byte for byte with what
+// `sort:"popular"` answers, so it would be the Most Popular row under a second name.
 export const ListID = {
   Trending: "trending",
+  TrendingWeek: "trending-week",
+  TrendingMonth: "trending-month",
   Latest: "latest",
+  LatestManga: "latest-manga",
+  LatestManhwa: "latest-manhwa",
+  LatestManhua: "latest-manhua",
   Popular: "popular",
   TopRated: "top-rated",
   Added: "recently-added",
+  Updated: "recently-updated",
+  Oldest: "oldest",
+  Alphabetical: "alphabetical",
 } as const;
+
+/** `recommendations.trending` rejects any other value outright. */
+export type TrendingPeriod = "day" | "week" | "month";
+
+/** `recommendations.latestChapters` takes the search `type` values plus "all". */
+export type SeriesScope = "all" | "manga" | "manhwa" | "manhua";
 
 export const SEARCH_PAGE_SIZE = 30;
 export const TRENDING_PAGE_SIZE = 20;
 export const LATEST_PAGE_SIZE = 40;
+
+// 50 of the catalogue's 4,525 titles publish their cover under this path, and all 50 are a
+// 404 — the CDN serves the Madara-era `/YYYY/MM/` files and the uploader's
+// `/covers/<slug>/` files, and nothing was ever migrated under `/storage/`. The site itself
+// renders a broken image for them, so the source hands those titles over with no cover
+// rather than a cover that cannot load.
+export const DEAD_COVER_PATH = "/storage/covers/";
 
 /** The id a picker uses for "no filter" — the API has no such value and wants the key omitted. */
 export const ANY = "any";

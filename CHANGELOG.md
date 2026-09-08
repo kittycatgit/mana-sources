@@ -199,6 +199,20 @@ are UTC. Format loosely follows [Keep a Changelog](https://keepachangelog.com/en
   Translation / Anime Adaptation / Adult Content toggles, six sort orders either way.
 - Asks the site for non-adult results when the app's content rating requires it.
 
+## Hiperdex (current: v1.2.1)
+
+### 2026-09-09
+
+- The home page arrives with every row already filled.
+
+
+### 2026-09-08
+
+- Added Latest Manga and Recently Updated.
+- Trending rows show fifteen tiles, like every other row.
+
+### 2026-09-08
+
 ## Hiperdex (current: v1.0.1)
 
 ### 2026-09-08
