@@ -55,6 +55,7 @@ export const ListID = {
   Latest: "latest",
   TopYesterday: "top-yesterday",
   TopMonth: "top-month",
+  TopYear: "top-year",
   TopAllTime: "top-all-time",
 } as const;
 
@@ -67,9 +68,12 @@ export const Toplist = {
 } as const;
 
 export type Category = {
+  /** Also the site's own listing path — `/cosplay` is what a category chip links to. */
   id: string;
   /** Exactly as the listing row and the API print it, so it doubles as the parse key. */
   title: string;
+  /** What the home row for this category says under its title. */
+  blurb: string;
   /** `f_cats` is a mask of the categories to *exclude*, so these bits are subtracted. */
   bit: number;
   type: ContentType;
@@ -81,6 +85,7 @@ export const CATEGORIES: readonly Category[] = [
   {
     id: "doujinshi",
     title: "Doujinshi",
+    blurb: "Self-published fan works, newest first",
     bit: 2,
     type: ContentType.MANGA,
     mode: ReadingMode.PAGED_MANGA,
@@ -89,6 +94,7 @@ export const CATEGORIES: readonly Category[] = [
   {
     id: "manga",
     title: "Manga",
+    blurb: "Commercially published volumes and magazine chapters",
     bit: 4,
     type: ContentType.MANGA,
     mode: ReadingMode.PAGED_MANGA,
@@ -97,6 +103,7 @@ export const CATEGORIES: readonly Category[] = [
   {
     id: "artistcg",
     title: "Artist CG",
+    blurb: "Illustration sets straight from the artist",
     bit: 8,
     type: ContentType.MANGA,
     mode: ReadingMode.PAGED_COMIC,
@@ -105,6 +112,7 @@ export const CATEGORIES: readonly Category[] = [
   {
     id: "gamecg",
     title: "Game CG",
+    blurb: "Art lifted from visual novels and games",
     bit: 16,
     type: ContentType.MANGA,
     mode: ReadingMode.PAGED_COMIC,
@@ -113,6 +121,7 @@ export const CATEGORIES: readonly Category[] = [
   {
     id: "western",
     title: "Western",
+    blurb: "Comics drawn outside Japan",
     bit: 512,
     type: ContentType.COMIC,
     mode: ReadingMode.PAGED_COMIC,
@@ -121,6 +130,7 @@ export const CATEGORIES: readonly Category[] = [
   {
     id: "non-h",
     title: "Non-H",
+    blurb: "Uploads the site marks as carrying nothing explicit",
     bit: 256,
     type: ContentType.MANGA,
     mode: ReadingMode.PAGED_MANGA,
@@ -129,6 +139,7 @@ export const CATEGORIES: readonly Category[] = [
   {
     id: "imageset",
     title: "Image Set",
+    blurb: "Loose collections gathered into one upload",
     bit: 32,
     type: ContentType.MANGA,
     mode: ReadingMode.PAGED_COMIC,
@@ -137,6 +148,7 @@ export const CATEGORIES: readonly Category[] = [
   {
     id: "cosplay",
     title: "Cosplay",
+    blurb: "Photo sets of costumed models",
     bit: 64,
     type: ContentType.MANGA,
     mode: ReadingMode.PAGED_COMIC,
@@ -145,6 +157,7 @@ export const CATEGORIES: readonly Category[] = [
   {
     id: "asianporn",
     title: "Asian Porn",
+    blurb: "Live-action photo sets",
     bit: 128,
     type: ContentType.MANGA,
     mode: ReadingMode.PAGED_COMIC,
@@ -153,6 +166,7 @@ export const CATEGORIES: readonly Category[] = [
   {
     id: "misc",
     title: "Misc",
+    blurb: "Everything the other nine categories do not cover",
     bit: 1,
     type: ContentType.MANGA,
     mode: ReadingMode.PAGED_COMIC,
@@ -161,6 +175,11 @@ export const CATEGORIES: readonly Category[] = [
 ];
 
 export const ALL_CATEGORY_BITS = 1023;
+
+/** Namespaced so a category row's list id can never collide with one of the `ListID` rows. */
+export function categoryListId(category: Category): string {
+  return `category-${category.id}`;
+}
 
 export const CATEGORY_OPTIONS: Option[] = CATEGORIES.map((category) => ({
   id: category.id,
