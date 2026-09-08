@@ -5,7 +5,7 @@
     {
       "id": "imhentai",
       "name": "Imhentai",
-      "version": "1.1.0",
+      "version": "1.0.1",
       "description": "Browses the doujinshi, manga and artist CG galleries on imhentai.xxx",
       "website": "https://imhentai.xxx",
       "rating": 2,
@@ -14,11 +14,7 @@
         "ja_JP",
         "es_ES",
         "fr_FR",
-        "ko_KR",
-        "zh-CN",
-        "pt_BR",
-        "de_DE",
-        "ru_RU"
+        "ko_KR"
       ],
       "thumbnail": "Imhentai.png",
       "developers": [
@@ -29,8 +25,8 @@
       ],
       "path": "Imhentai",
       "environment": "source",
-      "intents": 2104329,
-      "hash": "181ad30d181ad30d181ad30d181ad30d181ad30d181ad30d181ad30d181ad30d"
+      "intents": 2104328,
+      "hash": "2b38f0cd2b38f0cd2b38f0cd2b38f0cd2b38f0cd2b38f0cd2b38f0cd2b38f0cd"
     }
   ]
 }

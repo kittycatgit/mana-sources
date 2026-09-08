@@ -117,24 +117,18 @@ are UTC. Format loosely follows [Keep a Changelog](https://keepachangelog.com/en
 - Content type comes from the genre tags: the title page's own Type row reads Manhwa on
   every title, including ones filed under the manhua genre.
 
-## Imhentai (current: v1.1.0)
+## Imhentai (current: v1.0.1)
 
-### 2026-09-07 — Language setting
+### 2026-09-08 — A second challenged gallery opens
 
-- The source's settings now carry a reading language, chosen from the seven the site's own
-  search form offers: English, Japanese, Spanish, French, Korean, German and Russian. Each
-  was checked to return full pages, both on its own and alongside every category the home
-  page uses.
-- All six home rows follow that choice, and their subtitles say so. The site accepts a
-  language and a category in the same query, so New Manga, New Western and New Artist CG
-  narrow as well rather than dropping back to everything.
-- Searches follow it too, wherever the search screen's own Languages picker is left empty;
-  picking languages there still wins for that one search. The picker's subtitle reads
-  "Leave empty for <language>" once a language is set, because an empty picker no longer
-  means everything.
-- `supportedLanguages` is now derived from the language table the source reads galleries
-  with, so it lists German, Russian, Chinese and Portuguese — all four were already being
-  reported as chapter languages while the source declared it did not support them.
+- Reading a gallery the site challenged used `evaluateScript`, and the host declares a
+  `const args` beside a script for every call, whether arguments are passed or not. That
+  declaration outlives both the evaluation and the method, so the first challenged gallery
+  in a session opened and the second died on `SyntaxError: Cannot declare a const variable
+  twice: 'args'` before reading anything.
+- It uses `evaluate` with a function instead, which declares nothing beside it. The
+  callback lives in its own module because its `document` cannot typecheck against a source
+  tsconfig with no DOM lib — which is what the string form was working around.
 
 ### 2026-09-06
 
