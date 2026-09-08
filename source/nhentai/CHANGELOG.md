@@ -4,8 +4,18 @@ Notable changes to the extensions in this repository, grouped by extension —
 each one versions independently (see `info.version` in its `main.ts`). Dates
 are UTC. Format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-<<<<<<< HEAD
-## Nhentai (current: v1.1.0)
+## Nhentai (current: v1.2.0)
+
+### 2026-09-08 — The sort the home page was missing
+
+- The site ranks every listing four ways — recent, today, this week and all time — and the
+  home page only carried three of them. It now carries the fourth as its own row: Popular
+  of All Time site-wide, or Popular Today once a reading language is chosen, whichever the
+  hero is not already showing.
+- The row has to flip because the hero flips: the site's featured five are today's popular,
+  while a chosen language turns the hero into that language's all-time popular. Site-wide
+  all-time popular is English all-time popular to the last entry, so a fixed row would have
+  repeated one or the other.
 
 ### 2026-09-07 — Language setting
 
@@ -35,8 +45,6 @@ are UTC. Format loosely follows [Keep a Changelog](https://keepachangelog.com/en
 - Covers and pages come from two CDN pools that are not interchangeable — thumbnails only
   from the thumb servers, full pages only from the image servers.
 
-=======
-<<<<<<< HEAD
 ## Ehentai (current: v1.1.0)
 
 ### 2026-09-07
@@ -87,8 +95,6 @@ are UTC. Format loosely follows [Keep a Changelog](https://keepachangelog.com/en
   under that status where local law makes it add an age notice, and rejecting it would
   leave those readers with an empty app.
 
-=======
-<<<<<<< HEAD
 ## Manga18fx (current: v1.1.0)
 
 ### 2026-09-07 — Hiding raw releases
@@ -122,8 +128,6 @@ are UTC. Format loosely follows [Keep a Changelog](https://keepachangelog.com/en
 - Content type comes from the genre tags: the title page's own Type row reads Manhwa on
   every title, including ones filed under the manhua genre.
 
-=======
-<<<<<<< HEAD
 ## Imhentai (current: v1.0.0)
 
 ### 2026-09-06
@@ -152,7 +156,6 @@ are UTC. Format loosely follows [Keep a Changelog](https://keepachangelog.com/en
   by driving the built bundle against gallery HTML captured from a real browser, and the
   cover and page URLs they produced were fetched to confirm they serve.
 
-=======
 ## Madaradex (current: v1.0.1)
 
 ### 2026-09-06
@@ -241,11 +244,13 @@ are UTC. Format loosely follows [Keep a Changelog](https://keepachangelog.com/en
   toggles, and the site's six sort orders in either direction.
 - Honours the host's content-rating policy by asking the site for non-adult results when
   mature content is not allowed.
->>>>>>> origin/main
->>>>>>> origin/main
->>>>>>> origin/main
->>>>>>> origin/main
-## Hiperdex (current: v1.0.0)
+## Hiperdex (current: v1.0.1)
+
+### 2026-09-08
+
+- The chapter-count badge on a listing tile is written as text. `@mana-app/types@0.0.26`
+  redefines a badge as a short label the source supplies, where it used to be a count and a
+  colour the host rendered itself.
 
 ### 2026-09-06
 

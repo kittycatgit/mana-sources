@@ -203,7 +203,7 @@
 <li class="source" id="src-Nhentai">
   <div class="icon-slot"><img class="icon" src="assets/Nhentai.png" alt="" onerror="this.remove()"></div>
   <div class="body">
-    <h3>Nhentai <span class="ver">v1.1.0</span></h3>
+    <h3>Nhentai <span class="ver">v1.2.0</span></h3>
     <p>Reads doujinshi and manga galleries from nhentai.net</p>
     <div class="meta">
       <span class="r2"><i class="dot"></i>Explicit</span>
@@ -232,8 +232,11 @@
   <section>
   <h2>Changes</h2>
   <details>
-  <summary>Nhentai <span class="ver">1.1.0</span></summary>
+  <summary>Nhentai <span class="ver">1.2.0</span></summary>
   <div class="entry">
+    <h4>2026-09-08 — The sort the home page was missing</h4>
+    <ul><li>The site ranks every listing four ways — recent, today, this week and all time — and the home page only carried three of them. It now carries the fourth as its own row: Popular of All Time site-wide, or Popular Today once a reading language is chosen, whichever the hero is not already showing.</li><li>The row has to flip because the hero flips: the site's featured five are today's popular, while a chosen language turns the hero into that language's all-time popular. Site-wide all-time popular is English all-time popular to the last entry, so a fixed row would have repeated one or the other.</li></ul>
+  </div><div class="entry">
     <h4>2026-09-07 — Language setting</h4>
     <ul><li>The source's settings now carry a reading language, chosen from the four the site actually stocks: English, Japanese, Chinese, and Translated for anything carrying a translation at all.</li><li>The whole home page follows that choice — the hero becomes the language's most popular galleries, Recently Added its newest uploads, and Manga This Month its serialised manga. With nothing chosen the page is what it was, site-wide with an English week row.</li><li>Searches follow it too, wherever the search screen's own language filter is left on "Any language"; picking a language there still wins for that one search.</li><li>Stopped reading a Turnstile widget as a Cloudflare challenge, matching the fix the other sources already carried — this source was branched before it landed.</li></ul>
   </div><div class="entry">
@@ -299,8 +302,11 @@
   </div>
 </details>
 <details>
-  <summary>Hiperdex <span class="ver">1.0.0</span></summary>
+  <summary>Hiperdex <span class="ver">1.0.1</span></summary>
   <div class="entry">
+    <h4>2026-09-08</h4>
+    <ul><li>The chapter-count badge on a listing tile is written as text. <code>@mana-app/types@0.0.26</code> redefines a badge as a short label the source supplies, where it used to be a count and a colour the host rendered itself.</li></ul>
+  </div><div class="entry">
     <h4>2026-09-06</h4>
     <ul><li>Initial implementation, reading hiperdex.com through its tRPC API at <code>/api/trpc</code> rather than the markup — the site is now a client-rendered SPA whose pages contain no content.</li><li>Every API call carries the <code>__st</code> session cookie, which the server only issues in the <code>Set-Cookie</code> of a document request; the source fetches the landing page once for it and re-fetches on a 401.</li><li>Home page carries Trending Today, Latest Updates, Most Popular, Top Rated and Recently Added, each backed by the same query as its view-more listing.</li><li>Search supports a title query, the site's seven sort orders, and type, status, rating and genre filters; the status picker adds "Releasing", which the site's own filter panel omits despite 284 titles carrying it.</li><li>Covers and chapter pages are requested with the site as their referer, without which both CDNs answer 403.</li></ul>
   </div>
@@ -318,7 +324,7 @@
 </section>
 </main>
 
-<footer class="wrap">Updated 2026-09-07</footer>
+<footer class="wrap">Updated 2026-09-08</footer>
 
 <script>
   Array.prototype.forEach.call(document.querySelectorAll(".copy-one"), function (b) {
