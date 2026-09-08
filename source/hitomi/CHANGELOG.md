@@ -81,7 +81,13 @@ are UTC. Format loosely follows [Keep a Changelog](https://keepachangelog.com/en
 - Chapter images carry the site as referer plus the `mdx_fp`/`mdx_auth` cookies the CDN
   requires.
 
-## Hitomi (current: v1.3.0)
+## Hitomi (current: v1.3.1)
+
+### 2026-09-09
+
+- The home page arrives with every row already filled.
+- The Popular rows fetch only the twelve titles they show.
+
 
 ### 2026-09-08
 
