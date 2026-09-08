@@ -203,7 +203,7 @@
 
 <main class="wrap">
   <section>
-    <h2>10 sources</h2>
+    <h2>11 sources</h2>
     <ul class="sources">
 <li class="source" id="src-Ehentai">
   <div class="icon-slot"><img class="icon" src="assets/Ehentai.png" alt="" onerror="this.remove()"></div>
@@ -283,6 +283,19 @@
     
   </div>
 </li>
+<li class="source" id="src-Mangaball">
+  <div class="icon-slot"><img class="icon" src="assets/Mangaball.png" alt="" onerror="this.remove()"></div>
+  <div class="body">
+    <h3>Mangaball <span class="ver">v1.3.5</span></h3>
+    <p>Pulls manga, manhwa and manhua from mangaball.net</p>
+    <div class="meta">
+      <span class="r1"><i class="dot"></i>Mixed</span>
+      <span style="color:var(--muted)">EN / ES / PT / FR / zh-CN</span>
+      <a href="https://mangaball.net" target="_blank" rel="noopener">mangaball.net &nearr;</a>
+    </div>
+    
+  </div>
+</li>
 <li class="source" id="src-Mangafire">
   <div class="icon-slot"><img class="icon" src="assets/Mangafire.png" alt="" onerror="this.remove()"></div>
   <div class="body">
@@ -338,33 +351,7 @@
     </ul>
   </section>
 
-  <section>
-    <h2>In testing</h2>
-    <p class="lede">Built and published, not in the catalogue yet. Add one the same way, try it,
-    and say on its thread what worked and what did not — that is what decides whether it ships.</p>
-    <ul class="sources">
-<li class="source" id="testing-Mangaball">
-  <div class="icon-slot"><img class="icon" src="https://kittycatgit.github.io/mana-sources/source/mangaball/assets/Mangaball.png" alt="" onerror="this.remove()"></div>
-  <div class="body">
-    <h3>Mangaball <span class="ver">v1.3.5</span> <span class="tag">testing</span></h3>
-    <p>Pulls manga, manhwa and manhua from mangaball.net</p>
-    <div class="meta">
-      <span class="r1"><i class="dot"></i>Mixed</span>
-      <span style="color:var(--muted)">EN / ES / PT / FR / zh-CN</span>
-      <a href="https://mangaball.net" target="_blank" rel="noopener">mangaball.net &nearr;</a>
-    </div>
-    <div class="testing-changes">
-      <h4>New in this version</h4>
-      <ul><li>The home page arrives with every row already filled.</li></ul>
-      
-    </div><div class="testing-actions">
-      <code class="turl">https://kittycatgit.github.io/mana-sources/source/mangaball</code><button class="copy-one" type="button" data-url="https://kittycatgit.github.io/mana-sources/source/mangaball">Copy</button>
-      <a class="thread" href="https://github.com/kittycatgit/mana-sources/issues/9" target="_blank" rel="noopener">Leave feedback</a>
-    </div>
-  </div>
-</li>
-    </ul>
-  </section>
+  
 
   <section>
     <h2>Requests</h2>
@@ -380,6 +367,10 @@
   <section>
   <h2>Changes</h2>
   <details>
+  <summary>Mangaball <span class="ver">1.3.5</span></summary>
+  
+</details>
+<details>
   <summary>Nhentai <span class="ver">1.2.1</span></summary>
   
 </details>
@@ -388,6 +379,24 @@
   <div class="entry">
     <h4>2026-09-09</h4>
     <ul><li>The home page arrives with every row already filled.</li></ul>
+  </div><div class="entry">
+    <h4>2026-09-08</h4>
+    <ul><li>Opening the source again reuses its session instead of reloading the home page.</li></ul>
+  </div><div class="entry">
+    <h4>2026-09-08 — Most Read rows no longer time out</h4>
+    <ul><li>Fixed the four Most Read rows showing an error card while the rest of the home page loaded, when the site's cache for one of their time windows had expired.</li><li>The Most Read rows show twelve titles, the number the site itself asks for.</li></ul>
+  </div><div class="entry">
+    <h4>2026-09-08 — Rows no longer fail once the home page has loaded</h4>
+    <ul><li>Fixed every row failing with "did not issue a session" after the app had loaded the home page once.</li></ul>
+  </div><div class="entry">
+    <h4>2026-09-08 — One session for the whole home page</h4>
+    <ul><li>The home page's rows now share one session instead of each fetching their own, so opening the source is faster and rows no longer fail with "did not issue a session".</li></ul>
+  </div><div class="entry">
+    <h4>2026-09-08</h4>
+    <ul><li>Added Recommended Titles, Most Read Today, This Week, This Month and This Year, Most Viewed Today, This Month and This Year, Manga Updates and Comics Updates.</li><li>Chapters show which group scanned them, with a link to the group.</li><li>Chapter titles no longer repeat the group name.</li><li>Spanish (Latin America) chapters report <code>es-419</code>.</li></ul>
+  </div><div class="entry">
+    <h4>2026-09-07</h4>
+    <ul><li>Reads mangaball.net through the endpoints its own pages call.</li><li>Home: Featured, Latest Updates, Recently Added, Most Read Today.</li><li>Search: title query, genres, status, type and the site's sort orders.</li></ul>
   </div><div class="entry">
     <h4>2026-09-08</h4>
     <ul><li>Added Popular of All Time, or Popular Today when a reading language is set.</li><li>Added Trending Today, This Week and This Month, Hot, Most Viewed (30 days), Most Viewed (all time), Most Followed, Newest Series, A–Z and Z–A.</li><li>Chapters show whether they are the official release or a fan translation.</li><li>Chapter titles no longer end with “· Fan translation”.</li></ul>
