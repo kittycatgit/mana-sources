@@ -157,7 +157,11 @@ are UTC. Format loosely follows [Keep a Changelog](https://keepachangelog.com/en
 - Content type comes from the genre tags; the site's own Type row reads Manhwa on
   everything.
 
-## Imhentai (current: v1.0.3)
+## Imhentai (current: v1.1.0)
+
+### 2026-09-09
+
+- New Languages setting, applied to every home row and to searches that pick no language.
 
 ### 2026-09-09
 
