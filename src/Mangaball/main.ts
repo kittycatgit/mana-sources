@@ -84,7 +84,7 @@ import {
 const info: SourceInfo = {
   id: "mangaball",
   name: "Mangaball",
-  version: "1.3.0",
+  version: "1.3.1",
   description: "Pulls manga, manhwa and manhua from mangaball.net",
   website: BASE_URL,
   rating: CatalogRating.MIXED,
@@ -113,6 +113,8 @@ class MangaballSource implements ChapterSource, SearchProvider, PageLinkResolver
 
   private client: NetworkClient | undefined;
   private session: Session | undefined;
+  private pending: Promise<Session> | undefined;
+  private cookie: Cookie | undefined;
   private readonly preferences = new PreferenceStore(PREFERENCE_NAMESPACE, PREFERENCE_DEFAULTS);
 
   private get http(): NetworkClient {
@@ -516,7 +518,7 @@ class MangaballSource implements ChapterSource, SearchProvider, PageLinkResolver
       return await this.post<T>(url, body);
     } catch (error) {
       if (!cached) throw error;
-      this.session = undefined;
+      this.invalidate();
       return await this.post<T>(url, body);
     }
   }
@@ -552,21 +554,47 @@ class MangaballSource implements ChapterSource, SearchProvider, PageLinkResolver
    * Every API route needs the `csrf-token` meta from a rendered page *and* the PHP session
    * cookie issued alongside it — either on its own is a 403. The pair is read once and
    * reused for the life of the source instance.
+   *
+   * The in-flight request is held rather than the result: a home page carries eighteen rows
+   * that resolve together, and without this each one saw an empty `session` and bootstrapped
+   * for itself. That is eighteen fetches of a 300 KB page for one session, and only the
+   * first of them is answered with `Set-Cookie` — see `bootstrap`.
    */
   private async credentials(): Promise<Session> {
     if (this.session) return this.session;
 
+    this.pending ??= this.bootstrap().catch((error: unknown) => {
+      this.pending = undefined;
+      throw error;
+    });
+    return this.pending;
+  }
+
+  /**
+   * The client keeps a cookie jar, so the second and later fetches of the home page arrive
+   * carrying `PHPSESSID` already and PHP answers them without re-issuing it. A reply with a
+   * token but no `Set-Cookie` is therefore the session this source already holds, not a
+   * failure, and the held cookie stands.
+   */
+  private async bootstrap(): Promise<Session> {
     const response = await this.http.get(`${BASE_URL}/`);
     const token = /name="csrf-token"\s+content="([^"]+)"/.exec(response.data)?.[1] ?? "";
-    const value = sessionCookie(response.headers);
+    const value = sessionCookie(response.headers) || this.cookie?.value || "";
     if (!token || !value) {
       throw new Error(
         "Manga Ball did not issue a session. Its home page has to load before any of its API routes will answer.",
       );
     }
 
-    this.session = { token, cookie: { name: "PHPSESSID", value } };
+    this.cookie = { name: "PHPSESSID", value };
+    this.session = { token, cookie: this.cookie };
     return this.session;
+  }
+
+  /** Drops the cached pair and any settled bootstrap, so the next call mints a fresh one. */
+  private invalidate(): void {
+    this.session = undefined;
+    this.pending = undefined;
   }
 
   private async page(url: string): Promise<CheerioAPI> {
