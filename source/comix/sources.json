@@ -5,7 +5,7 @@
     {
       "id": "comix",
       "name": "Comix",
-      "version": "1.0.8",
+      "version": "1.0.9",
       "description": "Reads manga, manhwa and manhua from comix.to",
       "website": "https://comix.to",
       "rating": 1,
@@ -22,7 +22,7 @@
       "path": "Comix",
       "environment": "source",
       "intents": 6298636,
-      "hash": "0f35c7240f35c7240f35c7240f35c7240f35c7240f35c7240f35c7240f35c724"
+      "hash": "16cf8f8616cf8f8616cf8f8616cf8f8616cf8f8616cf8f8616cf8f8616cf8f86"
     }
   ]
 }

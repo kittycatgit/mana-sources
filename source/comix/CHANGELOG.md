@@ -4,7 +4,16 @@ Notable changes to the extensions in this repository, grouped by extension —
 each one versions independently (see `info.version` in its `main.ts`). Dates
 are UTC. Format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## Comix (current: v1.0.8)
+## Comix (current: v1.0.9)
+
+### 2026-09-08 — Back to the walk that worked
+
+- Everything from v1.0.5 to v1.0.8 is reverted: the source is the v1.0.4 code again, which
+  is the version that read chapter lists correctly on a device, slowly and completely.
+- v1.0.5 to v1.0.7 fetched pages through the app's own query function, which is bound to
+  the parameters it was built with — page two returned page one, and a device showed twenty
+  chapters. v1.0.8 walked the pager again but was a fresh implementation of it, and its
+  behaviour on a device was worse than the one it replaced.
 
 ### 2026-09-08 — The chapter list, actually
 

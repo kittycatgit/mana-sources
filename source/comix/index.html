@@ -203,7 +203,7 @@
 <li class="source" id="src-Comix">
   <div class="icon-slot"><img class="icon" src="assets/Comix.png" alt="" onerror="this.remove()"></div>
   <div class="body">
-    <h3>Comix <span class="ver">v1.0.8</span></h3>
+    <h3>Comix <span class="ver">v1.0.9</span></h3>
     <p>Reads manga, manhwa and manhua from comix.to</p>
     <div class="meta">
       <span class="r1"><i class="dot"></i>Mixed</span>
@@ -232,8 +232,11 @@
   <section>
   <h2>Changes</h2>
   <details>
-  <summary>Comix <span class="ver">1.0.8</span></summary>
+  <summary>Comix <span class="ver">1.0.9</span></summary>
   <div class="entry">
+    <h4>2026-09-08 — Back to the walk that worked</h4>
+    <ul><li>Everything from v1.0.5 to v1.0.8 is reverted: the source is the v1.0.4 code again, which is the version that read chapter lists correctly on a device, slowly and completely.</li><li>v1.0.5 to v1.0.7 fetched pages through the app's own query function, which is bound to the parameters it was built with — page two returned page one, and a device showed twenty chapters. v1.0.8 walked the pager again but was a fresh implementation of it, and its behaviour on a device was worse than the one it replaced.</li></ul>
+  </div><div class="entry">
     <h4>2026-09-08 — The chapter list, actually</h4>
     <ul><li>Fetching pages through the app's own query function was wrong from the start. That function is bound to the parameters it was built with, so asking it for page two returns page one again — thirty-one calls that looked like 620 chapters here and arrived as twenty on a device, which de-duplicates them. Every measurement made against it was measuring the same twenty chapters over and over.</li><li>The pager is walked again, which is the only thing that advances the list, and entries are taken by id so a repeat cannot inflate the count. Within one page of the end the site drops its "next" arrow and leaves the numbers, which had been stopping the walk two pages early; the numbered button is used when the arrow is gone.</li><li>601 chapters for the title that was showing 20, matching the site's own total, in about 22 seconds. 707 for the other.</li></ul>
   </div><div class="entry">
