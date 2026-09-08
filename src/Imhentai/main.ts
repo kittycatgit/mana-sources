@@ -11,6 +11,7 @@ import {
   type ChapterPage,
   type ChapterSource,
   type Content,
+  type Form,
   type Highlight,
   type PageLink,
   type PageLinkResolver,
@@ -23,6 +24,7 @@ import {
   type SortOption,
   type SourceConfig,
   type SourceInfo,
+  type SourcePreferenceProvider,
   type StaffItem,
   type Tag,
 } from "@mana-app/types";
@@ -33,6 +35,8 @@ import { buildClient } from "./client.ts";
 import { outerHtml } from "./page-html.ts";
 import {
   FilterReader,
+  PreferenceStore,
+  buildPreferenceMenu,
   buildSearchForm,
   listResults,
   pageOf,
@@ -53,6 +57,10 @@ import {
   LANGUAGE_OPTIONS,
   ListID,
   PAGE_SIZE,
+  PREFERENCE_DEFAULTS,
+  PREFERENCE_NAMESPACE,
+  PREFERENCE_SECTIONS,
+  PreferenceID,
   READING_MODE_BY_CATEGORY,
   SEARCH_FIELDS,
   SEARCH_URL,
@@ -67,7 +75,7 @@ import {
 const info: SourceInfo = {
   id: "imhentai",
   name: "Imhentai",
-  version: "1.0.3",
+  version: "1.1.0",
   description: "Browses the doujinshi, manga and artist CG galleries on imhentai.xxx",
   website: BASE_URL,
   rating: CatalogRating.EXPLICIT,
@@ -77,6 +85,8 @@ const info: SourceInfo = {
     DefinedLanguages.SPANISH,
     DefinedLanguages.FRENCH,
     DefinedLanguages.KOREAN,
+    "de_DE",
+    "ru_RU",
   ],
   thumbnail: "assets/icon.png",
   developers: [{ name: "Demon", github: "https://github.com/kittycatgit" }],
@@ -88,11 +98,14 @@ const config: SourceConfig = {
   owningLinks: ["imhentai.xxx"],
 };
 
-class ImhentaiSource implements ChapterSource, SearchProvider, PageLinkResolver {
+class ImhentaiSource
+  implements ChapterSource, SearchProvider, PageLinkResolver, SourcePreferenceProvider
+{
   readonly info = info;
   readonly config = config;
 
   private client: NetworkClient | undefined;
+  private readonly preferences = new PreferenceStore(PREFERENCE_NAMESPACE, PREFERENCE_DEFAULTS);
   private gallery: { contentId: string; html: string } | undefined;
 
   private get http(): NetworkClient {
@@ -100,7 +113,8 @@ class ImhentaiSource implements ChapterSource, SearchProvider, PageLinkResolver 
     return this.client;
   }
 
-  private sections(): SectionSpec[] {
+  /** Every row narrowed to the reader's languages; the site takes the flags on any sort. */
+  private sections(languages: readonly string[]): SectionSpec[] {
     return [
       {
         id: ListID.Popular,
@@ -108,7 +122,7 @@ class ImhentaiSource implements ChapterSource, SearchProvider, PageLinkResolver 
         subtitle: "What the site is reading this week",
         style: SectionStyle.SimpleHero,
         limit: 10,
-        load: (page) => this.listing({ page, sort: SortID.Popular }),
+        load: (page) => this.listing({ page, sort: SortID.Popular, languages }),
       },
       {
         id: ListID.Latest,
@@ -116,7 +130,7 @@ class ImhentaiSource implements ChapterSource, SearchProvider, PageLinkResolver 
         subtitle: "Everything as it lands, newest first",
         style: SectionStyle.DetailedVerticalListGrouped,
         limit: 12,
-        load: (page) => this.listing({ page, sort: SortID.Latest }),
+        load: (page) => this.listing({ page, sort: SortID.Latest, languages }),
       },
       {
         id: ListID.TopRated,
@@ -124,7 +138,7 @@ class ImhentaiSource implements ChapterSource, SearchProvider, PageLinkResolver 
         subtitle: "Scored highest by readers",
         style: SectionStyle.DetailedTripleRowPaged,
         limit: 12,
-        load: (page) => this.listing({ page, sort: SortID.TopRated }),
+        load: (page) => this.listing({ page, sort: SortID.TopRated, languages }),
       },
       {
         id: ListID.NewManga,
@@ -132,7 +146,7 @@ class ImhentaiSource implements ChapterSource, SearchProvider, PageLinkResolver 
         subtitle: "Fresh full-length manga",
         style: SectionStyle.DetailedTripleRowPaged,
         limit: 12,
-        load: (page) => this.listing({ page, sort: SortID.Latest, categories: ["m"] }),
+        load: (page) => this.listing({ page, sort: SortID.Latest, categories: ["m"], languages }),
       },
       {
         id: ListID.NewWestern,
@@ -140,7 +154,7 @@ class ImhentaiSource implements ChapterSource, SearchProvider, PageLinkResolver 
         subtitle: "Recent western comics",
         style: SectionStyle.DetailedTripleRowPaged,
         limit: 12,
-        load: (page) => this.listing({ page, sort: SortID.Latest, categories: ["w"] }),
+        load: (page) => this.listing({ page, sort: SortID.Latest, categories: ["w"], languages }),
       },
       {
         id: ListID.NewArtistCG,
@@ -148,7 +162,7 @@ class ImhentaiSource implements ChapterSource, SearchProvider, PageLinkResolver 
         subtitle: "The latest artist collections",
         style: SectionStyle.DetailedTripleRowPaged,
         limit: 12,
-        load: (page) => this.listing({ page, sort: SortID.Latest, categories: ["a"] }),
+        load: (page) => this.listing({ page, sort: SortID.Latest, categories: ["a"], languages }),
       },
     ];
   }
@@ -165,26 +179,38 @@ class ImhentaiSource implements ChapterSource, SearchProvider, PageLinkResolver 
     return SORT_OPTIONS;
   }
 
+  async getPreferenceMenu(): Promise<Form> {
+    return buildPreferenceMenu(this.preferences, PREFERENCE_SECTIONS);
+  }
+
   async getSectionsForPage(_link: PageLink): Promise<PageSection[]> {
-    return toPageSections(this.sections());
+    return toPageSections(this.sections(await this.languages()));
   }
 
   async resolvePageSection(_link: PageLink, sectionID: string): Promise<ResolvedPageSection> {
-    return resolveSection(this.sections(), sectionID);
+    return resolveSection(this.sections(await this.languages()), sectionID);
   }
 
   async search(request: SearchRequest): Promise<PagedSearchResult> {
-    const list = listResults(this.sections(), request);
+    const preferred = await this.languages();
+    const list = listResults(this.sections(preferred), request);
     if (list) return list;
 
     const filters = new FilterReader(request);
+    const picked = filters.options(FilterID.Languages);
     return this.listing({
       page: pageOf(request),
       key: request.query?.trim() ?? "",
       sort: resolveSortId(SORT_OPTIONS, request, SortID.Latest),
       categories: filters.options(FilterID.Categories),
-      languages: filters.options(FilterID.Languages),
+      languages: picked.length > 0 ? picked : preferred,
     });
+  }
+
+  /** The languages the reader chose in settings; empty means every language. */
+  private async languages(): Promise<string[]> {
+    const stored = await this.preferences.get(PreferenceID.Languages);
+    return Array.isArray(stored) ? stored : [];
   }
 
   async getContent(contentId: string): Promise<Content> {

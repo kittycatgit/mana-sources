@@ -8,6 +8,8 @@ import {
   type SortOption,
 } from "@mana-app/types";
 
+import type { PreferenceSection, PreferenceValue } from "./forms/index.ts";
+
 export const BASE_URL = "https://imhentai.xxx";
 
 // The only route Cloudflare leaves open to an automated client. It accepts every flag the
@@ -16,6 +18,16 @@ export const BASE_URL = "https://imhentai.xxx";
 export const SEARCH_URL = `${BASE_URL}/search/`;
 
 export const PAGE_SIZE = 20;
+
+export const PREFERENCE_NAMESPACE = "imhentai";
+
+export const PreferenceID = {
+  Languages: "languages",
+} as const;
+
+export const PREFERENCE_DEFAULTS: Record<string, PreferenceValue> = {
+  [PreferenceID.Languages]: [],
+};
 
 export const FilterID = {
   Categories: "categories",
@@ -71,6 +83,23 @@ export const LANGUAGE_OPTIONS: Option[] = [
   { id: "kr", title: "Korean" },
   { id: "de", title: "German" },
   { id: "ru", title: "Russian" },
+];
+
+export const PREFERENCE_SECTIONS: readonly PreferenceSection[] = [
+  {
+    header: "Languages",
+    footer:
+      "Every home row shows only these languages. A search that picks its own languages " +
+      "uses those instead; one that leaves them empty follows this setting.",
+    fields: [
+      {
+        type: "multiselect",
+        key: PreferenceID.Languages,
+        title: "Languages",
+        options: LANGUAGE_OPTIONS,
+      },
+    ],
+  },
 ];
 
 export const SEARCH_FIELDS: SearchListField[] = [
