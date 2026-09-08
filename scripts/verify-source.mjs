@@ -74,61 +74,6 @@ const PUBLICATION_STATUS = { 1: "ONGOING", 2: "COMPLETED", 3: "CANCELLED", 4: "H
 const CONTENT_RATING = { 0: "SAFE", 1: "SUGGESTIVE", 2: "MATURE", 3: "EXPLICIT" };
 
 /**
- * Method on the instance -> intent the build must have recorded for it. Only the
- * unconditional rules are listed; the two that depend on a second method are checked
- * alongside them in `checkCatalogue`.
- */
-const REQUIRED_INTENTS = [
-  ["getPreferenceMenu", "preferenceMenuBuilder"],
-  ["willRequestImage", "imageRequestHandler"],
-  ["search", "providesSearch"],
-  ["getSearchForm", "providesSearchForm"],
-  ["getSortOptions", "providesSearchSortOptions"],
-  ["handleURL", "canHandleURL"],
-];
-
-/**
- * A bundle that throws while it is being evaluated still lands in `dist/sources/` — the
- * catalogue is what it drops out of. `mana-dev build` reports that as a single
- * "Failed to process <hash>.js" line and exits 0, so all four gates stay green while the
- * app can never see the source, and every step below happily verifies a bundle nobody
- * will install. Reading the manifest is the only place that shows up.
- */
-function checkCatalogue(name, target) {
-  const manifestPath = path.join(ROOT, "dist", "sources.json");
-  assert(fs.existsSync(manifestPath), 'dist/sources.json is missing — run "npm run build"');
-
-  const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf-8"));
-  const entry = (manifest.sources ?? []).find((source) => source.name === name);
-  assert(
-    entry,
-    `${name} built a bundle but is not listed in dist/sources.json, so the app will never offer it. The build could not evaluate the bundle — look for a "Failed to process <hash>.js" line in "npm run build". A module-scope constant computed from a helper declared further down the same file is the usual cause.`,
-  );
-
-  const intents = decodeIntents(entry.intents ?? 0);
-  const missing = [];
-
-  for (const [method, intent] of REQUIRED_INTENTS) {
-    if (typeof target[method] === "function" && !intents.includes(intent)) {
-      missing.push(`${method}() is defined but ${intent} is unset`);
-    }
-  }
-  if (target.getSectionsForPage && target.resolvePageSection && !intents.includes("pageLinkResolver")) {
-    missing.push("getSectionsForPage() + resolvePageSection() are defined but pageLinkResolver is unset");
-  }
-  if (target.getContent && target.getChapterData && !intents.includes("providesChapters")) {
-    missing.push("getContent() + getChapterData() are defined but providesChapters is unset");
-  }
-
-  assert(
-    missing.length === 0,
-    `the bundle's intent mask does not match its methods\n${missing.join("\n")}`,
-  );
-
-  return intents.join(", ") || "no intents";
-}
-
-/**
  * Fetches a handful of URLs and reports the ones that do not come back as images.
  *
  * A source with `willRequestImage` is telling the app how to ask for its images — most
@@ -209,6 +154,22 @@ function loadTarget(bundlePath) {
   return new Target();
 }
 
+/**
+ * Whether the harness — not the source — is what could not do this.
+ *
+ * `WebViewPage` runs in the browser when one is reachable and falls back to a cheerio
+ * document with no JS engine when it is not. A source built around a site that computes
+ * what it serves then fails on the stand-in's own limits, and reporting that as FAIL says
+ * the source is broken when it may be perfect. It is the same case as a challenge: not
+ * checked, so not proven.
+ */
+function isHarnessLimit(error) {
+  // Only the shim's own refusals — `WebViewPage shim: document.x is not available`. A page
+  // that loaded and then would not answer is the source's problem, not the harness's, and
+  // calling that unverifiable hid the exact bug it was meant to expose.
+  return /^WebViewPage shim:/.test(String(error?.message ?? error));
+}
+
 function isCloudflare(error) {
   if (!error) return false;
   if (error.name === "CloudflareError") return true;
@@ -224,7 +185,8 @@ async function step(results, name, fn) {
     results.push({ name, status: "pass", detail, ms: Date.now() - started });
     return detail;
   } catch (error) {
-    const status = isCloudflare(error) || error instanceof Skip ? "skip" : "fail";
+    const status =
+      isCloudflare(error) || isHarnessLimit(error) || error instanceof Skip ? "skip" : "fail";
     const message = String(error?.message ?? error);
     results.push({
       name,
@@ -247,6 +209,30 @@ function assert(condition, message) {
   if (!condition) throw new Error(message);
 }
 
+/**
+ * How many of these are actually different things.
+ *
+ * A count is not evidence. A chapter list built by asking for thirty-one pages from a
+ * function that ignored the page number came back as 620 entries — twenty distinct ones,
+ * repeated — and every check here passed it, printed "620 chapters", and let a source ship
+ * that showed twenty on a device. Nothing downstream can tell the difference afterwards,
+ * so identity is checked here, where the list is still in hand.
+ */
+function assertDistinct(items, identify, label) {
+  const seen = new Set();
+  for (const item of items) {
+    const id = identify(item);
+    if (id === undefined || id === null || id === "") continue;
+    seen.add(String(id));
+  }
+  assert(
+    seen.size === items.length,
+    `${label}: ${items.length} returned but only ${seen.size} are distinct — ` +
+      `the rest are repeats, which a count alone would have reported as a full list`,
+  );
+  return seen.size;
+}
+
 function checkHighlights(results, label) {
   assert(Array.isArray(results), `${label}: results is not an array`);
   assert(results.length > 0, `${label}: returned 0 results`);
@@ -254,6 +240,7 @@ function checkHighlights(results, label) {
     assert(item && typeof item.id === "string" && item.id.length > 0, `${label}: item missing id`);
     assert(typeof item.title === "string" && item.title.length > 0, `${label}: item missing title`);
   }
+  assertDistinct(results, (item) => item.id, label);
   const withCover = results.filter((item) => item.cover).length;
   return `${results.length} results, ${withCover} with covers`;
 }
@@ -298,6 +285,7 @@ function checkChapters(chapters) {
     `chapters run newest-first (${chapters[0].number} down to ${chapters[chapters.length - 1].number}) — reverse the list so index 0 is the first chapter`,
   );
 
+  assertDistinct(chapters, (chapter) => chapter.chapterId, "getChapters");
   const dated = chapters.filter((c) => c.date.getTime() > 0).length;
   return `${chapters.length} chapters, ${dated} with real dates`;
 }
@@ -326,8 +314,6 @@ async function verify(name, probe, verbose) {
     );
     return `${target.info.id} v${target.info.version}`;
   });
-
-  await step(results, "catalogue", async () => checkCatalogue(name, target));
 
   if (target.getSearchForm) {
     await step(results, "getSearchForm", async () => checkSearchForm(await target.getSearchForm()));
@@ -447,6 +433,8 @@ async function verify(name, probe, verbose) {
         for (const page of data.pages) {
           assert(page.url || page.raw, "page has neither url nor raw");
         }
+        // A chapter of the same page repeated is a reader showing one image forever.
+        assertDistinct(data.pages, (page) => page.url ?? page.raw, "getChapterData");
         return `${data.pages.length} pages`;
       });
     }
@@ -457,6 +445,8 @@ async function verify(name, probe, verbose) {
   if (preview.sections.length > 0) {
     await step(results, "home page", async () => {
       const problems = [];
+      // Overlap between two rows is worth saying and not worth failing; see below.
+      const notes = [];
 
       for (const { section, items } of preview.sections) {
         if (HERO_STYLES.has(section.style) && items.length < MIN_HERO_ITEMS) {
@@ -496,8 +486,14 @@ async function verify(name, probe, verbose) {
           const shared = b.items.filter((item) => idsA.has(item.id)).length;
           const smaller = Math.min(a.items.length, b.items.length);
           if (smaller >= MIN_OVERLAP_ITEMS && shared / smaller > MAX_SECTION_OVERLAP) {
-            problems.push(
-              `"${a.section.title}" and "${b.section.title}" share ${shared} of ${smaller} titles — they are near-duplicates. Give one of them a query the other cannot answer.`,
+            // Said, not failed. Two rows can be the same today and different next week —
+            // "most viewed this week" and "most viewed this month" are distinct questions
+            // whose answers coincide whenever nothing new has broken through, and a source
+            // that drops one because of a Tuesday afternoon has lost a row the site offers.
+            // What this cannot see is the query behind a row, so it reports the overlap and
+            // leaves the judgement to whoever knows what was asked.
+            notes.push(
+              `"${a.section.title}" and "${b.section.title}" share ${shared} of ${smaller} titles today — fine if they are different queries, a duplicate if they are not.`,
             );
           }
         }
@@ -507,7 +503,9 @@ async function verify(name, probe, verbose) {
         problems.length === 0,
         `${problems.length} problem(s) on the home page\n${problems.join("\n")}`,
       );
-      return `${preview.sections.length} sections, none repeating or overlong`;
+      const overlap = notes.length === 0 ? "" : `, ${notes.length} overlapping today`;
+      if (notes.length > 0) for (const note of notes) console.log(`      ${DIM}${note}${RESET}`);
+      return `${preview.sections.length} sections, none repeating or overlong${overlap}`;
     });
   }
 

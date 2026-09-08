@@ -11,7 +11,7 @@
  * in-app runtime provides, backed by Node's `fetch`.
  */
 
-import { fetchThroughBrowser } from "./browser.mjs";
+import { evaluateInBrowser, fetchThroughBrowser, openInBrowser } from "./browser.mjs";
 
 /**
  * What a challenge page looks like, whatever status it arrives with. Kept in one place
@@ -245,9 +245,22 @@ class HarnessWebViewPageInstance {
     this.timeout = timeout;
     this.html = "";
     this.url = "";
+    // Whether this page is a real one in the browser, or the cheerio stand-in.
+    this.live = false;
   }
 
   async goto(url, options = {}) {
+    // A device runs the site's scripts; the stand-in below cannot. Load the page in the
+    // browser first, so `evaluate` reads what the site computed rather than what it shipped.
+    this.live = await openInBrowser(url);
+    if (this.live) {
+      this.url = url;
+      const html = await evaluateInBrowser("return document.documentElement.outerHTML");
+      this.html = html.ok && typeof html.value === "string" ? html.value : "";
+      if (!looksChallenged(this.html)) return;
+      this.live = false; // Challenged even there: fall through and report it the usual way.
+    }
+
     const controller = new AbortController();
     const ms = (options.timeout ?? this.timeout) * 1000;
     const timer = setTimeout(() => controller.abort(), ms);
@@ -285,6 +298,17 @@ class HarnessWebViewPageInstance {
 
   async evaluateScript(script, args = []) {
     if (!this.html) throw new Error("WebViewPage: evaluate called before goto");
+    if (this.live) {
+      const result = await evaluateInBrowser(script, args);
+      if (result.ok) return result.value;
+      // The page was real a moment ago and is not answering now. Reading the markup with
+      // cheerio would quietly return the wrong answer, so say what happened instead.
+      throw new Error(
+        result.error
+          ? `WebViewPage: the page threw — ${result.error}`
+          : "WebViewPage: the browser stopped answering mid-page",
+      );
+    }
     const { load } = await import("cheerio");
     const $ = load(this.html);
     const document = buildDocumentShim($, this.url);

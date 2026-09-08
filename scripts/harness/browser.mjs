@@ -172,9 +172,12 @@ async function open() {
 }
 
 /** The text of a tool reply, or null if the call failed. */
-function textOf(message) {
+function textOf(message, { keepErrorText = false } = {}) {
   if (message?.error || !message?.result) return null;
-  if (message.result.isError) return null;
+  // An error reply still carries what the page threw, which is the only account of a
+  // failure inside `evaluate` — discarding it reported every one of them as the browser
+  // going quiet, and hid the exception that explained it.
+  if (message.result.isError && !keepErrorText) return null;
   const blocks = message.result.content ?? [];
   return blocks
     .filter((block) => block?.type === "text")
@@ -277,6 +280,81 @@ export async function fetchThroughBrowser(url, options = {}) {
 
   assisted.push(url);
   return { status: payload.status ?? 200, data: payload.data, headers: payload.headers ?? {} };
+}
+
+/**
+ * Loads a URL in the browser and leaves it loaded, for a source that needs a real page.
+ *
+ * `WebViewPage` on a device is a WKWebView: the site's own scripts run, and a source can
+ * read what they produced. The stand-in here parses HTML with cheerio and has no JS engine
+ * at all, so a source built around a site that computes what it serves — a signed request,
+ * a hydrated app holding the answer in memory — is marked broken by a harness that simply
+ * cannot do the thing. Pointing the page at the browser we already drive makes that check
+ * mean something.
+ *
+ * @returns {Promise<boolean>} whether the page is loaded and ready to be evaluated in
+ */
+export async function openInBrowser(url) {
+  let origin;
+  try {
+    origin = new URL(url).origin;
+  } catch {
+    return false;
+  }
+  const link = await open();
+  if (!link) return false;
+  // Navigating counts as reaching the origin, so a later fetch on it skips its own visit.
+  const reply = await link.request(
+    "tools/call",
+    { name: "browser_navigate", arguments: { url } },
+    CALL_TIMEOUT,
+  );
+  if (textOf(reply) === null) return false;
+  link.origins.add(origin);
+  return true;
+}
+
+/**
+ * Runs a script in the loaded page and returns what it produced.
+ *
+ * The value comes back through JSON, which is the same boundary the app's own
+ * `evaluate` has — anything a source can actually receive survives it.
+ *
+ * @returns {Promise<{ ok: true, value: any } | { ok: false }>} `ok: false` when the browser
+ *   route is unavailable, which the caller reports as unverifiable rather than as a failure
+ */
+export async function evaluateInBrowser(script, args = []) {
+  const link = await open();
+  if (!link) return { ok: false };
+
+  // `args` is a plain binding the script can read. Declaring it the way the app does — a
+  // `const` in the page's own scope, which is what makes a second `evaluateScript` collide
+  // — cannot be done from here: a `const` introduced by `eval` is scoped to that eval and
+  // gone by the time the script runs, so every source lost its arguments entirely. The
+  // collision is a host behaviour this cannot reproduce; `references/recon.md` carries the
+  // rule that keeps sources clear of it instead.
+  const fn = `async () => {
+    const args = ${JSON.stringify(args)};
+    const value = await (async () => { ${script.startsWith("return") ? script : `return ${script}`} })();
+    return JSON.stringify({ value: value === undefined ? null : value });
+  }`;
+
+  const reply = await link.request(
+    "tools/call",
+    { name: "browser_evaluate", arguments: { function: fn } },
+    CALL_TIMEOUT,
+  );
+  const text = textOf(reply, { keepErrorText: true });
+  const raw = resultOf(text);
+  if (typeof raw !== "string") {
+    const thrown = String(text ?? "").trim();
+    return { ok: false, error: thrown ? thrown.split("\n").slice(0, 3).join(" ") : "" };
+  }
+  try {
+    return { ok: true, value: JSON.parse(raw).value };
+  } catch {
+    return { ok: false, error: "the page returned something that is not JSON" };
+  }
 }
 
 /** Shuts the server down. A verify run that left it open would never exit. */
