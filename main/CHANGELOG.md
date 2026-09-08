@@ -4,6 +4,7 @@ Notable changes to the extensions in this repository, grouped by extension —
 each one versions independently (see `info.version` in its `main.ts`). Dates
 are UTC. Format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## Nhentai (current: v1.2.1)
 ## Mangafire (current: v1.2.1)
 
 ### 2026-09-09
@@ -13,6 +14,7 @@ are UTC. Format loosely follows [Keep a Changelog](https://keepachangelog.com/en
 
 ### 2026-09-08
 
+- Added Popular of All Time, or Popular Today when a reading language is set.
 - Added Trending Today, This Week and This Month, Hot, Most Viewed (30 days), Most Viewed (all time), Most Followed, Newest Series, A–Z and Z–A.
 - Chapters show whether they are the official release or a fan translation.
 - Chapter titles no longer end with “· Fan translation”.
