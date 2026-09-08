@@ -68,7 +68,7 @@ import {
 const info: SourceInfo = {
   id: "weebcentral",
   name: "Weebcentral",
-  version: "1.1.0",
+  version: "1.2.0",
   description: "Pulls manga, manhwa and manhua from weebcentral.com",
   website: BASE_URL,
   rating: CatalogRating.MIXED,
@@ -125,6 +125,15 @@ class WeebcentralSource implements ChapterSource, SearchProvider, PageLinkResolv
         limit: 10,
         viewMore: false,
         load: () => this.hotSeries(HotSeriesSort.Week),
+      },
+      {
+        id: ListID.Month,
+        title: "Hot This Month",
+        subtitle: "The series drawing the most views this month",
+        style: SectionStyle.SimpleTripleRow,
+        limit: 10,
+        viewMore: false,
+        load: () => this.hotSeries(HotSeriesSort.Month),
       },
       {
         id: ListID.Popular,

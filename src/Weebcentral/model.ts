@@ -14,10 +14,11 @@ export const SEARCH_URL = `${BASE_URL}/search/data`;
 export const HOT_UPDATES_URL = `${BASE_URL}/hot-updates`;
 export const HOT_SERIES_URL = `${BASE_URL}/hot-series`;
 
-// The home page's Hot Series widget has a third tab, `monthly_views`, which is left out:
-// it returns the same ten series as `sort=Popularity`, which Most Popular already carries.
+// The home page's Hot Series widget has three tabs, all three of them rows. `/hot-series`
+// with no `sort` is the weekly tab again, so it is never asked for by itself.
 export const HotSeriesSort = {
   Week: "weekly_views",
+  Month: "monthly_views",
   AllTime: "total_views",
 } as const;
 
@@ -50,6 +51,7 @@ export const ListID = {
   Hot: "hot-updates",
   Latest: "latest-updates",
   Week: "hot-series-week",
+  Month: "hot-series-month",
   Popular: "popular",
   Recent: "recently-added",
   Subscribed: "subscribers",
