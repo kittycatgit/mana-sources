@@ -56,25 +56,29 @@ import {
   LTN_URL,
   ListID,
   PREFERENCE_DEFAULTS,
+  POPULAR_ROWS,
   PreferenceID,
   TAG_INDEX_URL,
   TAG_NAMESPACES,
   THUMBNAIL_URL,
   TYPE_TITLES,
   languageTitle,
+  popularPath,
   searchFields,
   type GalleryInfo,
   type ImageKey,
   type Listing,
+  type PopularWindow,
   type Suggestion,
   type TermTarget,
 } from "./model.ts";
+import { nozomiIds } from "./nozomi.ts";
 import { searchIndexIds } from "./search-index.ts";
 
 const info: SourceInfo = {
   id: "hitomi",
   name: "Hitomi",
-  version: "1.2.0",
+  version: "1.3.0",
   description: "Reads doujinshi, manga and CG sets from hitomi.la",
   website: BASE_URL,
   rating: CatalogRating.EXPLICIT,
@@ -103,6 +107,15 @@ const FEED_SIZE = 25;
 const SEARCH_PAGE_SIZE = 25;
 const GALLERY_CACHE_SIZE = 200;
 const SEARCH_CACHE_SIZE = 20;
+/** Long enough that one home page opens one WebView, short enough that a refresh moves. */
+const POPULAR_TTL = 5 * 60 * 1000;
+
+/** The four popularity windows as one held request, keyed by window. */
+type PopularLists = {
+  language: string;
+  fetchedAt: number;
+  lists: Promise<Map<PopularWindow, string[]> | undefined>;
+};
 
 class HitomiSource
   implements ChapterSource, SearchProvider, PageLinkResolver, SourcePreferenceProvider
@@ -113,6 +126,7 @@ class HitomiSource
   private client: NetworkClient | undefined;
   private tagOptions: Option[] | undefined;
   private imageKey: ImageKey | undefined;
+  private popular: PopularLists | undefined;
   private readonly galleries = new Map<string, GalleryInfo>();
   private readonly searches = new Map<string, string[]>();
   private readonly preferences = new PreferenceStore<Record<string, PreferenceValue>>(
@@ -136,6 +150,8 @@ class HitomiSource
   private async sections(): Promise<SectionSpec[]> {
     const language = await this.preferredLanguage();
     const everything = language === ALL_LANGUAGES;
+    const scope = everything ? "" : ` in ${languageTitle(language)}`;
+    const rankings = await this.rankings(language);
 
     return [
       {
@@ -148,6 +164,19 @@ class HitomiSource
         limit: 10,
         load: (page) => this.listing({ language }, page),
       },
+      // The popularity rows are only claimed when the WebView that reads them answered. A
+      // device without one cannot fill them, and four rows that stay empty read as a broken
+      // home page rather than as a listing the site declined to serve.
+      ...(rankings === undefined
+        ? []
+        : POPULAR_ROWS.map((row) => ({
+            id: row.id,
+            title: row.title,
+            subtitle: `${row.subtitle}${scope}`,
+            style: SectionStyle.DetailedTripleRowPaged,
+            limit: 12,
+            load: (page: number) => this.ranking(row.window, language, page),
+          }))),
       // The English shortcut only earns its place while no language is set: with one set it
       // is either the same feed as Just Added or the one language the reader ruled out.
       ...(everything
@@ -176,11 +205,25 @@ class HitomiSource
         load: (page) => this.listing({ area: "type", term: "manga", language }, page),
       },
       {
+        id: ListID.ArtistCG,
+        title: "Artist CG",
+        style: SectionStyle.DetailedTripleRowPaged,
+        limit: 12,
+        load: (page) => this.listing({ area: "type", term: "artistcg", language }, page),
+      },
+      {
         id: ListID.GameCG,
         title: "Game CG",
         style: SectionStyle.DetailedTripleRowPaged,
         limit: 12,
         load: (page) => this.listing({ area: "type", term: "gamecg", language }, page),
+      },
+      {
+        id: ListID.ImageSet,
+        title: "Image Sets",
+        style: SectionStyle.DetailedTripleRowPaged,
+        limit: 12,
+        load: (page) => this.listing({ area: "type", term: "imageset", language }, page),
       },
     ];
   }
@@ -373,10 +416,7 @@ class HitomiSource
     const wanted = ids.slice(start, start + SEARCH_PAGE_SIZE);
     if (wanted.length === 0) return { results: [], isLastPage: true };
 
-    const galleries = await Promise.all(
-      wanted.map((id) => this.gallery(id).catch((): GalleryInfo | undefined => undefined)),
-    );
-    const found = galleries.filter((gallery): gallery is GalleryInfo => gallery !== undefined);
+    const found = await this.galleriesFor(wanted);
     return { results: found.map(toHighlight), isLastPage: start + wanted.length >= ids.length };
   }
 
@@ -389,10 +429,7 @@ class HitomiSource
     const ids = await this.feedIds(feed);
     if (ids.length === 0) return { results: [], isLastPage: true };
 
-    const galleries = await Promise.all(
-      ids.map((id) => this.gallery(id).catch((): GalleryInfo | undefined => undefined)),
-    );
-    const found = galleries.filter((gallery): gallery is GalleryInfo => gallery !== undefined);
+    const found = await this.galleriesFor(ids);
     if (found.length === 0) {
       throw new Error(
         `Hitomi listed ${ids.length} galleries for ${feedUrl(feed)} but returned metadata for none of them.`,
@@ -400,6 +437,56 @@ class HitomiSource
     }
 
     return { results: found.map(toHighlight), isLastPage: true };
+  }
+
+  /** One of the order-by dropdown's popularity windows, read one visit deep like a feed. */
+  private async ranking(
+    window: PopularWindow,
+    language: string,
+    page: number,
+  ): Promise<PagedSearchResult> {
+    if (page > 1) return { results: [], isLastPage: true };
+
+    const ids = (await this.rankings(language))?.get(window) ?? [];
+    if (ids.length === 0) return { results: [], isLastPage: true };
+
+    const found = await this.galleriesFor(ids);
+    return { results: found.map(toHighlight), isLastPage: true };
+  }
+
+  /**
+   * All four windows in one WebView visit: each ranking's head is a hundred bytes and
+   * opening the page is the whole cost, so a home page carrying the four of them opens one.
+   *
+   * `undefined` means there was no WebView to open. These rankings are published as
+   * `.nozomi` only — arrays of big-endian int32 that `NetworkResponse.data` mangles into a
+   * UTF-8 string — so there is no plain-HTTP route to fall back to, and the caller drops the
+   * rows instead.
+   */
+  private rankings(language: string): Promise<Map<PopularWindow, string[]> | undefined> {
+    const held = this.popular;
+    if (held && held.language === language && Date.now() - held.fetchedAt < POPULAR_TTL) {
+      return held.lists;
+    }
+
+    const lists = nozomiIds(
+      POPULAR_ROWS.map((row) => popularPath(row, language)),
+      FEED_SIZE,
+    ).then((raw) =>
+      raw === undefined
+        ? undefined
+        : new Map(POPULAR_ROWS.map((row, index) => [row.window, (raw[index] ?? []).map(String)])),
+    );
+
+    this.popular = { language, fetchedAt: Date.now(), lists };
+    return lists;
+  }
+
+  private async galleriesFor(ids: readonly string[]): Promise<GalleryInfo[]> {
+    const galleries = await Promise.all(
+      ids.map((id) => this.gallery(id).catch((): GalleryInfo | undefined => undefined)),
+    );
+    return galleries.filter((gallery): gallery is GalleryInfo => gallery !== undefined);
   }
 
   private async feedIds(feed: Listing): Promise<string[]> {

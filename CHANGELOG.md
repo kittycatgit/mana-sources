@@ -159,7 +159,26 @@ are UTC. Format loosely follows [Keep a Changelog](https://keepachangelog.com/en
   `willRequestImage` carries all three; sending `origin` alongside the referer puts the
   403 back, because the CDN reads that as a cross-site XHR.
 
-## Hitomi (current: v1.2.0)
+## Hitomi (current: v1.3.0)
+
+### 2026-09-08 — Every listing the site offers
+
+- The home page now carries the four popularity windows the site's own order-by dropdown
+  offers — Popular Today, This Week, This Month and This Year. They are four separate
+  rankings of the whole catalogue rather than slices of one another: the day's list and the
+  week's shared two of twelve titles the day this was written.
+- Those four are published as `.nozomi` only, with no Atom counterpart, so they are read
+  through the same auxiliary WebView the search index already uses — all four in one visit,
+  because a listing's head is a hundred bytes and opening the page is the whole cost.
+- Where there is no WebView to open, those four rows are left off the home page rather than
+  shown empty. There is no plain-HTTP route to fall back to, and a row a device cannot fill
+  reads as a broken source rather than as a listing the site declined to serve.
+- Artist CG and Image Sets rows, the two content types the site lists that the home page did
+  not carry.
+- Date Published, the dropdown's remaining order, is deliberately not a row: it ranks the
+  same catalogue by a date that is almost always the day a gallery was added, and it held
+  eight of Just Added's ten titles. Anime is left out too — those galleries are an mp4 the
+  app cannot read, with a poster and a still standing in for pages.
 
 ### 2026-09-07
 
