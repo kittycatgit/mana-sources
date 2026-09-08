@@ -89,7 +89,7 @@ const SESSION_TTL_MS = 20 * 60 * 1000;
 const info: SourceInfo = {
   id: "mangaball",
   name: "Mangaball",
-  version: "1.3.4",
+  version: "1.3.5",
   description: "Pulls manga, manhwa and manhua from mangaball.net",
   website: BASE_URL,
   rating: CatalogRating.MIXED,
@@ -119,8 +119,6 @@ class MangaballSource implements ChapterSource, SearchProvider, PageLinkResolver
   private client: NetworkClient | undefined;
   private session: Session | undefined;
   private pending: Promise<Session> | undefined;
-  /** Home rows fetched together in `willResolveSectionsForPage`, handed out by `resolvePageSection`. */
-  private prefetched = new Map<string, Promise<PagedSearchResult>>();
   private readonly preferences = new PreferenceStore(PREFERENCE_NAMESPACE, PREFERENCE_DEFAULTS);
 
   private get http(): NetworkClient {
@@ -314,36 +312,37 @@ class MangaballSource implements ChapterSource, SearchProvider, PageLinkResolver
     return SORT_OPTIONS;
   }
 
-  async getSectionsForPage(_link: PageLink): Promise<PageSection[]> {
-    return toPageSections(this.sections());
-  }
-
   /**
-   * Every row is requested here, together, before any is resolved.
+   * The home page comes back with its rows already filled.
    *
-   * Resolved one after another, eighteen rows are the sum of eighteen round trips — about
-   * sixteen seconds, measured — and the reader sees the page fill in one row at a time. The
-   * site answers all of them at once in about two seconds, so they are asked for at once.
-   * Each result is kept as a promise: a row that is still in flight is simply awaited by
-   * `resolvePageSection`, and one that failed fails there, with its own error, not here.
+   * `PageSection.items` is optional, and a section returned without it is resolved by the
+   * app one `resolvePageSection` call at a time — eighteen round trips in sequence, about
+   * sixteen seconds, with the page filling in a row at a time. Mana's own sources return
+   * every row in this one call instead, and the site answers all eighteen requests at once
+   * in about two seconds, so that is what happens here.
+   *
+   * A row whose request fails is returned without `items`, so the app resolves that one on
+   * its own and its error is shown on that row rather than taking the page down.
    */
-  async willResolveSectionsForPage(_link: PageLink): Promise<void> {
+  async getSectionsForPage(_link: PageLink): Promise<PageSection[]> {
     await this.credentials();
-    this.prefetched = new Map();
-    for (const spec of this.sections()) {
-      const load = spec.load(1);
-      // Nothing awaits these until a row is resolved; an unobserved rejection must not
-      // surface as an unhandled one in the meantime.
-      load.catch(() => undefined);
-      this.prefetched.set(spec.id, load);
-    }
+    const specs = this.sections();
+    const loaded = await Promise.allSettled(specs.map((spec) => spec.load(1)));
+    return toPageSections(specs).map((section, index) => {
+      const outcome = loaded[index];
+      if (outcome?.status !== "fulfilled") return section;
+      const spec = specs[index];
+      const { results } = outcome.value;
+      const items = spec?.limit === undefined ? results : results.slice(0, spec.limit);
+      return { ...section, items };
+    });
   }
 
+  /** Only reached for a row `getSectionsForPage` could not fill; it is tried again here. */
   async resolvePageSection(_link: PageLink, sectionID: string): Promise<ResolvedPageSection> {
     const spec = this.sections().find((section) => section.id === sectionID);
     if (!spec) return { items: [] };
-    const pending = this.prefetched.get(sectionID);
-    const { results } = pending ? await pending : await spec.load(1);
+    const { results } = await spec.load(1);
     return { items: spec.limit === undefined ? results : results.slice(0, spec.limit) };
   }
 
