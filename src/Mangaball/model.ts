@@ -36,17 +36,32 @@ export const TRENDING_SIZE = 20;
  * them answers with a `pagination` block, so every section built on one is a single fixed
  * page and carries `viewMore: false`.
  *
- * `getRecentRead` is deliberately absent. It ranks titles by views over a `search_time`
- * window, and `getFeatured` is provably its `week` window reshuffled — all twelve featured
- * titles are the top twelve of `getRecentRead&search_time=week`, in a different order. Its
- * `day` and `month` windows come back 11 of those same 12. Every one of them is the Featured
- * row again under another title.
+ * `getRecentRead` ranks titles by views over a `search_time` window; `getRecentChapterRead`
+ * ranks them by chapters opened over the same windows. Their windows overlap heavily on any
+ * given day — a title that leads the week usually leads the month — but they are different
+ * questions and answer differently the moment something new breaks through, so each window
+ * the site offers is a row here.
+ *
+ * The one window that is not is `getRecentRead&search_time=week`: `getFeatured` is that
+ * query reshuffled, all twelve of its titles being the weekly top twelve in another order
+ * (measured again 2026-09-08, 12/12). Shipping it would be the Featured hero a second time.
+ * `getLatestTable` and `getByOrigin` are likewise absent as duplicates of browse queries the
+ * source already runs — see the `SORT_FIELD` note and the origin rows in `main.ts`.
  */
 export const ListingType = {
   Featured: "getFeatured",
   Recommend: "getRecommend",
   Popular: "getPopular",
+  Reads: "getRecentRead",
   ChapterReads: "getRecentChapterRead",
+} as const;
+
+/** The `search_time` windows both ranking types accept. */
+export const Window = {
+  Day: "day",
+  Week: "week",
+  Month: "month",
+  Year: "year",
 } as const;
 
 export const PREFERENCE_NAMESPACE = "mangaball";
@@ -78,7 +93,13 @@ export const ListID = {
   Latest: "latest-updates",
   Added: "recently-added",
   Viewed: "most-viewed",
+  ViewedToday: "most-viewed-today",
+  ViewedMonth: "most-viewed-month",
+  ViewedYear: "most-viewed-year",
   ReadToday: "most-read-today",
+  ReadWeek: "most-read-week",
+  ReadMonth: "most-read-month",
+  ReadYear: "most-read-year",
   MangaUpdates: "manga-updates",
   Manhwa: "manhwa-updates",
   Manhua: "manhua-updates",

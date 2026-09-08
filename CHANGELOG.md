@@ -4,7 +4,30 @@ Notable changes to the extensions in this repository, grouped by extension —
 each one versions independently (see `info.version` in its `main.ts`). Dates
 are UTC. Format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## Mangaball (current: v1.2.0)
+## Mangaball (current: v1.3.0)
+
+### 2026-09-08 — The ranking windows that were dropped
+
+- Six rows back: Most Read This Week, This Month and This Year (`getRecentChapterRead`
+  over its three remaining windows) and Most Viewed Today, This Month and This Year
+  (`getRecentRead`). They were left out last pass because their titles largely coincided
+  with the Featured hero and with each other on the day they were measured, which is not a
+  reason — "most viewed this week" and "most viewed this month" are different questions,
+  and they answer differently the moment something new breaks through. Overlap between two
+  rows is reported rather than judged.
+- Still out, and for the only reason a row should be: `getRecentRead&search_time=week` is
+  `getFeatured` reshuffled — measured again this pass, all twelve featured titles are the
+  weekly top twelve in another order — so shipping it would be the hero row twice.
+  `getLatestTable` and `getByOrigin` stay out on the same grounds: `getByOrigin` with no
+  scope is `getLatestTable` is `updated_chapters_desc`, which Latest Updates already runs,
+  and its four scopes are that sort plus an origin filter, which the four origin rows run.
+- `getRecentRead`'s rows print their update date; unlike `getRecentChapterRead` it reports
+  the title's own stamp — sixteen distinct values across twenty rows, agreeing with what
+  `getPopular` says about the same title.
+- Two rows renamed now that there are four view rankings to tell apart: Most Viewed is
+  "Most Viewed of All Time" (it is the whole catalogue by total views, not a window), and
+  Most Read Manga is "Most Viewed Manga" — it sorts on views, not chapters read, which the
+  Most Read rows above it do.
 
 ### 2026-09-08 — Home page rows
 
