@@ -4,7 +4,12 @@ Notable changes to the extensions in this repository, grouped by extension —
 each one versions independently (see `info.version` in its `main.ts`). Dates
 are UTC. Format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## Mangaball (current: v1.3.0)
+## Mangaball (current: v1.3.1)
+
+### 2026-09-08 — One session for the whole home page
+
+- The home page's rows now share one session instead of each fetching their own, so
+  opening the source is faster and rows no longer fail with "did not issue a session".
 
 ### 2026-09-08
 

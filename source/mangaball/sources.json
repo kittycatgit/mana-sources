@@ -5,7 +5,7 @@
     {
       "id": "mangaball",
       "name": "Mangaball",
-      "version": "1.3.0",
+      "version": "1.3.1",
       "description": "Pulls manga, manhwa and manhua from mangaball.net",
       "website": "https://mangaball.net",
       "rating": 1,
@@ -26,7 +26,7 @@
       "path": "Mangaball",
       "environment": "source",
       "intents": 2104329,
-      "hash": "73b6747273b6747273b6747273b6747273b6747273b6747273b6747273b67472"
+      "hash": "7aa385b17aa385b17aa385b17aa385b17aa385b17aa385b17aa385b17aa385b1"
     }
   ]
 }
