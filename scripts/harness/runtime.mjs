@@ -175,7 +175,12 @@ export class NetworkClient {
       clearTimeout(timer);
     }
 
-    let data = await raw.text();
+    // `responseEncoding: "base64"` (types 0.0.27) hands the body back as base64 so a binary
+    // file survives the bridge; anything else is decoded as UTF-8 text the way it always was.
+    const asBase64 = prepared.responseEncoding === "base64";
+    let data = asBase64
+      ? Buffer.from(await raw.arrayBuffer()).toString("base64")
+      : await raw.text();
     let status = raw.status;
     let headersOut = Object.fromEntries(raw.headers.entries());
 
@@ -183,7 +188,7 @@ export class NetworkClient {
     // request — so the same URL is re-issued inside the user's browser, where the site's
     // own cookies and a clearance it already granted apply. If that route is unavailable
     // the challenge page falls through untouched and the source reports it as before.
-    if (looksChallenged(data)) {
+    if (!asBase64 && looksChallenged(data)) {
       const viaBrowser = await fetchThroughBrowser(target, {
         method: prepared.method ?? "GET",
         body: prepared.body,
