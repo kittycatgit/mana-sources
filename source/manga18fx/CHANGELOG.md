@@ -4,8 +4,102 @@ Notable changes to the extensions in this repository, grouped by extension —
 each one versions independently (see `info.version` in its `main.ts`). Dates
 are UTC. Format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-<<<<<<< HEAD
-## Manga18fx (current: v1.1.0)
+## Nhentai (current: v1.1.0)
+
+### 2026-09-07 — Language setting
+
+- The source's settings now carry a reading language, chosen from the four the site
+  actually stocks: English, Japanese, Chinese, and Translated for anything carrying a
+  translation at all.
+- The whole home page follows that choice — the hero becomes the language's most popular
+  galleries, Recently Added its newest uploads, and Manga This Month its serialised manga.
+  With nothing chosen the page is what it was, site-wide with an English week row.
+- Searches follow it too, wherever the search screen's own language filter is left on
+  "Any language"; picking a language there still wins for that one search.
+- Stopped reading a Turnstile widget as a Cloudflare challenge, matching the fix the other
+  sources already carried — this source was branched before it landed.
+
+### 2026-09-06
+
+- Initial implementation, reading nhentai.net through its public `/api/v2` endpoints. The
+  HTML site sits behind a Cloudflare interstitial the app cannot clear; the API answers
+  unauthenticated and unchallenged, so the source parses no markup at all.
+- Home page carries Popular Right Now, Recently Added, Popular This Week and Manga This
+  Month, each backed by the same query as its view-more listing.
+- Search supports a keyword query, the site's five sort orders, language, format, artist
+  and parody filters, include/exclude across the 100 most used tags, and minimum page and
+  favourite counts.
+- Each gallery is one work rather than a series, so it is exposed as a single chapter; the
+  title view composes a summary from the metadata, since the API publishes none.
+- Covers and pages come from two CDN pools that are not interchangeable — thumbnails only
+  from the thumb servers, full pages only from the image servers.
+
+## Ehentai (current: v1.1.0)
+
+### 2026-09-07
+
+- Opening a chapter spent one request per page before the reader saw anything, which took
+  79 seconds on the 478-page gallery that led the home page — long enough to read as
+  images that never load. The image URL only exists inside the `/s/` viewer page it
+  belongs to and the site's bulk viewer refuses anyone not signed in, so those pages are
+  now handed to the reader as-is and resolved one at a time in `willRequestImage`. The
+  same gallery opens in seven seconds, and each image URL is minted when it is displayed
+  rather than up to a minute beforehand.
+- Added a Hidden languages setting to the source's preferences. A hidden language is left
+  out of every listing, dropped from the search form's language picker, and — for the
+  listings the site lets a query reach — excluded server-side as `-language:"x"$` so the
+  page still comes back full.
+- Hiding Japanese hides galleries carrying no language tag at all, which is what an
+  untranslated Japanese work looks like on this site; there is no `-language:` term that
+  can express that, so those rows are dropped from the listing instead.
+- Home sections now page until they have the tiles they advertise. Hiding a language can
+  leave a 25-row page holding one gallery, and the month's toplist was showing a single
+  item where it promised twelve.
+
+### 2026-09-06
+
+- Opening any gallery failed with "E-Hentai rejected the metadata request: No method
+  provided". The `gdata` body was stringified by the source and then serialised again by
+  the host, so the API received a quoted string instead of a request object. The body is
+  now handed over as an object.
+
+### 2026-09-06
+
+- Initial implementation, reading e-hentai.org's listings from its markup and every
+  gallery's metadata from `api.e-hentai.org/api.php` (`gdata`), which carries the title,
+  category, uploader, page count, rating and full tag list in one request.
+- Home page carries Popular Right Now, Latest Galleries and the Yesterday, This Month and
+  All-Time gallery toplists, each backed by the same query as its view-more listing.
+- Listings are cursor-paged rather than offset-paged — `?page=` is accepted and ignored,
+  and the only way to page 2 is the `next=<gid>` link page 1 printed. The source walks and
+  remembers that trail, so ordinary forwards paging still costs one request per page.
+- Search supports a keyword query, the ten categories, include/exclude tags, parody, the
+  translation language, gallery length, a minimum rating, "has a torrent" and "expunged
+  only". Length is a picker rather than a pair of steppers because the site refuses any
+  range narrower than 20 pages.
+- No sort control: listings are always newest first and the site offers no alternative.
+- Each gallery is exposed as a single chapter, matching the site's one-upload model, and
+  its pages are resolved from the `/s/` page each thumbnail links to.
+- Responses are accepted at HTTP 451 as well as 2xx. The site serves the complete page
+  under that status where local law makes it add an age notice, and rejecting it would
+  leave those readers with an empty app.
+
+## Manga18fx (current: v1.2.0)
+
+### 2026-09-08 — Manhua row
+
+- Added a Manhua row to the home page, reading the site's own `manhua` archive. It is the
+  one scope in the site's top menu the source did not already carry that is a different
+  query rather than the latest-updates pool relabelled: its titles overlap the other four
+  rows by at most one out of fifteen.
+- Re-enumerated what the site actually publishes while checking a report that the home
+  page was short of listings. There are two rows on its own home page and seven scopes in
+  its menu, no sort control anywhere, and no trending or most-viewed listing of any kind.
+  Of the three menu scopes still missing, only Manhua was added: `manga-genre/manhwa` is
+  the home page under another name (23 of 24 titles shared), and the Drama and Action
+  archives are the newest updates filtered — every one of their first fifteen titles sits
+  inside the site's own two most recent pages — so either would have shipped as a row that
+  duplicates Latest Updates on a busy day.
 
 ### 2026-09-07 — Hiding raw releases
 
@@ -38,8 +132,6 @@ are UTC. Format loosely follows [Keep a Changelog](https://keepachangelog.com/en
 - Content type comes from the genre tags: the title page's own Type row reads Manhwa on
   every title, including ones filed under the manhua genre.
 
-=======
-<<<<<<< HEAD
 ## Imhentai (current: v1.0.0)
 
 ### 2026-09-06
@@ -68,7 +160,6 @@ are UTC. Format loosely follows [Keep a Changelog](https://keepachangelog.com/en
   by driving the built bundle against gallery HTML captured from a real browser, and the
   cover and page URLs they produced were fetched to confirm they serve.
 
-=======
 ## Madaradex (current: v1.0.1)
 
 ### 2026-09-06
@@ -157,9 +248,13 @@ are UTC. Format loosely follows [Keep a Changelog](https://keepachangelog.com/en
   toggles, and the site's six sort orders in either direction.
 - Honours the host's content-rating policy by asking the site for non-adult results when
   mature content is not allowed.
->>>>>>> origin/main
->>>>>>> origin/main
-## Hiperdex (current: v1.0.0)
+## Hiperdex (current: v1.0.1)
+
+### 2026-09-08
+
+- The chapter-count badge on a listing tile is written as text. `@mana-app/types@0.0.26`
+  redefines a badge as a short label the source supplies, where it used to be a count and a
+  colour the host rendered itself.
 
 ### 2026-09-06
 

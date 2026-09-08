@@ -203,7 +203,7 @@
 <li class="source" id="src-Manga18fx">
   <div class="icon-slot"><img class="icon" src="assets/Manga18fx.png" alt="" onerror="this.remove()"></div>
   <div class="body">
-    <h3>Manga18fx <span class="ver">v1.1.0</span></h3>
+    <h3>Manga18fx <span class="ver">v1.2.0</span></h3>
     <p>Pulls adult manhwa, manhua and manga from manga18fx.com</p>
     <div class="meta">
       <span class="r2"><i class="dot"></i>Explicit</span>
@@ -232,8 +232,34 @@
   <section>
   <h2>Changes</h2>
   <details>
-  <summary>Manga18fx <span class="ver">1.1.0</span></summary>
+  <summary>Nhentai <span class="ver">1.1.0</span></summary>
   <div class="entry">
+    <h4>2026-09-07 — Language setting</h4>
+    <ul><li>The source's settings now carry a reading language, chosen from the four the site actually stocks: English, Japanese, Chinese, and Translated for anything carrying a translation at all.</li><li>The whole home page follows that choice — the hero becomes the language's most popular galleries, Recently Added its newest uploads, and Manga This Month its serialised manga. With nothing chosen the page is what it was, site-wide with an English week row.</li><li>Searches follow it too, wherever the search screen's own language filter is left on "Any language"; picking a language there still wins for that one search.</li><li>Stopped reading a Turnstile widget as a Cloudflare challenge, matching the fix the other sources already carried — this source was branched before it landed.</li></ul>
+  </div><div class="entry">
+    <h4>2026-09-06</h4>
+    <ul><li>Initial implementation, reading nhentai.net through its public <code>/api/v2</code> endpoints. The HTML site sits behind a Cloudflare interstitial the app cannot clear; the API answers unauthenticated and unchallenged, so the source parses no markup at all.</li><li>Home page carries Popular Right Now, Recently Added, Popular This Week and Manga This Month, each backed by the same query as its view-more listing.</li><li>Search supports a keyword query, the site's five sort orders, language, format, artist and parody filters, include/exclude across the 100 most used tags, and minimum page and favourite counts.</li><li>Each gallery is one work rather than a series, so it is exposed as a single chapter; the title view composes a summary from the metadata, since the API publishes none.</li><li>Covers and pages come from two CDN pools that are not interchangeable — thumbnails only from the thumb servers, full pages only from the image servers.</li></ul>
+  </div>
+</details>
+<details>
+  <summary>Ehentai <span class="ver">1.1.0</span></summary>
+  <div class="entry">
+    <h4>2026-09-07</h4>
+    <ul><li>Opening a chapter spent one request per page before the reader saw anything, which took 79 seconds on the 478-page gallery that led the home page — long enough to read as images that never load. The image URL only exists inside the <code>/s/</code> viewer page it belongs to and the site's bulk viewer refuses anyone not signed in, so those pages are now handed to the reader as-is and resolved one at a time in <code>willRequestImage</code>. The same gallery opens in seven seconds, and each image URL is minted when it is displayed rather than up to a minute beforehand.</li><li>Added a Hidden languages setting to the source's preferences. A hidden language is left out of every listing, dropped from the search form's language picker, and — for the listings the site lets a query reach — excluded server-side as <code>-language:"x"$</code> so the page still comes back full.</li><li>Hiding Japanese hides galleries carrying no language tag at all, which is what an untranslated Japanese work looks like on this site; there is no <code>-language:</code> term that can express that, so those rows are dropped from the listing instead.</li><li>Home sections now page until they have the tiles they advertise. Hiding a language can leave a 25-row page holding one gallery, and the month's toplist was showing a single item where it promised twelve.</li></ul>
+  </div><div class="entry">
+    <h4>2026-09-06</h4>
+    <ul><li>Opening any gallery failed with "E-Hentai rejected the metadata request: No method provided". The <code>gdata</code> body was stringified by the source and then serialised again by the host, so the API received a quoted string instead of a request object. The body is now handed over as an object.</li></ul>
+  </div><div class="entry">
+    <h4>2026-09-06</h4>
+    <ul><li>Initial implementation, reading e-hentai.org's listings from its markup and every gallery's metadata from <code>api.e-hentai.org/api.php</code> (<code>gdata</code>), which carries the title, category, uploader, page count, rating and full tag list in one request.</li><li>Home page carries Popular Right Now, Latest Galleries and the Yesterday, This Month and All-Time gallery toplists, each backed by the same query as its view-more listing.</li><li>Listings are cursor-paged rather than offset-paged — <code>?page=</code> is accepted and ignored, and the only way to page 2 is the <code>next=&lt;gid&gt;</code> link page 1 printed. The source walks and remembers that trail, so ordinary forwards paging still costs one request per page.</li><li>Search supports a keyword query, the ten categories, include/exclude tags, parody, the translation language, gallery length, a minimum rating, "has a torrent" and "expunged only". Length is a picker rather than a pair of steppers because the site refuses any range narrower than 20 pages.</li><li>No sort control: listings are always newest first and the site offers no alternative.</li><li>Each gallery is exposed as a single chapter, matching the site's one-upload model, and its pages are resolved from the <code>/s/</code> page each thumbnail links to.</li><li>Responses are accepted at HTTP 451 as well as 2xx. The site serves the complete page under that status where local law makes it add an age notice, and rejecting it would leave those readers with an empty app.</li></ul>
+  </div>
+</details>
+<details>
+  <summary>Manga18fx <span class="ver">1.2.0</span></summary>
+  <div class="entry">
+    <h4>2026-09-08 — Manhua row</h4>
+    <ul><li>Added a Manhua row to the home page, reading the site's own <code>manhua</code> archive. It is the one scope in the site's top menu the source did not already carry that is a different query rather than the latest-updates pool relabelled: its titles overlap the other four rows by at most one out of fifteen.</li><li>Re-enumerated what the site actually publishes while checking a report that the home page was short of listings. There are two rows on its own home page and seven scopes in its menu, no sort control anywhere, and no trending or most-viewed listing of any kind. Of the three menu scopes still missing, only Manhua was added: <code>manga-genre/manhwa</code> is the home page under another name (23 of 24 titles shared), and the Drama and Action archives are the newest updates filtered — every one of their first fifteen titles sits inside the site's own two most recent pages — so either would have shipped as a row that duplicates Latest Updates on a busy day.</li></ul>
+  </div><div class="entry">
     <h4>2026-09-07 — Hiding raw releases</h4>
     <ul><li>New source setting, "Hide raw releases". The site publishes the untranslated Korean edition of a title as a separate series, and those editions are mixed through every listing it has — 13 of the 24 rows on the second page of Latest Updates, 11 of 24 on the popular archive — so a reader who only wants translated titles could not avoid them. With the setting on they are filtered out of every listing and the Manhwa Raw home row is dropped with them; a raw title already in a library still opens.</li><li>A raw edition carries no marker of its own in a listing row, so it is recognised by its slug's <code>-raw</code> suffix or a heading ending in the word. Across the site's whole 1,086-title raw archive the two together miss four titles that carry no marker at all, and across 525 titles from the ordinary listings neither matches anything that is not a raw edition.</li><li>A listing now decides it has reached the end from what the page held rather than from what survived filtering, so a page filtered down to nothing no longer reports itself as the last one. This was already reachable through the app's content-rating filter.</li></ul>
   </div><div class="entry">
@@ -276,8 +302,11 @@
   </div>
 </details>
 <details>
-  <summary>Hiperdex <span class="ver">1.0.0</span></summary>
+  <summary>Hiperdex <span class="ver">1.0.1</span></summary>
   <div class="entry">
+    <h4>2026-09-08</h4>
+    <ul><li>The chapter-count badge on a listing tile is written as text. <code>@mana-app/types@0.0.26</code> redefines a badge as a short label the source supplies, where it used to be a count and a colour the host rendered itself.</li></ul>
+  </div><div class="entry">
     <h4>2026-09-06</h4>
     <ul><li>Initial implementation, reading hiperdex.com through its tRPC API at <code>/api/trpc</code> rather than the markup — the site is now a client-rendered SPA whose pages contain no content.</li><li>Every API call carries the <code>__st</code> session cookie, which the server only issues in the <code>Set-Cookie</code> of a document request; the source fetches the landing page once for it and re-fetches on a 401.</li><li>Home page carries Trending Today, Latest Updates, Most Popular, Top Rated and Recently Added, each backed by the same query as its view-more listing.</li><li>Search supports a title query, the site's seven sort orders, and type, status, rating and genre filters; the status picker adds "Releasing", which the site's own filter panel omits despite 284 titles carrying it.</li><li>Covers and chapter pages are requested with the site as their referer, without which both CDNs answer 403.</li></ul>
   </div>
@@ -295,7 +324,7 @@
 </section>
 </main>
 
-<footer class="wrap">Updated 2026-09-07</footer>
+<footer class="wrap">Updated 2026-09-08</footer>
 
 <script>
   Array.prototype.forEach.call(document.querySelectorAll(".copy-one"), function (b) {
