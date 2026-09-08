@@ -5,7 +5,7 @@
     {
       "id": "nhentai",
       "name": "Nhentai",
-      "version": "1.2.0",
+      "version": "1.2.1",
       "description": "Reads doujinshi and manga galleries from nhentai.net",
       "website": "https://nhentai.net",
       "rating": 2,
@@ -24,7 +24,7 @@
       "path": "Nhentai",
       "environment": "source",
       "intents": 2104329,
-      "hash": "257737b2257737b2257737b2257737b2257737b2257737b2257737b2257737b2"
+      "hash": "2d83ad0e2d83ad0e2d83ad0e2d83ad0e2d83ad0e2d83ad0e2d83ad0e2d83ad0e"
     }
   ]
 }

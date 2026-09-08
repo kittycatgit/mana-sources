@@ -4,7 +4,12 @@ Notable changes to the extensions in this repository, grouped by extension —
 each one versions independently (see `info.version` in its `main.ts`). Dates
 are UTC. Format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## Nhentai (current: v1.2.0)
+## Nhentai (current: v1.2.1)
+
+### 2026-09-09
+
+- The home page arrives with every row already filled.
+
 
 ### 2026-09-08
 
