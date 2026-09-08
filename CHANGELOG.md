@@ -244,7 +244,13 @@ are UTC. Format loosely follows [Keep a Changelog](https://keepachangelog.com/en
   toggles, and the site's six sort orders in either direction.
 - Honours the host's content-rating policy by asking the site for non-adult results when
   mature content is not allowed.
-## Hiperdex (current: v1.0.0)
+## Hiperdex (current: v1.0.1)
+
+### 2026-09-08
+
+- The chapter-count badge on a listing tile is written as text. `@mana-app/types@0.0.26`
+  redefines a badge as a short label the source supplies, where it used to be a count and a
+  colour the host rendered itself.
 
 ### 2026-09-06
 
