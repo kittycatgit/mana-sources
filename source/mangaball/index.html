@@ -203,7 +203,7 @@
 <li class="source" id="src-Mangaball">
   <div class="icon-slot"><img class="icon" src="assets/Mangaball.png" alt="" onerror="this.remove()"></div>
   <div class="body">
-    <h3>Mangaball <span class="ver">v1.2.0</span></h3>
+    <h3>Mangaball <span class="ver">v1.3.0</span></h3>
     <p>Pulls manga, manhwa and manhua from mangaball.net</p>
     <div class="meta">
       <span class="r1"><i class="dot"></i>Mixed</span>
@@ -232,8 +232,11 @@
   <section>
   <h2>Changes</h2>
   <details>
-  <summary>Mangaball <span class="ver">1.2.0</span></summary>
+  <summary>Mangaball <span class="ver">1.3.0</span></summary>
   <div class="entry">
+    <h4>2026-09-08 — The ranking windows that were dropped</h4>
+    <ul><li>Six rows back: Most Read This Week, This Month and This Year (<code>getRecentChapterRead</code> over its three remaining windows) and Most Viewed Today, This Month and This Year (<code>getRecentRead</code>). They were left out last pass because their titles largely coincided with the Featured hero and with each other on the day they were measured, which is not a reason — "most viewed this week" and "most viewed this month" are different questions, and they answer differently the moment something new breaks through. Overlap between two rows is reported rather than judged.</li><li>Still out, and for the only reason a row should be: <code>getRecentRead&amp;search_time=week</code> is <code>getFeatured</code> reshuffled — measured again this pass, all twelve featured titles are the weekly top twelve in another order — so shipping it would be the hero row twice. <code>getLatestTable</code> and <code>getByOrigin</code> stay out on the same grounds: <code>getByOrigin</code> with no scope is <code>getLatestTable</code> is <code>updated_chapters_desc</code>, which Latest Updates already runs, and its four scopes are that sort plus an origin filter, which the four origin rows run.</li><li><code>getRecentRead</code>'s rows print their update date; unlike <code>getRecentChapterRead</code> it reports the title's own stamp — sixteen distinct values across twenty rows, agreeing with what <code>getPopular</code> says about the same title.</li><li>Two rows renamed now that there are four view rankings to tell apart: Most Viewed is "Most Viewed of All Time" (it is the whole catalogue by total views, not a window), and Most Read Manga is "Most Viewed Manga" — it sorts on views, not chapters read, which the Most Read rows above it do.</li></ul>
+  </div><div class="entry">
     <h4>2026-09-08 — Home page rows</h4>
     <ul><li>Five rows the site offers and the source did not carry: Recommended Titles (<code>getRecommend</code>), Most Read Today (<code>getRecentChapterRead</code> over the day window), Most Viewed (<code>getPopular</code>), Manga Updates and Comics Updates (the Japanese and English scopes of the site's "By Origin" row).</li><li>The Featured hero's subtitle now says what it is. <code>getFeatured</code> is not an editorial pick: its twelve titles are the top twelve of <code>getRecentRead&amp;search_time=week</code> reshuffled, which is why none of the "Top Viewed Titles" windows was added — <code>day</code> and <code>month</code> come back eleven of those same twelve, and <code>week</code> is the row itself.</li><li>The site heads its own view ranking "Popular This Season", but <code>getPopular</code> returns the catalogue ranked by total views — byte-identical to <code>views_desc</code> on the browse page — so the row is named Most Viewed for what it returns.</li><li>Most Read Today shows status alone in its subtitle. <code>getRecentChapterRead</code> answers with the same <code>updated_at</code> on every row — 10mo ago on all twenty, a stats-table stamp rather than the title's — so printing it put "updated 10mo ago" under One Piece while the row below it correctly said 16h ago.</li><li><code>getByOrigin</code> is not used for the four origin rows even though they are its scopes: it ignores <code>search_limit</code>, always answers twelve and carries no pagination, while the browse API returns the same titles in the same order and pages, so those rows keep a view-more.</li></ul>
   </div><div class="entry">
