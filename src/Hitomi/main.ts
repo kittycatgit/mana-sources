@@ -78,7 +78,7 @@ import { searchIndexIds } from "./search-index.ts";
 const info: SourceInfo = {
   id: "hitomi",
   name: "Hitomi",
-  version: "1.3.1",
+  version: "1.3.2",
   description: "Reads doujinshi, manga and CG sets from hitomi.la",
   website: BASE_URL,
   rating: CatalogRating.EXPLICIT,
@@ -151,7 +151,6 @@ class HitomiSource
     const language = await this.preferredLanguage();
     const everything = language === ALL_LANGUAGES;
     const scope = everything ? "" : ` in ${languageTitle(language)}`;
-    const rankings = await this.rankings(language);
 
     return [
       {
@@ -164,19 +163,17 @@ class HitomiSource
         limit: 10,
         load: (page) => this.listing({ language }, page),
       },
-      // The popularity rows are only claimed when the WebView that reads them answered. A
-      // device without one cannot fill them, and four rows that stay empty read as a broken
-      // home page rather than as a listing the site declined to serve.
-      ...(rankings === undefined
-        ? []
-        : POPULAR_ROWS.map((row) => ({
-            id: row.id,
-            title: row.title,
-            subtitle: `${row.subtitle}${scope}`,
-            style: SectionStyle.DetailedTripleRowPaged,
-            limit: 12,
-            load: (page: number) => this.ranking(row.window, language, page),
-          }))),
+      // The popularity rows are read through a WebView, the slowest thing on the page, so
+      // they are left for the app to fill after the rest has been drawn.
+      ...POPULAR_ROWS.map((row) => ({
+        id: row.id,
+        title: row.title,
+        subtitle: `${row.subtitle}${scope}`,
+        style: SectionStyle.DetailedTripleRowPaged,
+        limit: 12,
+        defer: true,
+        load: (page: number) => this.ranking(row.window, language, page),
+      })),
       // The English shortcut only earns its place while no language is set: with one set it
       // is either the same feed as Just Added or the one language the reader ruled out.
       ...(everything
@@ -268,6 +265,9 @@ class HitomiSource
   }
 
   async getSectionsForPage(_link: PageLink): Promise<PageSection[]> {
+    // The WebView behind the Popular rows is opened now, so it is in flight while the feed
+    // rows load and before the app comes back for each Popular row.
+    void this.rankings(await this.preferredLanguage());
     return fillPageSections(await this.sections());
   }
 
@@ -447,7 +447,11 @@ class HitomiSource
   ): Promise<PagedSearchResult> {
     if (page > 1) return { results: [], isLastPage: true };
 
-    const ids = (await this.rankings(language))?.get(window) ?? [];
+    const rankings = await this.rankings(language);
+    if (rankings === undefined) {
+      throw new Error("Hitomi's Popular rows are read through a WebView, which is unavailable.");
+    }
+    const ids = rankings.get(window) ?? [];
     if (ids.length === 0) return { results: [], isLastPage: true };
 
     const found = await this.galleriesFor(ids.slice(0, 12));
@@ -460,8 +464,7 @@ class HitomiSource
    *
    * `undefined` means there was no WebView to open. These rankings are published as
    * `.nozomi` only — arrays of big-endian int32 that `NetworkResponse.data` mangles into a
-   * UTF-8 string — so there is no plain-HTTP route to fall back to, and the caller drops the
-   * rows instead.
+   * UTF-8 string — so there is no plain-HTTP route to fall back to.
    */
   private rankings(language: string): Promise<Map<PopularWindow, string[]> | undefined> {
     const held = this.popular;

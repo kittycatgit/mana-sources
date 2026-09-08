@@ -18,6 +18,11 @@ export type SectionSpec = {
    * home row.
    */
   limit?: number;
+  /**
+   * Left for the app to resolve on its own instead of being fetched with the home page —
+   * for a row whose load is slow enough that the whole page would wait on it.
+   */
+  defer?: boolean;
   load(page: number): Promise<PagedSearchResult>;
 };
 
@@ -42,11 +47,14 @@ export function toPageSections(specs: readonly SectionSpec[]): PageSection[] {
  * A section returned without `items` is resolved by the app one `resolvePageSection` at
  * a time, so a page of many rows costs the sum of its rows and fills in one at a time.
  * Fetched together it costs its slowest row. A row whose request fails is returned without
- * items, so the app resolves that one on its own and its error shows on that row alone.
+ * items, so the app resolves that one on its own and its error shows on that row alone; a
+ * `defer` row is returned without items on purpose, so the page is not held for it.
  */
 export async function fillPageSections(specs: readonly SectionSpec[]): Promise<PageSection[]> {
   const sections = toPageSections(specs);
-  const loaded = await Promise.allSettled(specs.map((spec) => spec.load(1)));
+  const loaded = await Promise.allSettled(
+    specs.map((spec) => (spec.defer ? Promise.reject(new Error("deferred")) : spec.load(1))),
+  );
   return sections.map((section, index) => {
     const outcome = loaded[index];
     const spec = specs[index];
