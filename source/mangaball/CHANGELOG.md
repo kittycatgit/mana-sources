@@ -4,7 +4,13 @@ Notable changes to the extensions in this repository, grouped by extension —
 each one versions independently (see `info.version` in its `main.ts`). Dates
 are UTC. Format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## Mangaball (current: v1.3.2)
+## Mangaball (current: v1.3.3)
+
+### 2026-09-08 — Most Read rows no longer time out
+
+- Fixed the four Most Read rows showing an error card while the rest of the home page
+  loaded, when the site's cache for one of their time windows had expired.
+- The Most Read rows show twelve titles, the number the site itself asks for.
 
 ### 2026-09-08 — Rows no longer fail once the home page has loaded
 
