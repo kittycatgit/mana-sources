@@ -4,6 +4,25 @@ Notable changes to the extensions in this repository, grouped by extension —
 each one versions independently (see `info.version` in its `main.ts`). Dates
 are UTC. Format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## Mangafire (current: v1.2.1)
+
+### 2026-09-09
+
+- The home page arrives with every row already filled.
+
+
+### 2026-09-08
+
+- Added Trending Today, This Week and This Month, Hot, Most Viewed (30 days), Most Viewed (all time), Most Followed, Newest Series, A–Z and Z–A.
+- Chapters show whether they are the official release or a fan translation.
+- Chapter titles no longer end with “· Fan translation”.
+
+### 2026-09-07
+
+- Reads mangafire.to through the endpoints its own pages call.
+- Home: Trending, Latest Updates, Most Viewed, Recently Added.
+- Search: title query, type, status, genre and year filters, and the site's sort orders.
+
 ## Nhentai (current: v1.1.0)
 
 ### 2026-09-07 — Language setting
