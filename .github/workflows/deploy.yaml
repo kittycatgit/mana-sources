@@ -71,12 +71,14 @@ jobs:
       # whatever landed in the meantime.
       - run: |
           set -euo pipefail
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-
           work="$(mktemp -d)"
           git clone --quiet --depth 1 --branch gh-pages \
             "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" "$work"
+
+          # In the clone, not the checkout: the commit below is made there, and a runner
+          # has no global identity to fall back on.
+          git -C "$work" config user.name "github-actions[bot]"
+          git -C "$work" config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
           for attempt in 1 2 3 4 5; do
             rm -rf "${work:?}/${GITHUB_REF_NAME:?}"
