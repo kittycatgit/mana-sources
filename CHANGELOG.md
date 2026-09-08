@@ -78,7 +78,16 @@ are UTC. Format loosely follows [Keep a Changelog](https://keepachangelog.com/en
 - Content type comes from the genre tags; the site's own Type row reads Manhwa on
   everything.
 
-## Imhentai (current: v1.0.0)
+## Imhentai (current: v1.0.2)
+
+### 2026-09-09
+
+- The home page arrives with every row already filled.
+
+
+### 2026-09-08
+
+- Fixed the second challenged gallery in a session failing to open.
 
 ### 2026-09-06
 
