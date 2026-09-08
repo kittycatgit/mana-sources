@@ -9,6 +9,7 @@ export const RAW_ROUTE = "manhwa-raw";
 export const SEARCH_ROUTE = "search";
 
 export const UNCENSORED_GENRE = "uncensored-manhwa";
+export const MANHUA_GENRE = "manhua";
 
 export const FilterID = {
   Genre: "genre",
@@ -17,6 +18,7 @@ export const FilterID = {
 export const ListID = {
   Popular: "popular",
   Latest: "latest",
+  Manhua: "manhua",
   Raw: "raw",
   Uncensored: "uncensored",
 } as const;
