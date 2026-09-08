@@ -26,7 +26,7 @@
       "path": "Ehentai",
       "environment": "source",
       "intents": 6294541,
-      "hash": "34b9d58f34b9d58f34b9d58f34b9d58f34b9d58f34b9d58f34b9d58f34b9d58f"
+      "hash": "2e8f85602e8f85602e8f85602e8f85602e8f85602e8f85602e8f85602e8f8560"
     },
     {
       "id": "hiperdex",
@@ -48,7 +48,7 @@
       "path": "Hiperdex",
       "environment": "source",
       "intents": 2104332,
-      "hash": "2d9226a42d9226a42d9226a42d9226a42d9226a42d9226a42d9226a42d9226a4"
+      "hash": "6f24d0d96f24d0d96f24d0d96f24d0d96f24d0d96f24d0d96f24d0d96f24d0d9"
     },
     {
       "id": "hitomi",
@@ -76,7 +76,7 @@
       "path": "Hitomi",
       "environment": "source",
       "intents": 2100237,
-      "hash": "748f0ab5748f0ab5748f0ab5748f0ab5748f0ab5748f0ab5748f0ab5748f0ab5"
+      "hash": "2827e9a22827e9a22827e9a22827e9a22827e9a22827e9a22827e9a22827e9a2"
     },
     {
       "id": "imhentai",
@@ -102,7 +102,7 @@
       "path": "Imhentai",
       "environment": "source",
       "intents": 2104328,
-      "hash": "1be3aa1e1be3aa1e1be3aa1e1be3aa1e1be3aa1e1be3aa1e1be3aa1e1be3aa1e"
+      "hash": "7f2d05527f2d05527f2d05527f2d05527f2d05527f2d05527f2d05527f2d0552"
     },
     {
       "id": "madaradex",
@@ -124,7 +124,7 @@
       "path": "Madaradex",
       "environment": "source",
       "intents": 2104332,
-      "hash": "5cd71a285cd71a285cd71a285cd71a285cd71a285cd71a285cd71a285cd71a28"
+      "hash": "06723ff406723ff406723ff406723ff406723ff406723ff406723ff406723ff4"
     },
     {
       "id": "manga18fx",
@@ -146,7 +146,7 @@
       "path": "Manga18fx",
       "environment": "source",
       "intents": 2100233,
-      "hash": "7757f14d7757f14d7757f14d7757f14d7757f14d7757f14d7757f14d7757f14d"
+      "hash": "255eb139255eb139255eb139255eb139255eb139255eb139255eb139255eb139"
     },
     {
       "id": "nhentai",
@@ -170,12 +170,12 @@
       "path": "Nhentai",
       "environment": "source",
       "intents": 2104329,
-      "hash": "24e9296a24e9296a24e9296a24e9296a24e9296a24e9296a24e9296a24e9296a"
+      "hash": "77cd7c4177cd7c4177cd7c4177cd7c4177cd7c4177cd7c4177cd7c4177cd7c41"
     },
     {
       "id": "tailspace",
       "name": "Tailspace",
-      "version": "1.1.0",
+      "version": "1.1.1",
       "description": "Pulls furry comics from tailspace.com",
       "website": "https://tailspace.com",
       "rating": 2,
@@ -192,7 +192,7 @@
       "path": "Tailspace",
       "environment": "source",
       "intents": 2104328,
-      "hash": "44fa2adf44fa2adf44fa2adf44fa2adf44fa2adf44fa2adf44fa2adf44fa2adf"
+      "hash": "0fc47fc40fc47fc40fc47fc40fc47fc40fc47fc40fc47fc40fc47fc40fc47fc4"
     },
     {
       "id": "weebcentral",
@@ -214,7 +214,7 @@
       "path": "Weebcentral",
       "environment": "source",
       "intents": 2104328,
-      "hash": "4cc593824cc593824cc593824cc593824cc593824cc593824cc593824cc59382"
+      "hash": "4ff111e94ff111e94ff111e94ff111e94ff111e94ff111e94ff111e94ff111e9"
     }
   ]
 }
