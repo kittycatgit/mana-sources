@@ -233,7 +233,26 @@ are UTC. Format loosely follows [Keep a Changelog](https://keepachangelog.com/en
   toggles, and the site's six sort orders in either direction.
 - Honours the host's content-rating policy by asking the site for non-adult results when
   mature content is not allowed.
-## Hiperdex (current: v1.0.1)
+## Hiperdex (current: v1.1.0)
+
+### 2026-09-08 — The rest of the site's listings
+
+- The home page carried five of the eleven listings the site actually offers. It now
+  carries all of them: the Trending row's week and month periods alongside its day, the
+  Recent Updates row scoped to Manhwa and to Manhua alongside its unscoped form, and the
+  browse page's Oldest and A–Z sorts alongside Popularity, Score and Newest.
+- Three listings the site offers are deliberately left out, because each returns what a
+  row already on the page returns: `sort:"relevance"` on an empty query is byte-identical
+  to `sort:"popular"`, `sort:"recent"` opens with twelve of Recently Added's fifteen
+  titles, and Recent Updates scoped to Manga is thirteen of the fifteen in its unscoped
+  form, since Japanese series carry most of the site's update traffic.
+- The three trending rows are kept to twelve tiles each. They rank one catalogue over
+  three windows, so they converge as they deepen — at twenty tiles the week and month rows
+  share 70% of their titles, at twelve they share half.
+- A title whose cover the site publishes under `/storage/covers/` is now handed over with
+  no cover at all. All 50 titles in the catalogue on that path 404, on every host and
+  extension the CDN serves, so the site renders a broken image for them too; two of them
+  open the A–Z row. An empty cover is a placeholder in the app rather than a broken tile.
 
 ### 2026-09-08
 

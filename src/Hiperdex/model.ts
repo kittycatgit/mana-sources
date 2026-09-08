@@ -52,17 +52,47 @@ export const SortID = {
   Alphabetical: "alphabetical",
 } as const;
 
+// The site's own home page is two rows with a toggle each — Trending over day/week/month and
+// Recent Updates scoped to a series type — and its browse page is `search.query` under seven
+// sorts. Each entry here is one of those, minus the three that are another one's duplicate:
+// `sort:"relevance"` on an empty query is byte-identical to `sort:"popular"`, `sort:"recent"`
+// opens with the same titles as `sort:"newest"`, and the Manga scope of Recent Updates is
+// most of the unscoped row, because Japanese series carry the site's update traffic.
 export const ListID = {
   Trending: "trending",
+  TrendingWeek: "trending-week",
+  TrendingMonth: "trending-month",
   Latest: "latest",
+  LatestManhwa: "latest-manhwa",
+  LatestManhua: "latest-manhua",
   Popular: "popular",
   TopRated: "top-rated",
   Added: "recently-added",
+  Oldest: "oldest",
+  Alphabetical: "alphabetical",
 } as const;
+
+/** `recommendations.trending` rejects any other value outright. */
+export type TrendingPeriod = "day" | "week" | "month";
+
+/** `recommendations.latestChapters` takes the search `type` values plus "all". */
+export type SeriesScope = "all" | "manga" | "manhwa" | "manhua";
 
 export const SEARCH_PAGE_SIZE = 30;
 export const TRENDING_PAGE_SIZE = 20;
 export const LATEST_PAGE_SIZE = 40;
+
+// The three trending periods rank the same catalogue and overlap more the deeper each row
+// goes: at twenty tiles the week and month rows share 70% of their titles, at twelve they
+// share half. Keeping the trending rows shallow is what keeps them three distinct rows.
+export const TRENDING_SECTION_LIMIT = 12;
+
+// 50 of the catalogue's 4,525 titles publish their cover under this path, and all 50 are a
+// 404 — the CDN serves the Madara-era `/YYYY/MM/` files and the uploader's
+// `/covers/<slug>/` files, and nothing was ever migrated under `/storage/`. The site itself
+// renders a broken image for them, so the source hands those titles over with no cover
+// rather than a cover that cannot load.
+export const DEAD_COVER_PATH = "/storage/covers/";
 
 /** The id a picker uses for "no filter" — the API has no such value and wants the key omitted. */
 export const ANY = "any";
