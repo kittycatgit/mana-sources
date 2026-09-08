@@ -22,8 +22,32 @@ export const ANY = "any";
 /** `pagination.limit` on every `search-advanced` reply, regardless of what is asked for. */
 export const PAGE_SIZE = 24;
 
-/** `getFeatured` echoes `search_limit` and always returns the same twelve titles. */
+/** `getFeatured` and `getByOrigin` ignore `search_limit` outright and always answer twelve. */
 export const FEATURED_SIZE = 12;
+
+/** `getRecommend` honours `search_limit` up to eighteen and caps there. */
+export const RECOMMEND_SIZE = 18;
+
+/** `getPopular` and `getRecentChapterRead` honour any `search_limit` they are given. */
+export const TRENDING_SIZE = 20;
+
+/**
+ * The home page's rows are all one endpoint under different `search_type` values. None of
+ * them answers with a `pagination` block, so every section built on one is a single fixed
+ * page and carries `viewMore: false`.
+ *
+ * `getRecentRead` is deliberately absent. It ranks titles by views over a `search_time`
+ * window, and `getFeatured` is provably its `week` window reshuffled — all twelve featured
+ * titles are the top twelve of `getRecentRead&search_time=week`, in a different order. Its
+ * `day` and `month` windows come back 11 of those same 12. Every one of them is the Featured
+ * row again under another title.
+ */
+export const ListingType = {
+  Featured: "getFeatured",
+  Recommend: "getRecommend",
+  Popular: "getPopular",
+  ChapterReads: "getRecentChapterRead",
+} as const;
 
 export const PREFERENCE_NAMESPACE = "mangaball";
 export const CHAPTER_LANGUAGES_KEY = "chapterLanguages";
@@ -50,11 +74,16 @@ export const SortID = {
 
 export const ListID = {
   Featured: "featured",
+  Recommended: "recommended",
   Latest: "latest-updates",
   Added: "recently-added",
-  Manga: "popular-manga",
+  Viewed: "most-viewed",
+  ReadToday: "most-read-today",
+  MangaUpdates: "manga-updates",
   Manhwa: "manhwa-updates",
   Manhua: "manhua-updates",
+  Comics: "comics-updates",
+  Manga: "popular-manga",
   Completed: "completed",
 } as const;
 

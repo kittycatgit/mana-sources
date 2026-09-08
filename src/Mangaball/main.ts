@@ -59,10 +59,12 @@ import {
   LANGUAGE_ALIASES,
   LISTING_API,
   ListID,
+  ListingType,
   OriginID,
   PREFERENCE_DEFAULTS,
   PREFERENCE_NAMESPACE,
   PREFERENCE_SECTIONS,
+  RECOMMEND_SIZE,
   SEARCH_API,
   SEARCH_FIELDS,
   SORT_FIELD,
@@ -70,6 +72,7 @@ import {
   STATUS_BY_NAME,
   SortID,
   TAGS_FIELD,
+  TRENDING_SIZE,
   type ApiChapterListing,
   type ApiGroup,
   type ApiSearchResponse,
@@ -80,7 +83,7 @@ import {
 const info: SourceInfo = {
   id: "mangaball",
   name: "Mangaball",
-  version: "1.1.0",
+  version: "1.2.0",
   description: "Pulls manga, manhwa and manhua from mangaball.net",
   website: BASE_URL,
   rating: CatalogRating.MIXED,
@@ -126,12 +129,20 @@ class MangaballSource implements ChapterSource, SearchProvider, PageLinkResolver
       {
         id: ListID.Featured,
         title: "Featured",
-        subtitle: "The titles the site is putting forward this week",
+        subtitle: "The titles readers opened most this week",
         style: SectionStyle.SimpleHero,
         limit: FEATURED_SIZE,
-        // `getFeatured` is a fixed twelve with no page after it.
         viewMore: false,
-        load: () => this.featured(),
+        load: () => this.listing(ListingType.Featured, FEATURED_SIZE),
+      },
+      {
+        id: ListID.Recommended,
+        title: "Recommended Titles",
+        subtitle: "The site's own picks, newest chapter first",
+        style: SectionStyle.DetailedTripleRowPaged,
+        limit: RECOMMEND_SIZE,
+        viewMore: false,
+        load: () => this.listing(ListingType.Recommend, RECOMMEND_SIZE),
       },
       {
         id: ListID.Latest,
@@ -150,12 +161,32 @@ class MangaballSource implements ChapterSource, SearchProvider, PageLinkResolver
         load: (page) => this.browse({ page, sort: SortID.RecentlyAdded }),
       },
       {
-        id: ListID.Manga,
-        title: "Most Read Manga",
-        subtitle: "Japanese series by view count",
+        id: ListID.ReadToday,
+        title: "Most Read Today",
+        subtitle: "Whose chapters were opened most in the last day",
+        style: SectionStyle.DetailedTripleRowPaged,
+        limit: TRENDING_SIZE,
+        viewMore: false,
+        load: () => this.listing(ListingType.ChapterReads, TRENDING_SIZE, "day"),
+      },
+      {
+        id: ListID.Viewed,
+        title: "Most Viewed",
+        // The site heads this row "Popular This Season"; the query behind it is the whole
+        // catalogue by total views, so it is named for what it returns.
+        subtitle: "The whole catalogue ranked by views",
+        style: SectionStyle.DetailedTripleRowPaged,
+        limit: TRENDING_SIZE,
+        viewMore: false,
+        load: () => this.listing(ListingType.Popular, TRENDING_SIZE),
+      },
+      {
+        id: ListID.MangaUpdates,
+        title: "Manga Updates",
+        subtitle: "Japanese series with a fresh chapter",
         style: SectionStyle.DetailedTripleRowPaged,
         limit: 18,
-        load: (page) => this.browse({ page, sort: SortID.Views, origin: OriginID.Manga }),
+        load: (page) => this.browse({ page, sort: SortID.LatestChapters, origin: OriginID.Manga }),
       },
       {
         id: ListID.Manhwa,
@@ -172,6 +203,22 @@ class MangaballSource implements ChapterSource, SearchProvider, PageLinkResolver
         style: SectionStyle.DetailedTripleRowPaged,
         limit: 18,
         load: (page) => this.browse({ page, sort: SortID.LatestChapters, origin: OriginID.Manhua }),
+      },
+      {
+        id: ListID.Comics,
+        title: "Comics Updates",
+        subtitle: "English-language series with a fresh chapter",
+        style: SectionStyle.DetailedTripleRowPaged,
+        limit: 18,
+        load: (page) => this.browse({ page, sort: SortID.LatestChapters, origin: OriginID.Comics }),
+      },
+      {
+        id: ListID.Manga,
+        title: "Most Read Manga",
+        subtitle: "Japanese series by view count",
+        style: SectionStyle.DetailedTripleRowPaged,
+        limit: 18,
+        load: (page) => this.browse({ page, sort: SortID.Views, origin: OriginID.Manga }),
       },
       {
         id: ListID.Completed,
@@ -369,12 +416,22 @@ class MangaballSource implements ChapterSource, SearchProvider, PageLinkResolver
     return { pages };
   }
 
-  private async featured(): Promise<PagedSearchResult> {
+  /**
+   * The home page's own rows. `search_time` is only read by the windowed types and is left
+   * off everything else; no reply carries a `pagination` block, so each is one fixed page.
+   */
+  private async listing(type: string, limit: number, time?: string): Promise<PagedSearchResult> {
     const payload = await this.api<ApiSearchResponse>(
       LISTING_API,
-      encodeForm({ search_type: "getFeatured", search_limit: FEATURED_SIZE }),
+      encodeForm({ search_type: type, search_limit: limit, search_time: time }),
     );
-    return { results: highlightsFrom(payload.data), isLastPage: true };
+    // `getRecentChapterRead` answers with the same `updated_at` on every row — a stats-table
+    // stamp rather than the title's — which would put "updated 10mo ago" under a title the
+    // next row over correctly reports as updated 16 hours ago.
+    return {
+      results: highlightsFrom(payload.data, type !== ListingType.ChapterReads),
+      isLastPage: true,
+    };
   }
 
   private async browse(query: SearchQuery): Promise<PagedSearchResult> {
@@ -572,7 +629,7 @@ function sortValue(query: SearchQuery): string {
   return `${field}_${query.ascending ? "asc" : "desc"}`;
 }
 
-function highlightsFrom(items: ApiTitle[] | undefined): Highlight[] {
+function highlightsFrom(items: ApiTitle[] | undefined, updated = true): Highlight[] {
   const results: Highlight[] = [];
   const seen = new Set<string>();
 
@@ -583,7 +640,7 @@ function highlightsFrom(items: ApiTitle[] | undefined): Highlight[] {
     seen.add(id);
 
     const tags = labelsFrom(item.tags);
-    const subtitle = subtitleFor(item);
+    const subtitle = subtitleFor(item, updated);
     results.push({
       id,
       title,
@@ -619,11 +676,11 @@ function labelsFrom(html: string | undefined): string[] {
  * `getFeatured`, which reads as a stray database field beside the other rows. The absolute
  * form is cut back to its date so the whole home page carries the same kind of subtitle.
  */
-function subtitleFor(item: ApiTitle): string {
+function subtitleFor(item: ApiTitle, updated: boolean): string {
   const status = clean(stripTags(item.status ?? ""));
-  const raw = clean(item.updated_at ?? "");
-  const updated = /^\d{4}-\d{2}-\d{2}/.exec(raw)?.[0] ?? raw;
-  return [status, updated ? `updated ${updated}` : ""].filter(Boolean).join(" · ");
+  const raw = updated ? clean(item.updated_at ?? "") : "";
+  const stamp = /^\d{4}-\d{2}-\d{2}/.exec(raw)?.[0] ?? raw;
+  return [status, stamp ? `updated ${stamp}` : ""].filter(Boolean).join(" · ");
 }
 
 function stripTags(html: string): string {

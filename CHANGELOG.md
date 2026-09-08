@@ -4,7 +4,28 @@ Notable changes to the extensions in this repository, grouped by extension —
 each one versions independently (see `info.version` in its `main.ts`). Dates
 are UTC. Format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## Mangaball (current: v1.1.0)
+## Mangaball (current: v1.2.0)
+
+### 2026-09-08 — Home page rows
+
+- Five rows the site offers and the source did not carry: Recommended Titles
+  (`getRecommend`), Most Read Today (`getRecentChapterRead` over the day window), Most
+  Viewed (`getPopular`), Manga Updates and Comics Updates (the Japanese and English scopes
+  of the site's "By Origin" row).
+- The Featured hero's subtitle now says what it is. `getFeatured` is not an editorial pick:
+  its twelve titles are the top twelve of `getRecentRead&search_time=week` reshuffled, which
+  is why none of the "Top Viewed Titles" windows was added — `day` and `month` come back
+  eleven of those same twelve, and `week` is the row itself.
+- The site heads its own view ranking "Popular This Season", but `getPopular` returns the
+  catalogue ranked by total views — byte-identical to `views_desc` on the browse page — so
+  the row is named Most Viewed for what it returns.
+- Most Read Today shows status alone in its subtitle. `getRecentChapterRead` answers with the
+  same `updated_at` on every row — 10mo ago on all twenty, a stats-table stamp rather than the
+  title's — so printing it put "updated 10mo ago" under One Piece while the row below it
+  correctly said 16h ago.
+- `getByOrigin` is not used for the four origin rows even though they are its scopes: it
+  ignores `search_limit`, always answers twelve and carries no pagination, while the browse
+  API returns the same titles in the same order and pages, so those rows keep a view-more.
 
 ### 2026-09-08
 
