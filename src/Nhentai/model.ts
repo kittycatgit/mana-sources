@@ -77,6 +77,8 @@ export const ListID = {
   Recent: "recent",
   LanguageWeek: "language-week",
   MangaMonth: "manga-month",
+  AllTime: "all-time",
+  Today: "today",
 } as const;
 
 // Tag ids from /api/v2/tags/category, used by the home section that calls

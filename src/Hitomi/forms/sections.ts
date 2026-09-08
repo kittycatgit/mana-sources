@@ -36,6 +36,26 @@ export function toPageSections(specs: readonly SectionSpec[]): PageSection[] {
   }));
 }
 
+/**
+ * Every home row, fetched at once, returned already filled.
+ *
+ * A section returned without `items` is resolved by the app one `resolvePageSection` at
+ * a time, so a page of many rows costs the sum of its rows and fills in one at a time.
+ * Fetched together it costs its slowest row. A row whose request fails is returned without
+ * items, so the app resolves that one on its own and its error shows on that row alone.
+ */
+export async function fillPageSections(specs: readonly SectionSpec[]): Promise<PageSection[]> {
+  const sections = toPageSections(specs);
+  const loaded = await Promise.allSettled(specs.map((spec) => spec.load(1)));
+  return sections.map((section, index) => {
+    const outcome = loaded[index];
+    const spec = specs[index];
+    if (!outcome || !spec || outcome.status !== "fulfilled") return section;
+    const { results } = outcome.value;
+    return { ...section, items: spec.limit === undefined ? results : results.slice(0, spec.limit) };
+  });
+}
+
 export function sectionById(
   specs: readonly SectionSpec[],
   id: string | undefined,

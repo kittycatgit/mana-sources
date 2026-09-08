@@ -49,11 +49,15 @@ export const SortID = {
   Alphabet: "alphabet",
 } as const;
 
+/** One per `m_orderby` tab the browse page offers; relevance is omitted because on an
+ * empty query the site answers it with the `new-manga` ordering, tile for tile. */
 export const ListID = {
   New: "new-manga",
   Latest: "latest",
+  Trending: "trending",
   Popular: "views",
   TopRated: "rating",
+  Alphabetical: "alphabet",
 } as const;
 
 /** The picker row meaning "do not send the parameter". */
