@@ -12,6 +12,14 @@ import {
 export const BASE_URL = "https://weebcentral.com";
 export const SEARCH_URL = `${BASE_URL}/search/data`;
 export const HOT_UPDATES_URL = `${BASE_URL}/hot-updates`;
+export const HOT_SERIES_URL = `${BASE_URL}/hot-series`;
+
+// The home page's Hot Series widget has a third tab, `monthly_views`, which is left out:
+// it returns the same ten series as `sort=Popularity`, which Most Popular already carries.
+export const HotSeriesSort = {
+  Week: "weekly_views",
+  AllTime: "total_views",
+} as const;
 
 // `/search/data` echoes whatever `limit` it is given but always returns 32 results and
 // always advances its own "view more" button by 32, so the page size is fixed.
@@ -41,8 +49,13 @@ export const SortID = {
 export const ListID = {
   Hot: "hot-updates",
   Latest: "latest-updates",
+  Week: "hot-series-week",
   Popular: "popular",
+  Recent: "recently-added",
+  Subscribed: "subscribers",
+  AllTime: "hot-series-all-time",
   Webtoons: "popular-webtoons",
+  Recommended: "recommendations",
 } as const;
 
 export const WEBTOON_TYPES = ["Manhwa", "Manhua"] as const;

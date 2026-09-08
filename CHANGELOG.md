@@ -212,7 +212,21 @@ are UTC. Format loosely follows [Keep a Changelog](https://keepachangelog.com/en
 - Chapter pages are built from the rotating path prefix and subdomain table in `gg.js`,
   re-fetched every 20 minutes. Both image CDNs answer 404 without the site as referer.
 
-## Weebcentral (current: v1.0.1)
+## Weebcentral (current: v1.1.0)
+
+### 2026-09-08 — The rest of the site's listings
+
+- Home page now carries Hot This Week and All-Time Most Viewed, the two Hot Series tabs on
+  the site's front page that were missing. Its third tab, Monthly, returns the same ten
+  series as the Popularity sort, so Most Popular already was that row and it is not
+  repeated.
+- Added Recently Added and Most Subscribed, the two browse sorts the home page did not
+  surface. Recently Added was left out originally as a near-duplicate of Latest Updates;
+  the site no longer ranks them alike — the two now share nothing across a full page of 32.
+- Added Recommendations, the site's own picks, which are rendered into the home page and
+  have no endpoint of their own.
+- Hot Series and Recommendations tiles are bare links with no cover in the markup, so their
+  covers are composed from the series id the cover CDN is keyed on.
 
 ### 2026-09-07
 

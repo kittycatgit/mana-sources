@@ -23,7 +23,7 @@ from there.
 | Manga18fx | 1.1.0 | English | Explicit |
 | Nhentai | 1.1.0 | Multi-language | Explicit |
 | Tailspace | 1.1.0 | English | Explicit |
-| Weebcentral | 1.0.1 | English | Mixed |
+| Weebcentral | 1.1.0 | English | Mixed |
 
 See [CHANGELOG.md](CHANGELOG.md) for what changed and when.
 
