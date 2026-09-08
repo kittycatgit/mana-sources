@@ -117,7 +117,18 @@ are UTC. Format loosely follows [Keep a Changelog](https://keepachangelog.com/en
 - Content type comes from the genre tags: the title page's own Type row reads Manhwa on
   every title, including ones filed under the manhua genre.
 
-## Imhentai (current: v1.0.0)
+## Imhentai (current: v1.0.1)
+
+### 2026-09-08 — A second challenged gallery opens
+
+- Reading a gallery the site challenged used `evaluateScript`, and the host declares a
+  `const args` beside a script for every call, whether arguments are passed or not. That
+  declaration outlives both the evaluation and the method, so the first challenged gallery
+  in a session opened and the second died on `SyntaxError: Cannot declare a const variable
+  twice: 'args'` before reading anything.
+- It uses `evaluate` with a function instead, which declares nothing beside it. The
+  callback lives in its own module because its `document` cannot typecheck against a source
+  tsconfig with no DOM lib — which is what the string form was working around.
 
 ### 2026-09-06
 

@@ -30,6 +30,7 @@ import { load, type Cheerio, type CheerioAPI } from "cheerio";
 import type { AnyNode } from "domhandler";
 
 import { buildClient } from "./client.ts";
+import { outerHtml } from "./page-html.ts";
 import {
   FilterReader,
   buildSearchForm,
@@ -66,7 +67,7 @@ import {
 const info: SourceInfo = {
   id: "imhentai",
   name: "Imhentai",
-  version: "1.0.0",
+  version: "1.0.1",
   description: "Browses the doujinshi, manga and artist CG galleries on imhentai.xxx",
   website: BASE_URL,
   rating: CatalogRating.EXPLICIT,
@@ -312,9 +313,15 @@ function galleryUrl(contentId: string): string {
 async function renderPage(url: string): Promise<string> {
   const page = await WebViewPage.create();
   await page.goto(url, { waitUntil: "load" });
-  // evaluateScript, not evaluate: the callback form runs in the page, so its `document`
-  // does not typecheck against a source tsconfig that has no DOM lib.
-  return page.evaluateScript<string>("document.documentElement.outerHTML");
+  // `evaluate`, not `evaluateScript`. The host declares a `const args` beside a script —
+  // for every call, whether arguments are passed or not — and that declaration outlives
+  // the evaluation and the method, so the second challenged gallery in a session died on
+  // `SyntaxError: Cannot declare a const variable twice: 'args'` before reading anything.
+  // `evaluate` takes a function and declares nothing beside it.
+  //
+  // The callback lives in its own module because its `document` cannot typecheck against a
+  // source tsconfig with no DOM lib, which is what the string form was working around.
+  return page.evaluate<string, []>(outerHtml);
 }
 
 /**
