@@ -4,7 +4,18 @@ Notable changes to the extensions in this repository, grouped by extension —
 each one versions independently (see `info.version` in its `main.ts`). Dates
 are UTC. Format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## Comix (current: v1.1.0)
+## Comix (current: v1.2.0)
+
+### 2026-09-08 — Nine rows on the home page
+
+- Popular, Trending Manga, Trending Webtoons, Most Viewed and Completed join the four the
+  home document already carried.
+- The original four are read out of the single request that serves the home page and stay
+  free. The new five are browse orderings the site will not answer without its own app
+  running, so each costs a page of its own — they are resolved when asked for rather than
+  up front, and they sit below the four that are already there.
+- Measured: the four free ones resolve in about a second between them, the new ones in two
+  to four seconds each. All nine return full rows with covers and none repeats another.
 
 ### 2026-09-08 — Shuffled pages come out in order
 
