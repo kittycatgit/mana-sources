@@ -84,7 +84,7 @@ import {
 const info: SourceInfo = {
   id: "mangaball",
   name: "Mangaball",
-  version: "1.3.1",
+  version: "1.3.2",
   description: "Pulls manga, manhwa and manhua from mangaball.net",
   website: BASE_URL,
   rating: CatalogRating.MIXED,
@@ -105,7 +105,7 @@ const config: SourceConfig = {
   owningLinks: ["mangaball.net"],
 };
 
-type Session = { token: string; cookie: Cookie };
+type Session = { token: string; cookie?: Cookie };
 
 class MangaballSource implements ChapterSource, SearchProvider, PageLinkResolver {
   readonly info = info;
@@ -114,7 +114,6 @@ class MangaballSource implements ChapterSource, SearchProvider, PageLinkResolver
   private client: NetworkClient | undefined;
   private session: Session | undefined;
   private pending: Promise<Session> | undefined;
-  private cookie: Cookie | undefined;
   private readonly preferences = new PreferenceStore(PREFERENCE_NAMESPACE, PREFERENCE_DEFAULTS);
 
   private get http(): NetworkClient {
@@ -532,7 +531,7 @@ class MangaballSource implements ChapterSource, SearchProvider, PageLinkResolver
         "x-csrf-token": session.token,
         "x-requested-with": "XMLHttpRequest",
       },
-      cookies: [session.cookie],
+      ...(session.cookie === undefined ? {} : { cookies: [session.cookie] }),
       body,
     });
 
@@ -551,14 +550,14 @@ class MangaballSource implements ChapterSource, SearchProvider, PageLinkResolver
   }
 
   /**
-   * Every API route needs the `csrf-token` meta from a rendered page *and* the PHP session
-   * cookie issued alongside it — either on its own is a 403. The pair is read once and
-   * reused for the life of the source instance.
+   * Every API route needs the `csrf-token` meta from a rendered page and the `PHPSESSID`
+   * it was minted against: the token alone is a 403, and so is the token paired with a
+   * different session's cookie. The token is read once and reused for the life of the
+   * source instance.
    *
    * The in-flight request is held rather than the result: a home page carries eighteen rows
    * that resolve together, and without this each one saw an empty `session` and bootstrapped
-   * for itself. That is eighteen fetches of a 300 KB page for one session, and only the
-   * first of them is answered with `Set-Cookie` — see `bootstrap`.
+   * for itself — eighteen fetches of a 300 KB page for one token.
    */
   private async credentials(): Promise<Session> {
     if (this.session) return this.session;
@@ -571,27 +570,31 @@ class MangaballSource implements ChapterSource, SearchProvider, PageLinkResolver
   }
 
   /**
-   * The client keeps a cookie jar, so the second and later fetches of the home page arrive
-   * carrying `PHPSESSID` already and PHP answers them without re-issuing it. A reply with a
-   * token but no `Set-Cookie` is therefore the session this source already holds, not a
-   * failure, and the held cookie stands.
+   * Only the token has to come out of the page. Where the client keeps a cookie jar the
+   * home page fetch already arrives carrying `PHPSESSID`, so PHP does not re-issue it and
+   * there is no `Set-Cookie` to read — but the same jar puts that cookie on the API call,
+   * which is the session the token belongs to. Requiring a cookie here failed every row
+   * the moment the app had loaded the home page once.
+   *
+   * A cookie is still attached when the reply offers one, because a jar is not guaranteed.
+   * Only the freshly offered one: it is the only cookie certain to pair with this token,
+   * and an explicit cookie would override whatever the jar holds.
    */
   private async bootstrap(): Promise<Session> {
     const response = await this.http.get(`${BASE_URL}/`);
     const token = /name="csrf-token"\s+content="([^"]+)"/.exec(response.data)?.[1] ?? "";
-    const value = sessionCookie(response.headers) || this.cookie?.value || "";
-    if (!token || !value) {
+    if (!token) {
       throw new Error(
-        "Manga Ball did not issue a session. Its home page has to load before any of its API routes will answer.",
+        "Manga Ball served no CSRF token. Its home page has to load before any of its API routes will answer.",
       );
     }
 
-    this.cookie = { name: "PHPSESSID", value };
-    this.session = { token, cookie: this.cookie };
+    const value = sessionCookie(response.headers);
+    this.session = { token, ...(value ? { cookie: { name: "PHPSESSID", value } } : {}) };
     return this.session;
   }
 
-  /** Drops the cached pair and any settled bootstrap, so the next call mints a fresh one. */
+  /** Drops the cached session and any settled bootstrap, so the next call mints a fresh one. */
   private invalidate(): void {
     this.session = undefined;
     this.pending = undefined;
