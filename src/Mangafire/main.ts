@@ -56,10 +56,12 @@ import {
   BASE_URL,
   CHAPTER_PAGE_SIZE,
   CONTENT_TYPE_BY_NAME,
+  FAN_PROVIDER,
   FilterID,
   LANGUAGE_CODES,
   ListID,
   MAX_CHAPTER_PAGES,
+  OFFICIAL_PROVIDER,
   PER_PAGE,
   PREFERENCE_DEFAULTS,
   PREFERENCE_NAMESPACE,
@@ -84,7 +86,7 @@ import {
 const info: SourceInfo = {
   id: "mangafire",
   name: "Mangafire",
-  version: "1.0.0",
+  version: "1.1.0",
   description: "Reads manga, manhwa and manhua from mangafire.to",
   website: BASE_URL,
   rating: CatalogRating.MIXED,
@@ -322,18 +324,16 @@ class MangafireSource implements ChapterSource, SearchProvider, PageLinkResolver
       readArray(title["languages"]).map(readString),
     );
 
-    // A series usually carries the same chapter twice, an official release and a fan one.
-    // Saying which is which is only useful when both are actually in the list.
-    const mixed =
-      records.some((record) => record.official) && records.some((record) => !record.official);
-
+    // Both versions of a chapter are reported, in the order the site lists them. Which one
+    // a reader wants is theirs to pick, and `provider` is what leaves them the choice.
     return records.map((record, index) => ({
       chapterId: record.id,
       number: record.number,
       index,
       date: chapterDate(record.createdAt),
       language: LANGUAGE_CODES[record.language] ?? DefinedLanguages.UNIVERSAL,
-      title: chapterTitle(record, mixed),
+      provider: record.official ? OFFICIAL_PROVIDER : FAN_PROVIDER,
+      title: chapterTitle(record),
       ...(key === "" ? {} : { webUrl: `${BASE_URL}/title/${key}/chapter/${record.id}` }),
     }));
   }
@@ -864,9 +864,8 @@ function chapterDate(seconds: number): Date {
   return Number.isFinite(date.getTime()) ? date : new Date(0);
 }
 
-function chapterTitle(record: ChapterRecord, mixed: boolean): string {
-  const name = record.name === "" ? `Chapter ${record.number}` : record.name;
-  return mixed && !record.official ? `${name} · Fan translation` : name;
+function chapterTitle(record: ChapterRecord): string {
+  return record.name === "" ? `Chapter ${record.number}` : record.name;
 }
 
 function contentIdFromUrl(url: string): string | undefined {

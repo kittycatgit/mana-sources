@@ -9,6 +9,7 @@ import {
   SearchMultiPicker,
   SearchStepper,
   type Option,
+  type Provider,
   type SearchListItem,
   type SortOption,
 } from "@mana-app/types";
@@ -143,6 +144,17 @@ export const LANGUAGE_OPTIONS: Option[] = LANGUAGES.map(({ id, title }) => ({ id
 export const LANGUAGE_CODES: Record<string, string> = Object.fromEntries(
   LANGUAGES.map(({ id, code }) => [id, code]),
 );
+
+/**
+ * The site carries the same chapter twice in one language — an official release and a fan
+ * one — and `type` is the only thing telling them apart. A chapter row is `id`, `number`,
+ * `name`, `language`, `type`, `createdAt` and nothing else: no group, no uploader, no team,
+ * on any of the 5026 rows recon read. Its own front end has no such field either, so these
+ * two are the whole of the release identity mangafire.to publishes, and neither has a site
+ * of its own to link to.
+ */
+export const OFFICIAL_PROVIDER: Provider = { id: "official", name: "Official release" };
+export const FAN_PROVIDER: Provider = { id: "unofficial", name: "Fan translation" };
 
 export const TRANSLATION_OPTIONS: Option[] = [
   { id: ANY, title: "Official and fan translations" },

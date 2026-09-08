@@ -16,12 +16,12 @@ from there.
 | Source | Version | Language | Rating |
 | ------ | ------- | -------- | ------ |
 | Ehentai | 1.1.0 | Multi-language | Explicit |
-| Hiperdex | 1.0.0 | English | Explicit |
+| Hiperdex | 1.0.1 | English | Explicit |
 | Hitomi | 1.2.0 | Multi-language | Explicit |
 | Imhentai | 1.0.0 | Multi-language | Explicit |
 | Madaradex | 1.0.1 | English | Explicit |
 | Manga18fx | 1.1.0 | English | Explicit |
-| Mangafire | 1.0.0 | Multi-language | Mixed |
+| Mangafire | 1.1.0 | Multi-language | Mixed |
 | Nhentai | 1.1.0 | Multi-language | Explicit |
 | Tailspace | 1.1.0 | English | Explicit |
 | Weebcentral | 1.0.1 | English | Mixed |

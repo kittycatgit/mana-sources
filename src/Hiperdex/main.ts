@@ -71,7 +71,7 @@ import {
 const info: SourceInfo = {
   id: "hiperdex",
   name: "Hiperdex",
-  version: "1.0.0",
+  version: "1.0.1",
   description: "Pulls manga, manhwa and manhua from hiperdex.com",
   website: BASE_URL,
   rating: CatalogRating.EXPLICIT,
@@ -707,7 +707,9 @@ function updateHighlight(entry: Record<string, unknown>): Highlight | undefined 
     cover: readString(entry["seriesCoverUrl"]),
     webUrl: contentUrl(slug),
     ...(subtitle === "" ? {} : { subtitle }),
-    ...(chapters.length <= 1 ? {} : { badge: { count: chapters.length } }),
+    // A badge is a short text label as of @mana-app/types 0.0.26; it used to be a count and
+    // a colour the host rendered itself.
+    ...(chapters.length <= 1 ? {} : { badge: { text: String(chapters.length) } }),
   };
 }
 
