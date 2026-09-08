@@ -41,7 +41,12 @@ are UTC. Format loosely follows [Keep a Changelog](https://keepachangelog.com/en
 - Each gallery is one chapter.
 - Pages served under HTTP 451 are accepted, so age-notice regions still work.
 
-## Manga18fx (current: v1.2.0)
+## Manga18fx (current: v1.2.1)
+
+### 2026-09-09
+
+- The home page arrives with every row already filled.
+
 
 ### 2026-09-08
 
