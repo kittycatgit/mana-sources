@@ -5,7 +5,7 @@
     {
       "id": "weebcentral",
       "name": "Weebcentral",
-      "version": "1.1.0",
+      "version": "1.2.0",
       "description": "Pulls manga, manhwa and manhua from weebcentral.com",
       "website": "https://weebcentral.com",
       "rating": 1,
@@ -22,7 +22,7 @@
       "path": "Weebcentral",
       "environment": "source",
       "intents": 2104328,
-      "hash": "0f64ea7d0f64ea7d0f64ea7d0f64ea7d0f64ea7d0f64ea7d0f64ea7d0f64ea7d"
+      "hash": "02eb6a3502eb6a3502eb6a3502eb6a3502eb6a3502eb6a3502eb6a3502eb6a35"
     }
   ]
 }

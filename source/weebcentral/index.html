@@ -203,7 +203,7 @@
 <li class="source" id="src-Weebcentral">
   <div class="icon-slot"><img class="icon" src="assets/Weebcentral.png" alt="" onerror="this.remove()"></div>
   <div class="body">
-    <h3>Weebcentral <span class="ver">v1.1.0</span></h3>
+    <h3>Weebcentral <span class="ver">v1.2.0</span></h3>
     <p>Pulls manga, manhwa and manhua from weebcentral.com</p>
     <div class="meta">
       <span class="r1"><i class="dot"></i>Mixed</span>
@@ -289,8 +289,11 @@
   </div>
 </details>
 <details>
-  <summary>Weebcentral <span class="ver">1.1.0</span></summary>
+  <summary>Weebcentral <span class="ver">1.2.0</span></summary>
   <div class="entry">
+    <h4>2026-09-08 — Hot This Month</h4>
+    <ul><li>Home page carries Hot This Month, the last of the site's three Hot Series tabs. It was left out for holding the same ten series as Most Popular, which it does today and ranks in a different order; but "most viewed this month" is a question the site answers for itself and its answer parts from the overall ranking the moment something new breaks through, so the row is the site's to offer and not this source's to withhold.</li><li>Still not carried, because each is a query already on the page rather than another one: <code>/hot-series</code> with no <code>sort</code>, which is the weekly tab again; <code>/recently-added/&lt;n&gt;</code>, which returns the Recently Added sort in the same order, link-only and ten to a page; and <code>/latest-updates/&lt;n&gt;</code>, the same feed behind Latest Updates, keyed by chapter rather than by series.</li></ul>
+  </div><div class="entry">
     <h4>2026-09-08 — The rest of the site's listings</h4>
     <ul><li>Home page now carries Hot This Week and All-Time Most Viewed, the two Hot Series tabs on the site's front page that were missing. Its third tab, Monthly, returns the same ten series as the Popularity sort, so Most Popular already was that row and it is not repeated.</li><li>Added Recently Added and Most Subscribed, the two browse sorts the home page did not surface. Recently Added was left out originally as a near-duplicate of Latest Updates; the site no longer ranks them alike — the two now share nothing across a full page of 32.</li><li>Added Recommendations, the site's own picks, which are rendered into the home page and have no endpoint of their own.</li><li>Hot Series and Recommendations tiles are bare links with no cover in the markup, so their covers are composed from the series id the cover CDN is keyed on.</li></ul>
   </div><div class="entry">
