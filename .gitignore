@@ -30,4 +30,5 @@ scripts/preflight.mjs
 # fail the clean-tree check before a build starts.
 .claude
 node_modules
+recon
 dist

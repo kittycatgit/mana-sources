@@ -40,7 +40,7 @@ import {
   pageOf,
   resolveSection,
   resolveSortId,
-  toPageSections,
+  fillPageSections,
   withQuery,
   type SectionSpec,
 } from "./forms/index.ts";
@@ -49,7 +49,9 @@ import {
   BASE_URL,
   CONTENT_TYPE_BY_NAME,
   FilterID,
+  HOT_SERIES_URL,
   HOT_UPDATES_URL,
+  HotSeriesSort,
   ListID,
   PAGE_SIZE,
   SEARCH_FIELDS,
@@ -66,7 +68,7 @@ import {
 const info: SourceInfo = {
   id: "weebcentral",
   name: "Weebcentral",
-  version: "1.0.1",
+  version: "1.2.1",
   description: "Pulls manga, manhwa and manhua from weebcentral.com",
   website: BASE_URL,
   rating: CatalogRating.MIXED,
@@ -116,6 +118,24 @@ class WeebcentralSource implements ChapterSource, SearchProvider, PageLinkResolv
         load: (page) => this.browse({ page, sort: SortID.LatestUpdates, adult }),
       },
       {
+        id: ListID.Week,
+        title: "Hot This Week",
+        subtitle: "The series drawing the most views this week",
+        style: SectionStyle.SimpleTripleRow,
+        limit: 10,
+        viewMore: false,
+        load: () => this.hotSeries(HotSeriesSort.Week),
+      },
+      {
+        id: ListID.Month,
+        title: "Hot This Month",
+        subtitle: "The series drawing the most views this month",
+        style: SectionStyle.SimpleTripleRow,
+        limit: 10,
+        viewMore: false,
+        load: () => this.hotSeries(HotSeriesSort.Month),
+      },
+      {
         id: ListID.Popular,
         title: "Most Popular",
         subtitle: "The most-read series in the catalogue",
@@ -123,8 +143,31 @@ class WeebcentralSource implements ChapterSource, SearchProvider, PageLinkResolv
         limit: 15,
         load: (page) => this.browse({ page, sort: SortID.Popularity, adult }),
       },
-      // Not "Recently Added": twelve of its first fifteen are also in Latest Updates,
-      // because a series added to this site arrives with its chapters.
+      {
+        id: ListID.Recent,
+        title: "Recently Added",
+        subtitle: "The newest series in the catalogue",
+        style: SectionStyle.DetailedTripleRowPaged,
+        limit: 15,
+        load: (page) => this.browse({ page, sort: SortID.RecentlyAdded, adult }),
+      },
+      {
+        id: ListID.Subscribed,
+        title: "Most Subscribed",
+        subtitle: "The series the most readers follow",
+        style: SectionStyle.DetailedTripleRowPaged,
+        limit: 15,
+        load: (page) => this.browse({ page, sort: SortID.Subscribers, adult }),
+      },
+      {
+        id: ListID.AllTime,
+        title: "All-Time Most Viewed",
+        subtitle: "The most-viewed series the site has ever hosted",
+        style: SectionStyle.SimpleTripleRow,
+        limit: 10,
+        viewMore: false,
+        load: () => this.hotSeries(HotSeriesSort.AllTime),
+      },
       {
         id: ListID.Webtoons,
         title: "Popular Webtoons",
@@ -132,6 +175,14 @@ class WeebcentralSource implements ChapterSource, SearchProvider, PageLinkResolv
         style: SectionStyle.DetailedTripleRowPaged,
         limit: 15,
         load: (page) => this.browse({ page, sort: SortID.Popularity, types: WEBTOON_TYPES, adult }),
+      },
+      {
+        id: ListID.Recommended,
+        title: "Recommendations",
+        subtitle: "The site's own picks, from its front page",
+        style: SectionStyle.SimpleTripleRow,
+        limit: 12,
+        load: () => this.recommendations(),
       },
     ];
   }
@@ -155,7 +206,7 @@ class WeebcentralSource implements ChapterSource, SearchProvider, PageLinkResolv
   }
 
   async getSectionsForPage(_link: PageLink): Promise<PageSection[]> {
-    return toPageSections(this.sections(ANY));
+    return fillPageSections(this.sections(ANY));
   }
 
   async resolvePageSection(link: PageLink, sectionID: string): Promise<ResolvedPageSection> {
@@ -331,7 +382,7 @@ class WeebcentralSource implements ChapterSource, SearchProvider, PageLinkResolv
 
   private async browse(query: SearchQuery): Promise<PagedSearchResult> {
     const $ = await this.page(searchUrl(query));
-    const results = highlightsFrom($, "article.bg-base-300");
+    const results = highlightsFrom($, $("article.bg-base-300"));
 
     // The site paginates by offset and only tells you there is more by rendering the
     // "view more" button, so its absence is the only end-of-list signal there is.
@@ -343,7 +394,24 @@ class WeebcentralSource implements ChapterSource, SearchProvider, PageLinkResolv
   // publishes nothing about a series' rating — so these tiles carry no `contentRating`.
   private async hotUpdates(): Promise<PagedSearchResult> {
     const $ = await this.page(HOT_UPDATES_URL);
-    return { results: highlightsFrom($, "article"), isLastPage: true };
+    return { results: highlightsFrom($, $("article")), isLastPage: true };
+  }
+
+  // `/hot-series` is one unpaginated list of ten bare links per sort, so its tiles carry
+  // neither a rating nor a subtitle and there is nothing behind a view-more.
+  private async hotSeries(sort: string): Promise<PagedSearchResult> {
+    const $ = await this.page(withQuery(HOT_SERIES_URL, { sort }));
+    return { results: linkHighlightsFrom($, $('a[href*="/series/"]')), isLastPage: true };
+  }
+
+  // The recommendations carousel is rendered into the home page itself; there is no
+  // endpoint of its own to ask for it.
+  private async recommendations(): Promise<PagedSearchResult> {
+    const $ = await this.page(BASE_URL);
+    const carousel = $("section")
+      .filter((_, node) => text($(node).children("h2").first()) === "Recommendations")
+      .first();
+    return { results: highlightsFrom($, carousel.find("li.glide__slide")), isLastPage: true };
   }
 
   private async page(url: string, referer?: string): Promise<CheerioAPI> {
@@ -486,11 +554,11 @@ function trackersFrom(links: readonly LinkItem[]): Record<string, string> {
  * once for mobile — and only one of the two carries the series link. Keying on that link
  * both identifies the entry and drops its twin.
  */
-function highlightsFrom($: CheerioAPI, selector: string): Highlight[] {
+function highlightsFrom($: CheerioAPI, nodes: Cheerio<AnyNode>): Highlight[] {
   const results: Highlight[] = [];
   const seen = new Set<string>();
 
-  for (const node of $(selector).toArray()) {
+  for (const node of nodes.toArray()) {
     const article = $(node);
     const link = article.find('a[href*="/series/"]').first();
     const id = seriesIdFrom(link.attr("href"));
@@ -515,6 +583,27 @@ function highlightsFrom($: CheerioAPI, selector: string): Highlight[] {
       ...(subtitle === "" ? {} : { subtitle }),
       ...(tags.length === 0 && !adult ? {} : { contentRating: ratingFor(adult, tags) }),
     });
+  }
+
+  return results;
+}
+
+/**
+ * `/hot-series` renders a series as a bare anchor with no cover and no metadata, so the
+ * tile's cover is composed from the series id the cover CDN is keyed on.
+ */
+function linkHighlightsFrom($: CheerioAPI, nodes: Cheerio<AnyNode>): Highlight[] {
+  const results: Highlight[] = [];
+  const seen = new Set<string>();
+
+  for (const node of nodes.toArray()) {
+    const link = $(node);
+    const id = seriesIdFrom(link.attr("href"));
+    const title = text(link);
+    if (!id || !title || seen.has(id)) continue;
+
+    seen.add(id);
+    results.push({ id, title, cover: coverFor(id, ""), webUrl: seriesUrl(id) });
   }
 
   return results;

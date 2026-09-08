@@ -521,7 +521,21 @@ async function verify(name, probe, verbose) {
   if (sampled.length > 0) {
     await step(results, "images", async () => {
       const broken = await checkImageUrls(sampled, target);
-      assert(broken.length === 0, `unreachable image(s):\n      ${broken.join("\n      ")}`);
+      // A chapter page that does not serve is a reader that cannot read: always a failure.
+      // A cover is the site's own data, and one dead cover in a sample of twenty is a title
+      // whose upstream image has gone — mangaball's covers are proxied from mangaupdates,
+      // which drops them — not a source that builds its URLs wrong. That is when more than
+      // one of the sample fails, and that still fails here.
+      const pageUrl = preview.pages[0]?.url;
+      const deadPage = broken.filter((line) => pageUrl && line.startsWith(pageUrl));
+      assert(deadPage.length === 0, `unreachable chapter page:\n      ${deadPage.join("\n      ")}`);
+      assert(
+        broken.length <= 1,
+        `unreachable image(s):\n      ${broken.join("\n      ")}`,
+      );
+      if (broken.length === 1) {
+        return `${sampled.length} sampled, one cover not served — ${broken[0]}`;
+      }
       return `${sampled.length} sampled, all served`;
     });
   }

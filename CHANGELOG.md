@@ -5,6 +5,8 @@ each one versions independently (see `info.version` in its `main.ts`). Dates
 are UTC. Format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## Mangaball (current: v1.3.5)
+## Nhentai (current: v1.2.1)
+## Mangafire (current: v1.2.1)
 
 ### 2026-09-09
 
@@ -43,6 +45,19 @@ are UTC. Format loosely follows [Keep a Changelog](https://keepachangelog.com/en
 - Home: Featured, Latest Updates, Recently Added, Most Read Today.
 - Search: title query, genres, status, type and the site's sort orders.
 
+### 2026-09-08
+
+- Added Popular of All Time, or Popular Today when a reading language is set.
+- Added Trending Today, This Week and This Month, Hot, Most Viewed (30 days), Most Viewed (all time), Most Followed, Newest Series, A–Z and Z–A.
+- Chapters show whether they are the official release or a fan translation.
+- Chapter titles no longer end with “· Fan translation”.
+
+### 2026-09-07
+
+- Reads mangafire.to through the endpoints its own pages call.
+- Home: Trending, Latest Updates, Most Viewed, Recently Added.
+- Search: title query, type, status, genre and year filters, and the site's sort orders.
+
 ## Nhentai (current: v1.1.0)
 
 ### 2026-09-07 — Language setting
@@ -59,7 +74,17 @@ are UTC. Format loosely follows [Keep a Changelog](https://keepachangelog.com/en
   include/exclude across the 100 most used tags, minimum page and favourite counts.
 - Each gallery is one chapter, with a summary composed from its metadata.
 
-## Ehentai (current: v1.1.0)
+## Ehentai (current: v1.2.1)
+
+### 2026-09-09
+
+- The home page arrives with every row already filled.
+
+
+### 2026-09-08
+
+- Added Top This Year.
+- Added a row for each of the ten front-page categories: Doujinshi, Manga, Artist CG, Game CG, Western, Non-H, Image Set, Cosplay, Asian Porn and Misc.
 
 ### 2026-09-07
 
@@ -80,7 +105,16 @@ are UTC. Format loosely follows [Keep a Changelog](https://keepachangelog.com/en
 - Each gallery is one chapter.
 - Pages served under HTTP 451 are accepted, so age-notice regions still work.
 
-## Manga18fx (current: v1.1.0)
+## Manga18fx (current: v1.2.1)
+
+### 2026-09-09
+
+- The home page arrives with every row already filled.
+
+
+### 2026-09-08
+
+- Added a Manhua row.
 
 ### 2026-09-07 — Hiding raw releases
 
@@ -98,7 +132,16 @@ are UTC. Format loosely follows [Keep a Changelog](https://keepachangelog.com/en
 - Content type comes from the genre tags; the site's own Type row reads Manhwa on
   everything.
 
-## Imhentai (current: v1.0.0)
+## Imhentai (current: v1.0.2)
+
+### 2026-09-09
+
+- The home page arrives with every row already filled.
+
+
+### 2026-09-08
+
+- Fixed the second challenged gallery in a session failing to open.
 
 ### 2026-09-06
 
@@ -111,7 +154,16 @@ are UTC. Format loosely follows [Keep a Changelog](https://keepachangelog.com/en
 - `getContent`, `getChapters` and `getChapterData` SKIP under `npm run verify` — they read
   a challenged route. All three were checked against gallery HTML captured from a browser.
 
-## Madaradex (current: v1.0.1)
+## Madaradex (current: v1.1.1)
+
+### 2026-09-09
+
+- The home page arrives with every row already filled.
+
+
+### 2026-09-08
+
+- Added Trending and A–Z.
 
 ### 2026-09-06
 
@@ -120,7 +172,18 @@ are UTC. Format loosely follows [Keep a Changelog](https://keepachangelog.com/en
 - Chapter images carry the site as referer plus the `mdx_fp`/`mdx_auth` cookies the CDN
   requires.
 
-## Hitomi (current: v1.2.0)
+## Hitomi (current: v1.3.1)
+
+### 2026-09-09
+
+- The home page arrives with every row already filled.
+- The Popular rows fetch only the twelve titles they show.
+
+
+### 2026-09-08
+
+- Added Popular Today, Popular This Week, Popular This Month and Popular This Year.
+- Those four rows need a WebView; without one they are left off rather than shown empty.
 
 ### 2026-09-07
 
@@ -146,7 +209,16 @@ are UTC. Format loosely follows [Keep a Changelog](https://keepachangelog.com/en
   newest-first.
 - Chapter images need the site as referer.
 
-## Weebcentral (current: v1.0.1)
+## Weebcentral (current: v1.2.1)
+
+### 2026-09-09
+
+- The home page arrives with every row already filled.
+
+
+### 2026-09-08
+
+- Added Hot This Week, Hot This Month, All-Time Most Viewed, Recently Added, Most Subscribed and Recommendations.
 
 ### 2026-09-07
 
@@ -159,6 +231,20 @@ are UTC. Format loosely follows [Keep a Changelog](https://keepachangelog.com/en
 - Search: title, author, type and status pickers, include/exclude tags, the Official
   Translation / Anime Adaptation / Adult Content toggles, six sort orders either way.
 - Asks the site for non-adult results when the app's content rating requires it.
+
+## Hiperdex (current: v1.2.1)
+
+### 2026-09-09
+
+- The home page arrives with every row already filled.
+
+
+### 2026-09-08
+
+- Added Latest Manga and Recently Updated.
+- Trending rows show fifteen tiles, like every other row.
+
+### 2026-09-08
 
 ## Hiperdex (current: v1.0.1)
 
@@ -175,7 +261,12 @@ are UTC. Format loosely follows [Keep a Changelog](https://keepachangelog.com/en
   status picker adds "Releasing", which the site's own panel omits.
 - Covers and chapter images carry the site as referer.
 
-## Tailspace (current: v1.1.0)
+## Tailspace (current: v1.1.1)
+
+### 2026-09-09
+
+- The home page arrives with every row already filled.
+
 
 ### 2026-09-05 — Home page
 

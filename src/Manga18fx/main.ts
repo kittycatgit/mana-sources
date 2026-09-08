@@ -41,7 +41,7 @@ import {
   listResults,
   pageOf,
   resolveSection,
-  toPageSections,
+  fillPageSections,
   withQuery,
   type SectionSpec,
 } from "./forms/index.ts";
@@ -54,6 +54,7 @@ import {
   FilterID,
   GENRE_ROUTE,
   ListID,
+  MANHUA_GENRE,
   PREFERENCE_DEFAULTS,
   PREFERENCE_NAMESPACE,
   POPULAR_ROUTE,
@@ -73,7 +74,7 @@ import {
 const info: SourceInfo = {
   id: "manga18fx",
   name: "Manga18fx",
-  version: "1.1.0",
+  version: "1.2.1",
   description: "Pulls adult manhwa, manhua and manga from manga18fx.com",
   website: BASE_URL,
   rating: CatalogRating.EXPLICIT,
@@ -129,6 +130,17 @@ class Manga18fxSource
         limit: 15,
         load: (page) => this.listing(latestUrl(page), context),
       },
+      // Nearly the whole catalogue is Korean, so the manhua archive is the one genre scope
+      // the site's own menu promotes that is not the latest-updates pool under another
+      // name — its 37 titles overlap every other row by at most one.
+      {
+        id: ListID.Manhua,
+        title: "Manhua",
+        subtitle: "The site's Chinese shelf",
+        style: SectionStyle.SimpleDoubleRow,
+        limit: 12,
+        load: (page) => this.listing(genreUrl(MANHUA_GENRE, page), context),
+      },
       // The whole row is raw releases, so the setting that hides them has to take the row
       // with it rather than leave an empty one behind.
       ...(rawHidden
@@ -183,7 +195,7 @@ class Manga18fxSource
   }
 
   async getSectionsForPage(link: PageLink): Promise<PageSection[]> {
-    return toPageSections(await this.sections(link.context));
+    return fillPageSections(await this.sections(link.context));
   }
 
   async resolvePageSection(link: PageLink, sectionID: string): Promise<ResolvedPageSection> {
