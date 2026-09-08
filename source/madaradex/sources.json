@@ -5,7 +5,7 @@
     {
       "id": "madaradex",
       "name": "Madaradex",
-      "version": "1.0.1",
+      "version": "1.1.0",
       "description": "Pulls manga, manhwa and manhua from madaradex.org",
       "website": "https://madaradex.org",
       "rating": 2,
@@ -22,7 +22,7 @@
       "path": "Madaradex",
       "environment": "source",
       "intents": 2104332,
-      "hash": "05f9fdc405f9fdc405f9fdc405f9fdc405f9fdc405f9fdc405f9fdc405f9fdc4"
+      "hash": "1a04cccc1a04cccc1a04cccc1a04cccc1a04cccc1a04cccc1a04cccc1a04cccc"
     }
   ]
 }
