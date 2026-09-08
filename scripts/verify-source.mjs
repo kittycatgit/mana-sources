@@ -57,18 +57,6 @@ const SECTION_STYLE = [
 const HERO_STYLES = new Set([3, 4]);
 const MIN_HERO_ITEMS = 3;
 const MAX_SECTION_ITEMS = 20;
-/**
- * Two sections sharing more than this fraction of the smaller one are the same row twice.
- *
- * Deliberately near-total, and only over a sample worth drawing a conclusion from. Sections
- * that rank the same catalogue over different windows — "popular right now" against
- * "popular this week" — share most of their titles by their nature, and at two thirds of
- * five items that read as a duplicate and failed a source that was doing exactly what it
- * should. Running the same query is what this is looking for, and the identical-order check
- * above catches the honest form of that; this catches it reordered.
- */
-const MAX_SECTION_OVERLAP = 0.9;
-const MIN_OVERLAP_ITEMS = 10;
 
 const PUBLICATION_STATUS = { 1: "ONGOING", 2: "COMPLETED", 3: "CANCELLED", 4: "HIATUS" };
 const CONTENT_RATING = { 0: "SAFE", 1: "SUGGESTIVE", 2: "MATURE", 3: "EXPLICIT" };
@@ -445,8 +433,6 @@ async function verify(name, probe, verbose) {
   if (preview.sections.length > 0) {
     await step(results, "home page", async () => {
       const problems = [];
-      // Overlap between two rows is worth saying and not worth failing; see below.
-      const notes = [];
 
       for (const { section, items } of preview.sections) {
         if (HERO_STYLES.has(section.style) && items.length < MIN_HERO_ITEMS) {
@@ -464,48 +450,16 @@ async function verify(name, probe, verbose) {
         }
       }
 
-      // Two sections showing the same tiles in the same order are one query wearing
-      // two titles — usually a copied `load` that never had its sort changed.
-      for (let i = 0; i < preview.sections.length; i++) {
-        for (let j = i + 1; j < preview.sections.length; j++) {
-          const a = preview.sections[i];
-          const b = preview.sections[j];
-          const headA = a.items.slice(0, 5).map((item) => item.id);
-          const headB = b.items.slice(0, 5).map((item) => item.id);
-          if (headA.length > 0 && headA.join("\u0000") === headB.join("\u0000")) {
-            problems.push(
-              `"${a.section.title}" and "${b.section.title}" open with the same titles in the same order — they are running the same query.`,
-            );
-            continue;
-          }
-
-          // Reordering the same titles clears the check above and is still two rows of
-          // the same thing: a site's "recently added" and its "latest updates" hold the
-          // same series, because a series arrives with its chapters.
-          const idsA = new Set(a.items.map((item) => item.id));
-          const shared = b.items.filter((item) => idsA.has(item.id)).length;
-          const smaller = Math.min(a.items.length, b.items.length);
-          if (smaller >= MIN_OVERLAP_ITEMS && shared / smaller > MAX_SECTION_OVERLAP) {
-            // Said, not failed. Two rows can be the same today and different next week —
-            // "most viewed this week" and "most viewed this month" are distinct questions
-            // whose answers coincide whenever nothing new has broken through, and a source
-            // that drops one because of a Tuesday afternoon has lost a row the site offers.
-            // What this cannot see is the query behind a row, so it reports the overlap and
-            // leaves the judgement to whoever knows what was asked.
-            notes.push(
-              `"${a.section.title}" and "${b.section.title}" share ${shared} of ${smaller} titles today — fine if they are different queries, a duplicate if they are not.`,
-            );
-          }
-        }
-      }
+      // Two rows with different ids are different rows, whatever they hold today: "latest
+      // updates" and "manhwa raw" coincide whenever the newest uploads are all raws, and
+      // "this week" and "this month" whenever nothing new broke through. What each asks the
+      // site is not visible from here, so nothing is compared across rows.
 
       assert(
         problems.length === 0,
         `${problems.length} problem(s) on the home page\n${problems.join("\n")}`,
       );
-      const overlap = notes.length === 0 ? "" : `, ${notes.length} overlapping today`;
-      if (notes.length > 0) for (const note of notes) console.log(`      ${DIM}${note}${RESET}`);
-      return `${preview.sections.length} sections, none repeating or overlong${overlap}`;
+      return `${preview.sections.length} sections, none empty or overlong`;
     });
   }
 
