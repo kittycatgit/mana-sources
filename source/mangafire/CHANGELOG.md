@@ -4,7 +4,16 @@ Notable changes to the extensions in this repository, grouped by extension —
 each one versions independently (see `info.version` in its `main.ts`). Dates
 are UTC. Format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## Mangafire (current: v1.0.0)
+## Mangafire (current: v1.1.0)
+
+### 2026-09-08 — Chapters say which release they are
+
+- Every chapter now reports its release — Official release or Fan translation — as its
+  provider, so the app can show the two scans of a chapter number as two versions of it and
+  the reader can stay with one of them. Both are still reported, in the order the site
+  lists them; the source picks neither.
+- Chapter titles lost the "· Fan translation" suffix that stood in for this, since the
+  release is now a field of its own rather than text tacked onto a name.
 
 ### 2026-09-07 — First release
 
@@ -250,7 +259,13 @@ are UTC. Format loosely follows [Keep a Changelog](https://keepachangelog.com/en
   toggles, and the site's six sort orders in either direction.
 - Honours the host's content-rating policy by asking the site for non-adult results when
   mature content is not allowed.
-## Hiperdex (current: v1.0.0)
+## Hiperdex (current: v1.0.1)
+
+### 2026-09-08
+
+- The chapter-count badge on a listing tile is written as text. `@mana-app/types@0.0.26`
+  redefines a badge as a short label the source supplies, where it used to be a count and a
+  colour the host rendered itself.
 
 ### 2026-09-06
 

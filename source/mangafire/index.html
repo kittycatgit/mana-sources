@@ -203,7 +203,7 @@
 <li class="source" id="src-Mangafire">
   <div class="icon-slot"><img class="icon" src="assets/Mangafire.png" alt="" onerror="this.remove()"></div>
   <div class="body">
-    <h3>Mangafire <span class="ver">v1.0.0</span></h3>
+    <h3>Mangafire <span class="ver">v1.1.0</span></h3>
     <p>Reads manga, manhwa and manhua from mangafire.to</p>
     <div class="meta">
       <span class="r1"><i class="dot"></i>Mixed</span>
@@ -232,8 +232,11 @@
   <section>
   <h2>Changes</h2>
   <details>
-  <summary>Mangafire <span class="ver">1.0.0</span></summary>
+  <summary>Mangafire <span class="ver">1.1.0</span></summary>
   <div class="entry">
+    <h4>2026-09-08 — Chapters say which release they are</h4>
+    <ul><li>Every chapter now reports its release — Official release or Fan translation — as its provider, so the app can show the two scans of a chapter number as two versions of it and the reader can stay with one of them. Both are still reported, in the order the site lists them; the source picks neither.</li><li>Chapter titles lost the "· Fan translation" suffix that stood in for this, since the release is now a field of its own rather than text tacked onto a name.</li></ul>
+  </div><div class="entry">
     <h4>2026-09-07 — First release</h4>
     <ul><li>Reads mangafire.to through the JSON API its own site runs on, signing each request the way the site does, so no page markup is parsed and nothing breaks when the layout moves.</li><li>Home page carries Trending, Latest Updates, Most Viewed This Week, New Arrivals and Highest Rated, each opening into its own paginated listing.</li><li>Search offers the site's whole filter set — type, status, content rating, available language, minimum chapters, publication years, demographic, themes, and genres with per-genre include and exclude — over its eleven sorts.</li><li>Settings choose the chapter language and whether to show official releases, fan translations or both. A title that has nothing in the chosen language falls back to whatever it does have rather than showing an empty list.</li><li>Covers and pages carry the referer the site's CDN requires, and mangafire.to title links open in the app.</li></ul>
   </div>
@@ -306,8 +309,11 @@
   </div>
 </details>
 <details>
-  <summary>Hiperdex <span class="ver">1.0.0</span></summary>
+  <summary>Hiperdex <span class="ver">1.0.1</span></summary>
   <div class="entry">
+    <h4>2026-09-08</h4>
+    <ul><li>The chapter-count badge on a listing tile is written as text. <code>@mana-app/types@0.0.26</code> redefines a badge as a short label the source supplies, where it used to be a count and a colour the host rendered itself.</li></ul>
+  </div><div class="entry">
     <h4>2026-09-06</h4>
     <ul><li>Initial implementation, reading hiperdex.com through its tRPC API at <code>/api/trpc</code> rather than the markup — the site is now a client-rendered SPA whose pages contain no content.</li><li>Every API call carries the <code>__st</code> session cookie, which the server only issues in the <code>Set-Cookie</code> of a document request; the source fetches the landing page once for it and re-fetches on a 401.</li><li>Home page carries Trending Today, Latest Updates, Most Popular, Top Rated and Recently Added, each backed by the same query as its view-more listing.</li><li>Search supports a title query, the site's seven sort orders, and type, status, rating and genre filters; the status picker adds "Releasing", which the site's own filter panel omits despite 284 titles carrying it.</li><li>Covers and chapter pages are requested with the site as their referer, without which both CDNs answer 403.</li></ul>
   </div>
@@ -325,7 +331,7 @@
 </section>
 </main>
 
-<footer class="wrap">Updated 2026-09-07</footer>
+<footer class="wrap">Updated 2026-09-08</footer>
 
 <script>
   Array.prototype.forEach.call(document.querySelectorAll(".copy-one"), function (b) {
