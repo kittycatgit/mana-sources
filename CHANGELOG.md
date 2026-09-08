@@ -145,7 +145,21 @@ are UTC. Format loosely follows [Keep a Changelog](https://keepachangelog.com/en
   by driving the built bundle against gallery HTML captured from a real browser, and the
   cover and page URLs they produced were fetched to confirm they serve.
 
-## Madaradex (current: v1.0.1)
+## Madaradex (current: v1.1.0)
+
+### 2026-09-08 — The rest of the site's listings
+
+- The home page carried four of the six listings the site browses by. Added Trending and
+  A–Z, so every `m_orderby` tab the site's own browse page offers now has a row and a
+  view-more listing behind it.
+- Trending and Most Read are two different queries the site keeps apart, and they are kept
+  apart here: they shared 10 of their first 17 titles when this was measured, in a
+  different order, which is the ordinary overlap between a recent window and an all-time
+  one rather than one query wearing two titles.
+- The site has no time-scoped listings — `time=day` and `time=week` are ignored on every
+  sort, and an unrecognised `m_orderby` silently falls back to the default ordering — so
+  there is no "trending today"/"trending this week" pair to carry, and nothing was added
+  for them.
 
 ### 2026-09-06
 
