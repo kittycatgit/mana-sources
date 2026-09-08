@@ -38,11 +38,64 @@ export const PREFERENCE_DEFAULTS: Record<string, PreferenceValue> = {
 
 export const ListID = {
   Latest: "latest",
+  PopularToday: "popular-today",
+  PopularWeek: "popular-week",
+  PopularMonth: "popular-month",
+  PopularYear: "popular-year",
   English: "english",
   Doujinshi: "doujinshi",
   Manga: "manga",
+  ArtistCG: "artistcg",
   GameCG: "gamecg",
+  ImageSet: "imageset",
 } as const;
+
+export type PopularWindow = "today" | "week" | "month" | "year";
+
+export type PopularRow = {
+  id: string;
+  window: PopularWindow;
+  title: string;
+  subtitle: string;
+};
+
+/**
+ * The four windows the site's own order-by dropdown offers. Each ranks the whole catalogue
+ * over its own span rather than slicing the one above it, so the day's list is not the head
+ * of the week's — `popular/today-all` and `popular/week-all` shared two of twelve titles the
+ * day this was written, and the month's and the year's shared none.
+ */
+export const POPULAR_ROWS: readonly PopularRow[] = [
+  {
+    id: ListID.PopularToday,
+    window: "today",
+    title: "Popular Today",
+    subtitle: "The day's most read",
+  },
+  {
+    id: ListID.PopularWeek,
+    window: "week",
+    title: "Popular This Week",
+    subtitle: "The week's most read",
+  },
+  {
+    id: ListID.PopularMonth,
+    window: "month",
+    title: "Popular This Month",
+    subtitle: "The month's most read",
+  },
+  {
+    id: ListID.PopularYear,
+    window: "year",
+    title: "Popular This Year",
+    subtitle: "The year's most read",
+  },
+];
+
+/** One `popular/<window>-<language>.nozomi` ranking on ltn, minus its extension. */
+export function popularPath(row: PopularRow, language: string): string {
+  return `popular/${row.window}-${encodeURIComponent(language || ALL_LANGUAGES)}`;
+}
 
 /** One `<area>/<term>-<language>.atom` feed on ltn. No area means the site-wide index. */
 export type Listing = {
