@@ -1,0 +1,32 @@
+{
+  "repositoryName": "Demon | Mana Sources",
+  "thumbnail": "https://avatars.githubusercontent.com/u/204405496",
+  "sources": [
+    {
+      "id": "mangaball",
+      "name": "Mangaball",
+      "version": "1.3.5",
+      "description": "Pulls manga, manhwa and manhua from mangaball.net",
+      "website": "https://mangaball.net",
+      "rating": 1,
+      "supportedLanguages": [
+        "en_US",
+        "es_ES",
+        "pt_BR",
+        "fr_FR",
+        "zh-CN"
+      ],
+      "thumbnail": "Mangaball.png",
+      "developers": [
+        {
+          "name": "Demon",
+          "github": "https://github.com/kittycatgit"
+        }
+      ],
+      "path": "Mangaball",
+      "environment": "source",
+      "intents": 2104329,
+      "hash": "4864e8bc4864e8bc4864e8bc4864e8bc4864e8bc4864e8bc4864e8bc4864e8bc"
+    }
+  ]
+}
