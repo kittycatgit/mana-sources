@@ -4,7 +4,20 @@ Notable changes to the extensions in this repository, grouped by extension —
 each one versions independently (see `info.version` in its `main.ts`). Dates
 are UTC. Format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## Mangaball (current: v1.0.0)
+## Mangaball (current: v1.1.0)
+
+### 2026-09-08
+
+- Chapters now report the scanlation group that made them as `Chapter.provider`, so several
+  scans of one chapter show up as versions of it rather than as identical rows. Manga Ball
+  aggregates: across the twenty-four most-read titles, every one of them carries the same
+  chapter number twice or more in English alone, and one Blue Lock chapter has fifty-six
+  English scans. The group's page on the site is reported alongside as a provider link.
+- The group is no longer appended to the chapter title, which was the old way of telling two
+  scans apart and would now print its name twice in the same row.
+- `es-la` is reported as `es-419`. The site uses both codes and labels both of them "Spanish
+  (Latin America)", which split one language into two in the reader; `es-la` is not a valid
+  tag either. Both stay selectable in the Chapter Languages setting.
 
 ### 2026-09-07 — New source
 

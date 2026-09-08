@@ -203,7 +203,7 @@
 <li class="source" id="src-Mangaball">
   <div class="icon-slot"><img class="icon" src="assets/Mangaball.png" alt="" onerror="this.remove()"></div>
   <div class="body">
-    <h3>Mangaball <span class="ver">v1.0.0</span></h3>
+    <h3>Mangaball <span class="ver">v1.1.0</span></h3>
     <p>Pulls manga, manhwa and manhua from mangaball.net</p>
     <div class="meta">
       <span class="r1"><i class="dot"></i>Mixed</span>
@@ -232,8 +232,11 @@
   <section>
   <h2>Changes</h2>
   <details>
-  <summary>Mangaball <span class="ver">1.0.0</span></summary>
+  <summary>Mangaball <span class="ver">1.1.0</span></summary>
   <div class="entry">
+    <h4>2026-09-08</h4>
+    <ul><li>Chapters now report the scanlation group that made them as <code>Chapter.provider</code>, so several scans of one chapter show up as versions of it rather than as identical rows. Manga Ball aggregates: across the twenty-four most-read titles, every one of them carries the same chapter number twice or more in English alone, and one Blue Lock chapter has fifty-six English scans. The group's page on the site is reported alongside as a provider link.</li><li>The group is no longer appended to the chapter title, which was the old way of telling two scans apart and would now print its name twice in the same row.</li><li><code>es-la</code> is reported as <code>es-419</code>. The site uses both codes and labels both of them "Spanish (Latin America)", which split one language into two in the reader; <code>es-la</code> is not a valid tag either. Both stay selectable in the Chapter Languages setting.</li></ul>
+  </div><div class="entry">
     <h4>2026-09-07 — New source</h4>
     <ul><li>Reads mangaball.net through the site's own JSON API rather than its markup: the home page, search and the chapter list are all served by <code>/api/v1/</code>, which the page's own JavaScript calls, so the source never has to render anything.</li><li>Home page carries seven rows — a Featured hero, Latest Updates, Recently Added, Most Read Manga, Manhwa Updates, Manhua Updates and Finished Series — each backed by the same query as its view-more listing.</li><li>Filters cover origin, publication status, demographic, translation language and the site's ninety-six tags with include and exclude. Content rating, publication year and the rating sorts are deliberately absent: the site accepts all four and returns the unfiltered listing, so shipping them would have shown the reader controls that do nothing.</li><li>A "Chapter Languages" setting decides which of the site's translations are listed. A title on Manga Ball carries one chapter list per language, so unfiltered a long series runs to a couple of thousand rows; the default is English, and clearing the selection gives every language back.</li></ul>
   </div>
@@ -325,7 +328,7 @@
 </section>
 </main>
 
-<footer class="wrap">Updated 2026-09-07</footer>
+<footer class="wrap">Updated 2026-09-08</footer>
 
 <script>
   Array.prototype.forEach.call(document.querySelectorAll(".copy-one"), function (b) {
