@@ -24,6 +24,8 @@ from there.
 | Hitomi | 1.3.1 | Multi-language | Explicit |
 | Imhentai | 1.0.0 | Multi-language | Explicit |
 | Madaradex | 1.0.1 | English | Explicit |
+| Manga18fx | 1.1.0 | English | Explicit |
+| Mangaball | 1.3.5 | Multi-language | Mixed |
 | Manga18fx | 1.2.1 | English | Explicit |
 | Nhentai | 1.1.0 | Multi-language | Explicit |
 | Madaradex | 1.1.1 | English | Explicit |

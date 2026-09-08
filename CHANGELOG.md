@@ -4,6 +4,7 @@ Notable changes to the extensions in this repository, grouped by extension —
 each one versions independently (see `info.version` in its `main.ts`). Dates
 are UTC. Format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## Mangaball (current: v1.3.5)
 ## Nhentai (current: v1.2.1)
 ## Mangafire (current: v1.2.1)
 
@@ -11,6 +12,38 @@ are UTC. Format loosely follows [Keep a Changelog](https://keepachangelog.com/en
 
 - The home page arrives with every row already filled.
 
+### 2026-09-08
+
+- Opening the source again reuses its session instead of reloading the home page.
+
+### 2026-09-08 — Most Read rows no longer time out
+
+- Fixed the four Most Read rows showing an error card while the rest of the home page
+  loaded, when the site's cache for one of their time windows had expired.
+- The Most Read rows show twelve titles, the number the site itself asks for.
+
+### 2026-09-08 — Rows no longer fail once the home page has loaded
+
+- Fixed every row failing with "did not issue a session" after the app had loaded the home
+  page once.
+
+### 2026-09-08 — One session for the whole home page
+
+- The home page's rows now share one session instead of each fetching their own, so
+  opening the source is faster and rows no longer fail with "did not issue a session".
+
+### 2026-09-08
+
+- Added Recommended Titles, Most Read Today, This Week, This Month and This Year, Most Viewed Today, This Month and This Year, Manga Updates and Comics Updates.
+- Chapters show which group scanned them, with a link to the group.
+- Chapter titles no longer repeat the group name.
+- Spanish (Latin America) chapters report `es-419`.
+
+### 2026-09-07
+
+- Reads mangaball.net through the endpoints its own pages call.
+- Home: Featured, Latest Updates, Recently Added, Most Read Today.
+- Search: title query, genres, status, type and the site's sort orders.
 
 ### 2026-09-08
 
