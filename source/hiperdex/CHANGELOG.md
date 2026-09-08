@@ -233,7 +233,21 @@ are UTC. Format loosely follows [Keep a Changelog](https://keepachangelog.com/en
   toggles, and the site's six sort orders in either direction.
 - Honours the host's content-rating policy by asking the site for non-adult results when
   mature content is not allowed.
-## Hiperdex (current: v1.1.0)
+## Hiperdex (current: v1.2.0)
+
+### 2026-09-08 — The rows that only look alike
+
+- Latest Manga and Recently Updated are back on the home page. Both were dropped for
+  holding much of what a neighbouring row holds today, which is a fact about this week's
+  catalogue rather than about the query: the Manga scope is applied by the site, and
+  `sort:"recent"` orders by last chapter where Recently Added orders by series id, so an
+  older series that updates appears on one and not the other.
+- Only `sort:"relevance"` stays out. With an empty query the API answers it byte for byte
+  with `sort:"popular"` — it is the Most Popular row under a second name, not a listing of
+  its own.
+- The three trending rows are fifteen tiles again, like every other row. They were cut to
+  twelve to hold their overlap down, and how much two windows over one ranking happen to
+  share this week is not a reason to show less of either.
 
 ### 2026-09-08 — The rest of the site's listings
 

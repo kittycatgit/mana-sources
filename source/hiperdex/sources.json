@@ -5,7 +5,7 @@
     {
       "id": "hiperdex",
       "name": "Hiperdex",
-      "version": "1.1.0",
+      "version": "1.2.0",
       "description": "Pulls manga, manhwa and manhua from hiperdex.com",
       "website": "https://hiperdex.com",
       "rating": 2,
@@ -22,7 +22,7 @@
       "path": "Hiperdex",
       "environment": "source",
       "intents": 2104332,
-      "hash": "3a4cd8523a4cd8523a4cd8523a4cd8523a4cd8523a4cd8523a4cd8523a4cd852"
+      "hash": "08a5ec9308a5ec9308a5ec9308a5ec9308a5ec9308a5ec9308a5ec9308a5ec93"
     }
   ]
 }

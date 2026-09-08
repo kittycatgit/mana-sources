@@ -203,7 +203,7 @@
 <li class="source" id="src-Hiperdex">
   <div class="icon-slot"><img class="icon" src="assets/Hiperdex.png" alt="" onerror="this.remove()"></div>
   <div class="body">
-    <h3>Hiperdex <span class="ver">v1.1.0</span></h3>
+    <h3>Hiperdex <span class="ver">v1.2.0</span></h3>
     <p>Pulls manga, manhwa and manhua from hiperdex.com</p>
     <div class="meta">
       <span class="r2"><i class="dot"></i>Explicit</span>
@@ -299,8 +299,11 @@
   </div>
 </details>
 <details>
-  <summary>Hiperdex <span class="ver">1.1.0</span></summary>
+  <summary>Hiperdex <span class="ver">1.2.0</span></summary>
   <div class="entry">
+    <h4>2026-09-08 — The rows that only look alike</h4>
+    <ul><li>Latest Manga and Recently Updated are back on the home page. Both were dropped for holding much of what a neighbouring row holds today, which is a fact about this week's catalogue rather than about the query: the Manga scope is applied by the site, and <code>sort:"recent"</code> orders by last chapter where Recently Added orders by series id, so an older series that updates appears on one and not the other.</li><li>Only <code>sort:"relevance"</code> stays out. With an empty query the API answers it byte for byte with <code>sort:"popular"</code> — it is the Most Popular row under a second name, not a listing of its own.</li><li>The three trending rows are fifteen tiles again, like every other row. They were cut to twelve to hold their overlap down, and how much two windows over one ranking happen to share this week is not a reason to show less of either.</li></ul>
+  </div><div class="entry">
     <h4>2026-09-08 — The rest of the site's listings</h4>
     <ul><li>The home page carried five of the eleven listings the site actually offers. It now carries all of them: the Trending row's week and month periods alongside its day, the Recent Updates row scoped to Manhwa and to Manhua alongside its unscoped form, and the browse page's Oldest and A–Z sorts alongside Popularity, Score and Newest.</li><li>Three listings the site offers are deliberately left out, because each returns what a row already on the page returns: <code>sort:"relevance"</code> on an empty query is byte-identical to <code>sort:"popular"</code>, <code>sort:"recent"</code> opens with twelve of Recently Added's fifteen titles, and Recent Updates scoped to Manga is thirteen of the fifteen in its unscoped form, since Japanese series carry most of the site's update traffic.</li><li>The three trending rows are kept to twelve tiles each. They rank one catalogue over three windows, so they converge as they deepen — at twenty tiles the week and month rows share 70% of their titles, at twelve they share half.</li><li>A title whose cover the site publishes under <code>/storage/covers/</code> is now handed over with no cover at all. All 50 titles in the catalogue on that path 404, on every host and extension the CDN serves, so the site renders a broken image for them too; two of them open the A–Z row. An empty cover is a placeholder in the app rather than a broken tile.</li></ul>
   </div><div class="entry">
