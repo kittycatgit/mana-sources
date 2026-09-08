@@ -112,7 +112,16 @@ are UTC. Format loosely follows [Keep a Changelog](https://keepachangelog.com/en
 - `getContent`, `getChapters` and `getChapterData` SKIP under `npm run verify` — they read
   a challenged route. All three were checked against gallery HTML captured from a browser.
 
-## Madaradex (current: v1.0.1)
+## Madaradex (current: v1.1.1)
+
+### 2026-09-09
+
+- The home page arrives with every row already filled.
+
+
+### 2026-09-08
+
+- Added Trending and A–Z.
 
 ### 2026-09-06
 
