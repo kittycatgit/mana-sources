@@ -65,7 +65,6 @@ import {
   STATUS_BY_STATE,
   SortID,
   TRENDING_PAGE_SIZE,
-  TRENDING_SECTION_LIMIT,
   TYPE_OPTIONS,
   type SearchQuery,
   type SeriesScope,
@@ -75,7 +74,7 @@ import {
 const info: SourceInfo = {
   id: "hiperdex",
   name: "Hiperdex",
-  version: "1.1.0",
+  version: "1.2.0",
   description: "Pulls manga, manhwa and manhua from hiperdex.com",
   website: BASE_URL,
   rating: CatalogRating.EXPLICIT,
@@ -131,7 +130,7 @@ class HiperdexSource implements ChapterSource, SearchProvider, PageLinkResolver 
         title: "Trending This Week",
         subtitle: "The last seven days of reading",
         style: SectionStyle.DetailedTripleRowPaged,
-        limit: TRENDING_SECTION_LIMIT,
+        limit: 15,
         load: (page) => this.trending(page, "week", policy),
       },
       {
@@ -139,7 +138,7 @@ class HiperdexSource implements ChapterSource, SearchProvider, PageLinkResolver 
         title: "Trending This Month",
         subtitle: "What has held its readers for a month",
         style: SectionStyle.SimpleTripleRow,
-        limit: TRENDING_SECTION_LIMIT,
+        limit: 15,
         load: (page) => this.trending(page, "month", policy),
       },
       {
@@ -149,6 +148,14 @@ class HiperdexSource implements ChapterSource, SearchProvider, PageLinkResolver 
         style: SectionStyle.DetailedVerticalListGrouped,
         limit: 15,
         load: (page) => this.latest(page, "all", policy),
+      },
+      {
+        id: ListID.LatestManga,
+        title: "Latest Manga",
+        subtitle: "New chapters on the Japanese shelf",
+        style: SectionStyle.DetailedTripleRowPaged,
+        limit: 15,
+        load: (page) => this.latest(page, "manga", policy),
       },
       {
         id: ListID.LatestManhwa,
@@ -189,6 +196,14 @@ class HiperdexSource implements ChapterSource, SearchProvider, PageLinkResolver 
         style: SectionStyle.DetailedTripleRowPaged,
         limit: 15,
         load: (page) => this.browse({ page, sort: SortID.Newest, maxRating: policy.max }, policy),
+      },
+      {
+        id: ListID.Updated,
+        title: "Recently Updated",
+        subtitle: "The catalogue by its most recent chapter",
+        style: SectionStyle.SimpleTripleRow,
+        limit: 15,
+        load: (page) => this.browse({ page, sort: SortID.Recent, maxRating: policy.max }, policy),
       },
       {
         id: ListID.Oldest,
