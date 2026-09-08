@@ -209,6 +209,30 @@ function assert(condition, message) {
   if (!condition) throw new Error(message);
 }
 
+/**
+ * How many of these are actually different things.
+ *
+ * A count is not evidence. A chapter list built by asking for thirty-one pages from a
+ * function that ignored the page number came back as 620 entries — twenty distinct ones,
+ * repeated — and every check here passed it, printed "620 chapters", and let a source ship
+ * that showed twenty on a device. Nothing downstream can tell the difference afterwards,
+ * so identity is checked here, where the list is still in hand.
+ */
+function assertDistinct(items, identify, label) {
+  const seen = new Set();
+  for (const item of items) {
+    const id = identify(item);
+    if (id === undefined || id === null || id === "") continue;
+    seen.add(String(id));
+  }
+  assert(
+    seen.size === items.length,
+    `${label}: ${items.length} returned but only ${seen.size} are distinct — ` +
+      `the rest are repeats, which a count alone would have reported as a full list`,
+  );
+  return seen.size;
+}
+
 function checkHighlights(results, label) {
   assert(Array.isArray(results), `${label}: results is not an array`);
   assert(results.length > 0, `${label}: returned 0 results`);
@@ -216,6 +240,7 @@ function checkHighlights(results, label) {
     assert(item && typeof item.id === "string" && item.id.length > 0, `${label}: item missing id`);
     assert(typeof item.title === "string" && item.title.length > 0, `${label}: item missing title`);
   }
+  assertDistinct(results, (item) => item.id, label);
   const withCover = results.filter((item) => item.cover).length;
   return `${results.length} results, ${withCover} with covers`;
 }
@@ -260,6 +285,7 @@ function checkChapters(chapters) {
     `chapters run newest-first (${chapters[0].number} down to ${chapters[chapters.length - 1].number}) — reverse the list so index 0 is the first chapter`,
   );
 
+  assertDistinct(chapters, (chapter) => chapter.chapterId, "getChapters");
   const dated = chapters.filter((c) => c.date.getTime() > 0).length;
   return `${chapters.length} chapters, ${dated} with real dates`;
 }
@@ -407,6 +433,8 @@ async function verify(name, probe, verbose) {
         for (const page of data.pages) {
           assert(page.url || page.raw, "page has neither url nor raw");
         }
+        // A chapter of the same page repeated is a reader showing one image forever.
+        assertDistinct(data.pages, (page) => page.url ?? page.raw, "getChapterData");
         return `${data.pages.length} pages`;
       });
     }
