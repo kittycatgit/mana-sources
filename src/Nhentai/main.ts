@@ -76,7 +76,7 @@ import {
 const info: SourceInfo = {
   id: "nhentai",
   name: "Nhentai",
-  version: "1.1.0",
+  version: "1.2.0",
   description: "Reads doujinshi and manga galleries from nhentai.net",
   website: BASE_URL,
   rating: CatalogRating.EXPLICIT,
@@ -190,6 +190,35 @@ class NhentaiSource implements ChapterSource, SearchProvider, PageLinkResolver {
               })
             : this.tagged({ page, tagId: TagID.Manga, sort: SortID.PopularMonth }),
       },
+      // The site ranks a listing four ways — recent, today, this week, all time — and the
+      // rows above cover three of them plus whichever one the hero is already showing.
+      // That is a different one in each case: the featured five are today's popular, while
+      // a chosen language turns the hero into that language's all-time popular. So the
+      // fifth row is whichever sort is left rather than a fixed one; pinning it to either
+      // would repeat the hero for half the readers.
+      //
+      // The language case cannot simply keep the site-wide all-time row: all-time popular
+      // is English top to bottom, so the two lists come back identical.
+      language
+        ? {
+            id: ListID.Today,
+            title: "Popular Today",
+            subtitle: `The day's most read ${language.label} galleries`,
+            style: SectionStyle.DetailedTripleRowPaged,
+            limit: 12,
+            load: (page) => this.inLanguage(language, page, SortID.PopularToday),
+          }
+        : {
+            id: ListID.AllTime,
+            title: "Popular of All Time",
+            subtitle: "The most read galleries in the site's history",
+            style: SectionStyle.DetailedTripleRowPaged,
+            limit: 12,
+            // No tag covers everything and /galleries takes no sort, so this is the one
+            // home row that has to go through /search.
+            load: (page) =>
+              this.searchGalleries({ page, query: MATCH_ALL_QUERY, sort: SortID.Popular }),
+          },
     ];
   }
 

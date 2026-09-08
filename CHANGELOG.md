@@ -4,7 +4,18 @@ Notable changes to the extensions in this repository, grouped by extension —
 each one versions independently (see `info.version` in its `main.ts`). Dates
 are UTC. Format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## Nhentai (current: v1.1.0)
+## Nhentai (current: v1.2.0)
+
+### 2026-09-08 — The sort the home page was missing
+
+- The site ranks every listing four ways — recent, today, this week and all time — and the
+  home page only carried three of them. It now carries the fourth as its own row: Popular
+  of All Time site-wide, or Popular Today once a reading language is chosen, whichever the
+  hero is not already showing.
+- The row has to flip because the hero flips: the site's featured five are today's popular,
+  while a chosen language turns the hero into that language's all-time popular. Site-wide
+  all-time popular is English all-time popular to the last entry, so a fixed row would have
+  repeated one or the other.
 
 ### 2026-09-07 — Language setting
 
