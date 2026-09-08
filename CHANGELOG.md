@@ -155,7 +155,12 @@ are UTC. Format loosely follows [Keep a Changelog](https://keepachangelog.com/en
   status picker adds "Releasing", which the site's own panel omits.
 - Covers and chapter images carry the site as referer.
 
-## Tailspace (current: v1.1.0)
+## Tailspace (current: v1.1.1)
+
+### 2026-09-09
+
+- The home page arrives with every row already filled.
+
 
 ### 2026-09-05 — Home page
 
