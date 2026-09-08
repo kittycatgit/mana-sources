@@ -203,7 +203,7 @@
 <li class="source" id="src-Comix">
   <div class="icon-slot"><img class="icon" src="assets/Comix.png" alt="" onerror="this.remove()"></div>
   <div class="body">
-    <h3>Comix <span class="ver">v1.0.10</span></h3>
+    <h3>Comix <span class="ver">v1.1.0</span></h3>
     <p>Reads manga, manhwa and manhua from comix.to</p>
     <div class="meta">
       <span class="r1"><i class="dot"></i>Mixed</span>
@@ -232,8 +232,11 @@
   <section>
   <h2>Changes</h2>
   <details>
-  <summary>Comix <span class="ver">1.0.10</span></summary>
+  <summary>Comix <span class="ver">1.1.0</span></summary>
   <div class="entry">
+    <h4>2026-09-08 — Shuffled pages come out in order</h4>
+    <ul><li>Some chapter pages are served with their tiles shuffled — about one in ten of the ones sampled — and they were being shown that way. The chapter payload flags them (<code>scramble: true</code>) and the image's own headers describe the shuffle: a seed, a grid, a generator, and a token that keys the seed.</li><li><code>shouldRedrawImage</code> reads those with a HEAD, and <code>redrawImageWithSize</code> returns one copy instruction per tile. A page that was never flagged costs nothing; a flagged one costs a request with no body before it is drawn.</li><li>Tiles are floor(size / grid), so a width or height that does not divide evenly leaves a margin on the right or bottom untouched — which is where the site leaves it too.</li></ul>
+  </div><div class="entry">
     <h4>2026-09-08 — Long lists get the time they need</h4>
     <ul><li>A 1194-chapter title loaded 1020 of them and needed a second open to finish. The walk had sixty seconds and that title is sixty pager pages; a phone renders about fifty of them in the time allowed, and what is not reached is simply missing. The walk now has 150 seconds and the WebView 180, which covers a list of that length on a first open.</li><li>Nothing else changed: same walk, same clicks, same reads.</li></ul>
   </div><div class="entry">

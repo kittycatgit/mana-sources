@@ -4,7 +4,19 @@ Notable changes to the extensions in this repository, grouped by extension —
 each one versions independently (see `info.version` in its `main.ts`). Dates
 are UTC. Format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## Comix (current: v1.0.10)
+## Comix (current: v1.1.0)
+
+### 2026-09-08 — Shuffled pages come out in order
+
+- Some chapter pages are served with their tiles shuffled — about one in ten of the ones
+  sampled — and they were being shown that way. The chapter payload flags them
+  (`scramble: true`) and the image's own headers describe the shuffle: a seed, a grid, a
+  generator, and a token that keys the seed.
+- `shouldRedrawImage` reads those with a HEAD, and `redrawImageWithSize` returns one copy
+  instruction per tile. A page that was never flagged costs nothing; a flagged one costs a
+  request with no body before it is drawn.
+- Tiles are floor(size / grid), so a width or height that does not divide evenly leaves a
+  margin on the right or bottom untouched — which is where the site leaves it too.
 
 ### 2026-09-08 — Long lists get the time they need
 
