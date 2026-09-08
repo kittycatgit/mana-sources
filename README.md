@@ -15,7 +15,7 @@ from there.
 
 | Source | Version | Language | Rating |
 | ------ | ------- | -------- | ------ |
-| Ehentai | 1.2.0 | Multi-language | Explicit |
+| Ehentai | 1.2.1 | Multi-language | Explicit |
 | Hiperdex | 1.0.1 | English | Explicit |
 | Hitomi | 1.2.0 | Multi-language | Explicit |
 | Imhentai | 1.0.0 | Multi-language | Explicit |

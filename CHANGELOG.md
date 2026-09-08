@@ -20,7 +20,12 @@ are UTC. Format loosely follows [Keep a Changelog](https://keepachangelog.com/en
   include/exclude across the 100 most used tags, minimum page and favourite counts.
 - Each gallery is one chapter, with a summary composed from its metadata.
 
-## Ehentai (current: v1.2.0)
+## Ehentai (current: v1.2.1)
+
+### 2026-09-09
+
+- The home page arrives with every row already filled.
+
 
 ### 2026-09-08
 
