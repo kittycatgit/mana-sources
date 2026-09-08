@@ -84,7 +84,22 @@ are UTC. Format loosely follows [Keep a Changelog](https://keepachangelog.com/en
   under that status where local law makes it add an age notice, and rejecting it would
   leave those readers with an empty app.
 
-## Manga18fx (current: v1.1.0)
+## Manga18fx (current: v1.2.0)
+
+### 2026-09-08 — Manhua row
+
+- Added a Manhua row to the home page, reading the site's own `manhua` archive. It is the
+  one scope in the site's top menu the source did not already carry that is a different
+  query rather than the latest-updates pool relabelled: its titles overlap the other four
+  rows by at most one out of fifteen.
+- Re-enumerated what the site actually publishes while checking a report that the home
+  page was short of listings. There are two rows on its own home page and seven scopes in
+  its menu, no sort control anywhere, and no trending or most-viewed listing of any kind.
+  Of the three menu scopes still missing, only Manhua was added: `manga-genre/manhwa` is
+  the home page under another name (23 of 24 titles shared), and the Drama and Action
+  archives are the newest updates filtered — every one of their first fifteen titles sits
+  inside the site's own two most recent pages — so either would have shipped as a row that
+  duplicates Latest Updates on a busy day.
 
 ### 2026-09-07 — Hiding raw releases
 
