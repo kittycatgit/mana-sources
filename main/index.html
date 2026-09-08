@@ -247,7 +247,7 @@
 <li class="source" id="src-Imhentai">
   <div class="icon-slot"><img class="icon" src="assets/Imhentai.png" alt="" onerror="this.remove()"></div>
   <div class="body">
-    <h3>Imhentai <span class="ver">v1.0.0</span></h3>
+    <h3>Imhentai <span class="ver">v1.0.2</span></h3>
     <p>Browses the doujinshi, manga and artist CG galleries on imhentai.xxx</p>
     <div class="meta">
       <span class="r2"><i class="dot"></i>Explicit</span>
@@ -380,26 +380,6 @@
     </div><div class="testing-actions">
       <code class="turl">https://kittycatgit.github.io/mana-sources/source/hiperdex</code><button class="copy-one" type="button" data-url="https://kittycatgit.github.io/mana-sources/source/hiperdex">Copy</button>
       <a class="thread" href="https://github.com/kittycatgit/mana-sources/issues?q=is%3Aissue+hiperdex" target="_blank" rel="noopener">Leave feedback</a>
-    </div>
-  </div>
-</li>
-<li class="source" id="testing-Imhentai">
-  <div class="icon-slot"><img class="icon" src="https://kittycatgit.github.io/mana-sources/source/imhentai/assets/Imhentai.png" alt="" onerror="this.remove()"></div>
-  <div class="body">
-    <h3>Imhentai <span class="ver">v1.0.2</span> <span class="tag">testing</span></h3>
-    <p>Browses the doujinshi, manga and artist CG galleries on imhentai.xxx</p>
-    <div class="meta">
-      <span class="r2"><i class="dot"></i>Explicit</span>
-      <span style="color:var(--muted)">EN / JA / ES / FR / KO</span>
-      <a href="https://imhentai.xxx" target="_blank" rel="noopener">imhentai.xxx &nearr;</a>
-    </div>
-    <div class="testing-changes">
-      <h4>New in this version</h4>
-      <ul><li>The home page arrives with every row already filled.</li></ul>
-      
-    </div><div class="testing-actions">
-      <code class="turl">https://kittycatgit.github.io/mana-sources/source/imhentai</code><button class="copy-one" type="button" data-url="https://kittycatgit.github.io/mana-sources/source/imhentai">Copy</button>
-      <a class="thread" href="https://github.com/kittycatgit/mana-sources/issues/7" target="_blank" rel="noopener">Leave feedback</a>
     </div>
   </div>
 </li>
@@ -563,8 +543,14 @@
   </div>
 </details>
 <details>
-  <summary>Imhentai <span class="ver">1.0.0</span></summary>
+  <summary>Imhentai <span class="ver">1.0.2</span></summary>
   <div class="entry">
+    <h4>2026-09-09</h4>
+    <ul><li>The home page arrives with every row already filled.</li></ul>
+  </div><div class="entry">
+    <h4>2026-09-08</h4>
+    <ul><li>Fixed the second challenged gallery in a session failing to open.</li></ul>
+  </div><div class="entry">
     <h4>2026-09-06</h4>
     <ul><li>Reads imhentai.xxx through <code>/search/</code>, the one route Cloudflare does not challenge.</li><li>Home: Popular Now, Latest Uploads, Top Rated, New Manga, New Western, New Artist CG.</li><li>Most Downloaded left out — it shares 55% of its titles with Popular.</li><li>Search: comma-separated tags, four sort orders, category and language facets.</li><li>A gallery is one chapter; status is COMPLETED unless the title says <code>[ongoing]</code>.</li><li>Page extensions come from each gallery's own manifest, which mixes webp and jpg.</li><li><code>getContent</code>, <code>getChapters</code> and <code>getChapterData</code> SKIP under <code>npm run verify</code> — they read a challenged route. All three were checked against gallery HTML captured from a browser.</li></ul>
   </div>
