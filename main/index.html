@@ -362,7 +362,7 @@
     </div>
     <div class="testing-changes">
       <h4>New in this version</h4>
-      <ul><li>Latest Manga and Recently Updated are back on the home page. Both were dropped for holding much of what a neighbouring row holds today, which is a fact about this week's catalogue rather than about the query: the Manga scope is applied by the site, and <code>sort:"recent"</code> orders by last chapter where Recently Added orders by series id, so an older series that updates appears on one and not the other.</li><li>Only <code>sort:"relevance"</code> stays out. With an empty query the API answers it byte for byte with <code>sort:"popular"</code> — it is the Most Popular row under a second name, not a listing of its own.</li><li>The three trending rows are fifteen tiles again, like every other row. They were cut to twelve to hold their overlap down, and how much two windows over one ranking happen to share this week is not a reason to show less of either.</li></ul>
+      <ul><li>Added Latest Manga and Recently Updated.</li><li>Trending rows show fifteen tiles, like every other row.</li></ul>
       
     </div><div class="testing-actions">
       <code class="turl">https://kittycatgit.github.io/mana-sources/source/hiperdex</code><button class="copy-one" type="button" data-url="https://kittycatgit.github.io/mana-sources/source/hiperdex">Copy</button>
@@ -382,7 +382,7 @@
     </div>
     <div class="testing-changes">
       <h4>New in this version</h4>
-      <ul><li>The home page now carries the four popularity windows the site's own order-by dropdown offers — Popular Today, This Week, This Month and This Year. They are four separate rankings of the whole catalogue rather than slices of one another: the day's list and the week's shared two of twelve titles the day this was written.</li><li>Those four are published as <code>.nozomi</code> only, with no Atom counterpart, so they are read through the same auxiliary WebView the search index already uses — all four in one visit, because a listing's head is a hundred bytes and opening the page is the whole cost.</li><li>Where there is no WebView to open, those four rows are left off the home page rather than shown empty. There is no plain-HTTP route to fall back to, and a row a device cannot fill reads as a broken source rather than as a listing the site declined to serve.</li><li>Artist CG and Image Sets rows, the two content types the site lists that the home page did not carry.</li><li>Date Published, the dropdown's remaining order, is deliberately not a row: it ranks the same catalogue by a date that is almost always the day a gallery was added, and it held eight of Just Added's ten titles. Anime is left out too — those galleries are an mp4 the app cannot read, with a poster and a still standing in for pages.</li></ul>
+      <ul><li>Added Popular Today, Popular This Week, Popular This Month and Popular This Year.</li><li>Those four rows need a WebView; without one they are left off rather than shown empty.</li></ul>
       
     </div><div class="testing-actions">
       <code class="turl">https://kittycatgit.github.io/mana-sources/source/hitomi</code><button class="copy-one" type="button" data-url="https://kittycatgit.github.io/mana-sources/source/hitomi">Copy</button>
@@ -462,7 +462,7 @@
     </div>
     <div class="testing-changes">
       <h4>New in this version</h4>
-      <ul><li>Six rows back: Most Read This Week, This Month and This Year (<code>getRecentChapterRead</code> over its three remaining windows) and Most Viewed Today, This Month and This Year (<code>getRecentRead</code>). They were left out last pass because their titles largely coincided with the Featured hero and with each other on the day they were measured, which is not a reason — "most viewed this week" and "most viewed this month" are different questions, and they answer differently the moment something new breaks through. Overlap between two rows is reported rather than judged.</li><li>Still out, and for the only reason a row should be: <code>getRecentRead&amp;search_time=week</code> is <code>getFeatured</code> reshuffled — measured again this pass, all twelve featured titles are the weekly top twelve in another order — so shipping it would be the hero row twice. <code>getLatestTable</code> and <code>getByOrigin</code> stay out on the same grounds: <code>getByOrigin</code> with no scope is <code>getLatestTable</code> is <code>updated_chapters_desc</code>, which Latest Updates already runs, and its four scopes are that sort plus an origin filter, which the four origin rows run.</li><li><code>getRecentRead</code>'s rows print their update date; unlike <code>getRecentChapterRead</code> it reports the title's own stamp — sixteen distinct values across twenty rows, agreeing with what <code>getPopular</code> says about the same title.</li><li>Two rows renamed now that there are four view rankings to tell apart: Most Viewed is "Most Viewed of All Time" (it is the whole catalogue by total views, not a window), and Most Read Manga is "Most Viewed Manga" — it sorts on views, not chapters read, which the Most Read rows above it do.</li></ul>
+      <ul><li>Added Recommended Titles, Most Read Today, This Week, This Month and This Year, Most Viewed Today, This Month and This Year, Manga Updates and Comics Updates.</li><li>Chapters show which group scanned them, with a link to the group.</li><li>Chapter titles no longer repeat the group name.</li><li>Spanish (Latin America) chapters report <code>es-419</code>.</li></ul>
       
     </div><div class="testing-actions">
       <code class="turl">https://kittycatgit.github.io/mana-sources/source/mangaball</code><button class="copy-one" type="button" data-url="https://kittycatgit.github.io/mana-sources/source/mangaball">Copy</button>
@@ -502,7 +502,7 @@
     </div>
     <div class="testing-changes">
       <h4>New in this version</h4>
-      <ul><li>The site ranks every listing four ways — recent, today, this week and all time — and the home page only carried three of them. It now carries the fourth as its own row: Popular of All Time site-wide, or Popular Today once a reading language is chosen, whichever the hero is not already showing.</li><li>The row has to flip because the hero flips: the site's featured five are today's popular, while a chosen language turns the hero into that language's all-time popular. Site-wide all-time popular is English all-time popular to the last entry, so a fixed row would have repeated one or the other.</li></ul>
+      <ul><li>Added Popular of All Time, or Popular Today when a reading language is set.</li></ul>
       
     </div><div class="testing-actions">
       <code class="turl">https://kittycatgit.github.io/mana-sources/source/nhentai</code><button class="copy-one" type="button" data-url="https://kittycatgit.github.io/mana-sources/source/nhentai">Copy</button>
@@ -522,7 +522,7 @@
     </div>
     <div class="testing-changes">
       <h4>New in this version</h4>
-      <ul><li>Home page carries Hot This Month, the last of the site's three Hot Series tabs. It was left out for holding the same ten series as Most Popular, which it does today and ranks in a different order; but "most viewed this month" is a question the site answers for itself and its answer parts from the overall ranking the moment something new breaks through, so the row is the site's to offer and not this source's to withhold.</li><li>Still not carried, because each is a query already on the page rather than another one: <code>/hot-series</code> with no <code>sort</code>, which is the weekly tab again; <code>/recently-added/&lt;n&gt;</code>, which returns the Recently Added sort in the same order, link-only and ten to a page; and <code>/latest-updates/&lt;n&gt;</code>, the same feed behind Latest Updates, keyed by chapter rather than by series.</li></ul>
+      <ul><li>Added Hot This Week, Hot This Month, All-Time Most Viewed, Recently Added, Most Subscribed and Recommendations.</li></ul>
       
     </div><div class="testing-actions">
       <code class="turl">https://kittycatgit.github.io/mana-sources/source/weebcentral</code><button class="copy-one" type="button" data-url="https://kittycatgit.github.io/mana-sources/source/weebcentral">Copy</button>
