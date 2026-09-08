@@ -180,17 +180,57 @@ function previewSource(id) {
   }
 }
 
+
+/**
+ * The newest changelog entry a preview published, so the row says what to try.
+ *
+ * A tester opening a preview otherwise has to guess what is different about it. The
+ * branch's own CHANGELOG is the answer and it is already published beside the bundle.
+ *
+ * @returns {{ heading: string, items: string[] } | null}
+ */
+function previewChanges(id, name) {
+  fetchGhPages();
+  try {
+    const raw = require("child_process").execFileSync(
+      "git",
+      ["show", `origin/gh-pages:source/${id}/CHANGELOG.md`],
+      { encoding: "utf-8", timeout: 20000, stdio: ["ignore", "pipe", "ignore"] },
+    );
+    const ext = parseChangelog(raw).find(
+      (e) => e.name.toLowerCase() === String(name).toLowerCase(),
+    );
+    const entry = ext?.entries?.[0];
+    return entry && entry.items.length > 0 ? entry : null;
+  } catch {
+    return null;
+  }
+}
+
 /** @param {string} id */
 function testingRow(id) {
   const install = pageBase ? `${pageBase}/source/${id}` : "";
   const thread = threads[id] || (repoUrl ? `${repoUrl}/issues?q=is%3Aissue+${encodeURIComponent(id)}` : "");
-  const extra = `<div class="testing-actions">
+  const published = previewSource(id);
+  const source = published ?? { name: id.charAt(0).toUpperCase() + id.slice(1), version: "?" };
+  const changes = previewChanges(id, source.name);
+  // Six is what fits without the row becoming a page of its own; the rest are on the
+  // preview's own page, which the install link goes to.
+  const listed = changes ? changes.items.slice(0, 6) : [];
+
+  const extra = `${
+    listed.length === 0
+      ? ""
+      : `<div class="testing-changes">
+      <h4>New in this version</h4>
+      <ul>${listed.map((item) => `<li>${renderInline(item)}</li>`).join("")}</ul>
+      ${changes.items.length > listed.length ? `<p class="more">and ${changes.items.length - listed.length} more</p>` : ""}
+    </div>`
+  }<div class="testing-actions">
       ${install ? `<code class="turl">${escapeHtml(install)}</code><button class="copy-one" type="button" data-url="${escapeHtml(install)}">Copy</button>` : ""}
       ${thread ? `<a class="thread" href="${thread}" target="_blank" rel="noopener">Leave feedback</a>` : ""}
     </div>`;
 
-  const published = previewSource(id);
-  const source = published ?? { name: id.charAt(0).toUpperCase() + id.slice(1), version: "?" };
   return sourceRow(source, {
     iconBase: `${pageBase}/source/${id}/assets/`,
     idPrefix: "testing",
@@ -516,6 +556,11 @@ const html = `<!doctype html>
   .request a:hover { background: var(--ember); color: #150705; }
 
   .tag { font: 700 10px/1 Archivo, sans-serif; letter-spacing: .12em; text-transform: uppercase; color: var(--amber); }
+  .testing-changes { margin-top: 12px; }
+  .testing-changes h4 { margin: 0 0 6px; font: 400 11px "JetBrains Mono", ui-monospace, monospace; color: var(--amber); letter-spacing: .1em; text-transform: uppercase; }
+  .testing-changes ul { margin: 0; padding-left: 18px; }
+  .testing-changes li { font-size: 14px; color: var(--muted); margin-bottom: 4px; }
+  .testing-changes .more { margin: 6px 0 0; font-size: 13px; color: var(--muted); opacity: .75; }
   .testing-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-top: 12px; }
   .turl { font: 400 12px "JetBrains Mono", ui-monospace, monospace; color: var(--muted); word-break: break-all; }
   .copy-one, .thread {
