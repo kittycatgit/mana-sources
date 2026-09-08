@@ -100,7 +100,18 @@ are UTC. Format loosely follows [Keep a Changelog](https://keepachangelog.com/en
 - Chapter images carry the site as referer plus the `mdx_fp`/`mdx_auth` cookies the CDN
   requires.
 
-## Hitomi (current: v1.2.0)
+## Hitomi (current: v1.3.1)
+
+### 2026-09-09
+
+- The home page arrives with every row already filled.
+- The Popular rows fetch only the twelve titles they show.
+
+
+### 2026-09-08
+
+- Added Popular Today, Popular This Week, Popular This Month and Popular This Year.
+- Those four rows need a WebView; without one they are left off rather than shown empty.
 
 ### 2026-09-07
 
