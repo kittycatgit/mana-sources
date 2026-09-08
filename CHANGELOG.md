@@ -107,7 +107,7 @@ are UTC. Format loosely follows [Keep a Changelog](https://keepachangelog.com/en
   newest-first.
 - Chapter images need the site as referer.
 
-## Weebcentral (current: v1.1.0)
+## Weebcentral (current: v1.2.0)
 
 ### 2026-09-08
 
