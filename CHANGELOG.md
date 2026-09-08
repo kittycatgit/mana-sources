@@ -121,7 +121,7 @@ are UTC. Format loosely follows [Keep a Changelog](https://keepachangelog.com/en
   Translation / Anime Adaptation / Adult Content toggles, six sort orders either way.
 - Asks the site for non-adult results when the app's content rating requires it.
 
-## Hiperdex (current: v1.1.0)
+## Hiperdex (current: v1.2.0)
 
 ### 2026-09-08
 
