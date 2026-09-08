@@ -5,7 +5,7 @@
     {
       "id": "mangafire",
       "name": "Mangafire",
-      "version": "1.2.0",
+      "version": "1.2.1",
       "description": "Reads manga, manhwa and manhua from mangafire.to",
       "website": "https://mangafire.to",
       "rating": 1,
@@ -26,7 +26,7 @@
       "path": "Mangafire",
       "environment": "source",
       "intents": 6298637,
-      "hash": "61ba88bc61ba88bc61ba88bc61ba88bc61ba88bc61ba88bc61ba88bc61ba88bc"
+      "hash": "6287148f6287148f6287148f6287148f6287148f6287148f6287148f6287148f"
     }
   ]
 }
