@@ -63,8 +63,48 @@ jobs:
             exit 1
           fi
 
-      - uses: peaceiris/actions-gh-pages@v4
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: dist
-          destination_dir: ${{ github.ref_name }}
+      # Published by hand rather than by the action, because the action cannot retry.
+      # Every branch writes into its own directory of one shared gh-pages ref, so two
+      # deploys finishing together lose one to "cannot lock ref" — the publish is simply
+      # dropped, and only the run's own red tick says so. Nothing here conflicts in
+      # content: each run touches one directory. So a rejected push is re-tried against
+      # whatever landed in the meantime.
+      - run: |
+          set -euo pipefail
+          work="$(mktemp -d)"
+          git clone --quiet --depth 1 --branch gh-pages \
+            "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" "$work"
+
+          # In the clone, not the checkout: the commit below is made there, and a runner
+          # has no global identity to fall back on.
+          git -C "$work" config user.name "github-actions[bot]"
+          git -C "$work" config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          for attempt in 1 2 3 4 5; do
+            rm -rf "${work:?}/${GITHUB_REF_NAME:?}"
+            mkdir -p "$work/$GITHUB_REF_NAME"
+            cp -R dist/. "$work/$GITHUB_REF_NAME/"
+
+            git -C "$work" add -A "$GITHUB_REF_NAME"
+            if git -C "$work" diff --cached --quiet; then
+              echo "nothing to publish for $GITHUB_REF_NAME"
+              exit 0
+            fi
+            git -C "$work" commit -q -m "deploy: ${GITHUB_SHA}"
+
+            if git -C "$work" push --quiet origin gh-pages; then
+              echo "published $GITHUB_REF_NAME on attempt $attempt"
+              exit 0
+            fi
+
+            echo "gh-pages moved under us; re-trying ($attempt)"
+            git -C "$work" reset --hard --quiet HEAD~1
+            git -C "$work" fetch --quiet --depth 1 origin gh-pages
+            git -C "$work" reset --hard --quiet origin/gh-pages
+            sleep $(( attempt * 5 ))
+          done
+
+          echo "::error::could not publish $GITHUB_REF_NAME after five attempts"
+          exit 1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
