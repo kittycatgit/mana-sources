@@ -40,7 +40,7 @@ import {
   pageOf,
   resolveSection,
   resolveSortId,
-  toPageSections,
+  fillPageSections,
   withQuery,
   type SectionSpec,
 } from "./forms/index.ts";
@@ -68,7 +68,7 @@ import {
 const info: SourceInfo = {
   id: "weebcentral",
   name: "Weebcentral",
-  version: "1.2.0",
+  version: "1.2.1",
   description: "Pulls manga, manhwa and manhua from weebcentral.com",
   website: BASE_URL,
   rating: CatalogRating.MIXED,
@@ -206,7 +206,7 @@ class WeebcentralSource implements ChapterSource, SearchProvider, PageLinkResolv
   }
 
   async getSectionsForPage(_link: PageLink): Promise<PageSection[]> {
-    return toPageSections(this.sections(ANY));
+    return fillPageSections(this.sections(ANY));
   }
 
   async resolvePageSection(link: PageLink, sectionID: string): Promise<ResolvedPageSection> {
