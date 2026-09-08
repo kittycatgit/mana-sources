@@ -34,7 +34,21 @@ are UTC. Format loosely follows [Keep a Changelog](https://keepachangelog.com/en
 - Covers and pages come from two CDN pools that are not interchangeable — thumbnails only
   from the thumb servers, full pages only from the image servers.
 
-## Ehentai (current: v1.1.0)
+## Ehentai (current: v1.2.0)
+
+### 2026-09-08 — The rest of the site's listings
+
+- Added Top This Year. The site publishes four gallery toplists and the source carried
+  three; `toplist.php?tl=12` is a separate ranking from the yesterday, month and all-time
+  ones it sits beside, and none of the four shares a title with another today.
+- Added a home row for each of the ten categories the front page's own chips scope to —
+  Doujinshi, Manga, Artist CG, Game CG, Western, Non-H, Image Set, Cosplay, Asian Porn and
+  Misc. The site reaches these as `/manga`, `/cosplay` and so on; each is an `f_cats` mask
+  on the front page under another path, so they go through the same search URL the filters
+  already build and inherit the hidden-language handling with it.
+- Nothing else on the site is a gallery listing: Watched, Favorites and My Home need an
+  account, Torrents lists torrents rather than galleries, and the browse page offers no
+  ordering at all — every listing it serves is newest first.
 
 ### 2026-09-07
 
