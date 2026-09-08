@@ -4,7 +4,21 @@ Notable changes to the extensions in this repository, grouped by extension —
 each one versions independently (see `info.version` in its `main.ts`). Dates
 are UTC. Format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## Comix (current: v1.0.7)
+## Comix (current: v1.0.8)
+
+### 2026-09-08 — The chapter list, actually
+
+- Fetching pages through the app's own query function was wrong from the start. That
+  function is bound to the parameters it was built with, so asking it for page two returns
+  page one again — thirty-one calls that looked like 620 chapters here and arrived as
+  twenty on a device, which de-duplicates them. Every measurement made against it was
+  measuring the same twenty chapters over and over.
+- The pager is walked again, which is the only thing that advances the list, and entries
+  are taken by id so a repeat cannot inflate the count. Within one page of the end the site
+  drops its "next" arrow and leaves the numbers, which had been stopping the walk two pages
+  early; the numbered button is used when the arrow is gone.
+- 601 chapters for the title that was showing 20, matching the site's own total, in about
+  22 seconds. 707 for the other.
 
 ### 2026-09-08 — Do not wait for the pictures
 

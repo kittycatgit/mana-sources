@@ -203,7 +203,7 @@
 <li class="source" id="src-Comix">
   <div class="icon-slot"><img class="icon" src="assets/Comix.png" alt="" onerror="this.remove()"></div>
   <div class="body">
-    <h3>Comix <span class="ver">v1.0.7</span></h3>
+    <h3>Comix <span class="ver">v1.0.8</span></h3>
     <p>Reads manga, manhwa and manhua from comix.to</p>
     <div class="meta">
       <span class="r1"><i class="dot"></i>Mixed</span>
@@ -232,8 +232,11 @@
   <section>
   <h2>Changes</h2>
   <details>
-  <summary>Comix <span class="ver">1.0.7</span></summary>
+  <summary>Comix <span class="ver">1.0.8</span></summary>
   <div class="entry">
+    <h4>2026-09-08 — The chapter list, actually</h4>
+    <ul><li>Fetching pages through the app's own query function was wrong from the start. That function is bound to the parameters it was built with, so asking it for page two returns page one again — thirty-one calls that looked like 620 chapters here and arrived as twenty on a device, which de-duplicates them. Every measurement made against it was measuring the same twenty chapters over and over.</li><li>The pager is walked again, which is the only thing that advances the list, and entries are taken by id so a repeat cannot inflate the count. Within one page of the end the site drops its "next" arrow and leaves the numbers, which had been stopping the walk two pages early; the numbered button is used when the arrow is gone.</li><li>601 chapters for the title that was showing 20, matching the site's own total, in about 22 seconds. 707 for the other.</li></ul>
+  </div><div class="entry">
     <h4>2026-09-08 — Do not wait for the pictures</h4>
     <ul><li>The title page was opened with <code>waitUntil: "load"</code>, which waits for every image and stylesheet it pulls in — none of which carries a chapter. It now waits for <code>domcontentloaded</code>, which is when the data this reads has arrived.</li><li>Clicking the pager was measured against fetching directly, on a 620-chapter title: clicking returned 100 chapters in 20.5s, fetching returned all 620 in 20.6s. Twenty per request is a server cap and the app serialises them, so about thirty round trips is the floor for that title however they are asked for. Fetching is kept.</li></ul>
   </div><div class="entry">
@@ -346,7 +349,7 @@
 </section>
 </main>
 
-<footer class="wrap">Updated 2026-09-07</footer>
+<footer class="wrap">Updated 2026-09-08</footer>
 
 <script>
   Array.prototype.forEach.call(document.querySelectorAll(".copy-one"), function (b) {
