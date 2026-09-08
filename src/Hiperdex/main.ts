@@ -39,7 +39,7 @@ import {
   pageOf,
   resolveSection,
   resolveSortId,
-  toPageSections,
+  fillPageSections,
   withQuery,
   type SectionSpec,
 } from "./forms/index.ts";
@@ -74,7 +74,7 @@ import {
 const info: SourceInfo = {
   id: "hiperdex",
   name: "Hiperdex",
-  version: "1.2.0",
+  version: "1.2.1",
   description: "Pulls manga, manhwa and manhua from hiperdex.com",
   website: BASE_URL,
   rating: CatalogRating.EXPLICIT,
@@ -244,7 +244,7 @@ class HiperdexSource implements ChapterSource, SearchProvider, PageLinkResolver 
   }
 
   async getSectionsForPage(link: PageLink): Promise<PageSection[]> {
-    return toPageSections(this.sections(this.policy(link.context)));
+    return fillPageSections(this.sections(this.policy(link.context)));
   }
 
   async resolvePageSection(link: PageLink, sectionID: string): Promise<ResolvedPageSection> {
