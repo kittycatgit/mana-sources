@@ -53,6 +53,8 @@ import {
   BASE_URL,
   CHAPTERS_API,
   CHAPTER_LANGUAGES_KEY,
+  CHAPTER_READS_SIZE,
+  CHAPTER_READS_TIMEOUT,
   CONTENT_TYPE_BY_FLAG,
   FEATURED_SIZE,
   FilterID,
@@ -84,7 +86,7 @@ import {
 const info: SourceInfo = {
   id: "mangaball",
   name: "Mangaball",
-  version: "1.3.2",
+  version: "1.3.3",
   description: "Pulls manga, manhwa and manhua from mangaball.net",
   website: BASE_URL,
   rating: CatalogRating.MIXED,
@@ -167,36 +169,36 @@ class MangaballSource implements ChapterSource, SearchProvider, PageLinkResolver
         title: "Most Read Today",
         subtitle: "Whose chapters were opened most in the last day",
         style: SectionStyle.DetailedTripleRowPaged,
-        limit: TRENDING_SIZE,
+        limit: CHAPTER_READS_SIZE,
         viewMore: false,
-        load: () => this.listing(ListingType.ChapterReads, TRENDING_SIZE, Window.Day),
+        load: () => this.listing(ListingType.ChapterReads, CHAPTER_READS_SIZE, Window.Day),
       },
       {
         id: ListID.ReadWeek,
         title: "Most Read This Week",
         subtitle: "Whose chapters were opened most over the last seven days",
         style: SectionStyle.DetailedTripleRowPaged,
-        limit: TRENDING_SIZE,
+        limit: CHAPTER_READS_SIZE,
         viewMore: false,
-        load: () => this.listing(ListingType.ChapterReads, TRENDING_SIZE, Window.Week),
+        load: () => this.listing(ListingType.ChapterReads, CHAPTER_READS_SIZE, Window.Week),
       },
       {
         id: ListID.ReadMonth,
         title: "Most Read This Month",
         subtitle: "Whose chapters were opened most over the last month",
         style: SectionStyle.DetailedTripleRowPaged,
-        limit: TRENDING_SIZE,
+        limit: CHAPTER_READS_SIZE,
         viewMore: false,
-        load: () => this.listing(ListingType.ChapterReads, TRENDING_SIZE, Window.Month),
+        load: () => this.listing(ListingType.ChapterReads, CHAPTER_READS_SIZE, Window.Month),
       },
       {
         id: ListID.ReadYear,
         title: "Most Read This Year",
         subtitle: "Whose chapters were opened most over the last year",
         style: SectionStyle.DetailedTripleRowPaged,
-        limit: TRENDING_SIZE,
+        limit: CHAPTER_READS_SIZE,
         viewMore: false,
-        load: () => this.listing(ListingType.ChapterReads, TRENDING_SIZE, Window.Year),
+        load: () => this.listing(ListingType.ChapterReads, CHAPTER_READS_SIZE, Window.Year),
       },
       {
         id: ListID.ViewedToday,
@@ -480,6 +482,7 @@ class MangaballSource implements ChapterSource, SearchProvider, PageLinkResolver
     const payload = await this.api<ApiSearchResponse>(
       LISTING_API,
       encodeForm({ search_type: type, search_limit: limit, search_time: time }),
+      type === ListingType.ChapterReads ? CHAPTER_READS_TIMEOUT : undefined,
     );
     // `getRecentChapterRead` answers with the same `updated_at` on every row — a stats-table
     // stamp rather than the title's — which would put "updated 10mo ago" under a title the
@@ -511,18 +514,18 @@ class MangaballSource implements ChapterSource, SearchProvider, PageLinkResolver
    * fails is therefore discarded and the call retried once against a fresh one; a session
    * minted for this very call is not retried, because nothing about it is stale.
    */
-  private async api<T>(url: string, body: string): Promise<T> {
+  private async api<T>(url: string, body: string, timeout?: number): Promise<T> {
     const cached = this.session !== undefined;
     try {
-      return await this.post<T>(url, body);
+      return await this.post<T>(url, body, timeout);
     } catch (error) {
       if (!cached) throw error;
       this.invalidate();
-      return await this.post<T>(url, body);
+      return await this.post<T>(url, body, timeout);
     }
   }
 
-  private async post<T>(url: string, body: string): Promise<T> {
+  private async post<T>(url: string, body: string, timeout?: number): Promise<T> {
     const session = await this.credentials();
     const response = await this.http.post(url, {
       headers: {
@@ -532,6 +535,7 @@ class MangaballSource implements ChapterSource, SearchProvider, PageLinkResolver
         "x-requested-with": "XMLHttpRequest",
       },
       ...(session.cookie === undefined ? {} : { cookies: [session.cookie] }),
+      ...(timeout === undefined ? {} : { timeout }),
       body,
     });
 

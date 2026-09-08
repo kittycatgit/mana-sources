@@ -32,6 +32,25 @@ export const RECOMMEND_SIZE = 18;
 export const TRENDING_SIZE = 20;
 
 /**
+ * `getRecentChapterRead` is the one listing served from a cache the site rebuilds on a miss,
+ * and `search_limit` is part of that cache key — so the number asked for decides whether the
+ * reply comes off the line the site's own home page keeps warm or off one only this source
+ * ever asks for. Measured 2026-09-08: `day` cold at 13.1s, and a limit of 17 that nothing
+ * else requests cold at 16.4s, both 0.4s on the next call, while every other listing answers
+ * in under a second either way. The site's own page asks for twelve, so these rows show
+ * twelve.
+ */
+export const CHAPTER_READS_SIZE = 12;
+
+/**
+ * Riding the warm line is not enough on its own: `day` goes cold again within the hour, so a
+ * rebuild still has to fit inside the request or the row returns an error card while its
+ * neighbours load. Given to these four calls only — the client default is right for
+ * everything else, none of which has ever been seen above a second.
+ */
+export const CHAPTER_READS_TIMEOUT = 30_000;
+
+/**
  * The home page's rows are all one endpoint under different `search_type` values. None of
  * them answers with a `pagination` block, so every section built on one is a single fixed
  * page and carries `viewMore: false`.
