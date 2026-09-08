@@ -4,7 +4,18 @@ Notable changes to the extensions in this repository, grouped by extension —
 each one versions independently (see `info.version` in its `main.ts`). Dates
 are UTC. Format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## Mangafire (current: v1.1.0)
+## Mangafire (current: v1.2.0)
+
+### 2026-09-08 — Every listing the site has
+
+- The home page grew from five rows to fourteen, and now carries every listing
+  mangafire.to offers without a keyword: Trending over each of the three windows the site's
+  own row is scoped to — today, this week and this month — the Hot tab of Latest Updates,
+  Most Viewed over 30 days and all time, Most Followed, Newest Series, and the catalogue
+  A to Z and Z to A.
+- Two of the site's listings were left off after checking what each query returns rather
+  than what it is labelled: the browse page's Trending sort is its 7-day view ranking under
+  another name, and its Year (oldest) sort puts the titles carrying no year at all first.
 
 ### 2026-09-08 — Chapters say which release they are
 

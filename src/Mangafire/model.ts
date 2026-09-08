@@ -83,11 +83,34 @@ export const VRF_STAGES: readonly VrfStage[] = [
 
 export const ListID = {
   Trending: "trending",
+  TrendingDay: "trending-day",
+  TrendingMonth: "trending-month",
+  Hot: "hot",
   Latest: "latest",
   Viewed: "viewed",
+  ViewedMonth: "viewed-month",
+  ViewedAll: "viewed-all",
+  Followed: "followed",
   Added: "added",
   Rated: "rated",
+  Year: "year",
+  Alphabetical: "a-z",
+  Reversed: "z-a",
 } as const;
+
+/** The three windows the home page's Trending row offers, as `/top-titles` counts them. */
+export const TrendingDays = {
+  Day: 1,
+  Week: 7,
+  Month: 30,
+} as const;
+
+/**
+ * The home page's Latest Updates row has a Hot tab beside its New one. Both order by
+ * `chapter_updated_at`; `hot=1` is what narrows the catalogue behind it from 78k titles
+ * to the ~10k the site marks hot, so the two are separate listings rather than one sort.
+ */
+export const HOT_FILTER: ApiParams = { hot: 1 };
 
 export const FilterID = {
   Types: "types",

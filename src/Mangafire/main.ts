@@ -58,6 +58,7 @@ import {
   CONTENT_TYPE_BY_NAME,
   FAN_PROVIDER,
   FilterID,
+  HOT_FILTER,
   LANGUAGE_CODES,
   ListID,
   MAX_CHAPTER_PAGES,
@@ -74,6 +75,7 @@ import {
   STATUS_BY_STATE,
   SortID,
   TYPE_LABELS,
+  TrendingDays,
   VRF_STAGES,
   YEAR_CEILING,
   YEAR_FLOOR,
@@ -86,7 +88,7 @@ import {
 const info: SourceInfo = {
   id: "mangafire",
   name: "Mangafire",
-  version: "1.1.0",
+  version: "1.2.0",
   description: "Reads manga, manhwa and manhua from mangafire.to",
   website: BASE_URL,
   rating: CatalogRating.MIXED,
@@ -140,21 +142,52 @@ class MangafireSource implements ChapterSource, SearchProvider, PageLinkResolver
   }
 
   /**
-   * The site's own home page is Trending plus a Latest Updates grid. The three rows after
-   * those are its browse sorts, chosen because they rank the catalogue on axes the first
-   * two cannot reach — a series can lead Latest Updates every day without ever being read.
+   * Every listing mangafire.to offers without a keyword. The site's home page is one
+   * Trending row scoped Day / Week / Month and one Latest Updates row tabbed Hot / New —
+   * six queries behind four tabs — and its browse page adds the sorts below. Two of the
+   * site's own listings are deliberately absent, because the query behind each is one
+   * already on this page rather than a listing of its own: `trending:desc` on /browse is
+   * the 7-day view ranking under another name, and `year:asc` sorts the titles carrying
+   * no year at all to the front.
    */
   private sections(): SectionSpec[] {
     return [
       {
         id: ListID.Trending,
-        title: "Trending",
+        title: "Trending This Week",
         subtitle: "What the site is reading this week",
         style: SectionStyle.SimpleHero,
         // /top-titles takes a limit and no page: there is no second page to open.
         viewMore: false,
         limit: 8,
-        load: () => this.trending(),
+        load: () => this.trending(TrendingDays.Week),
+      },
+      {
+        id: ListID.TrendingDay,
+        title: "Trending Today",
+        subtitle: "The last 24 hours, which is where the site opens",
+        style: SectionStyle.DetailedTripleRowPaged,
+        viewMore: false,
+        limit: 12,
+        load: () => this.trending(TrendingDays.Day),
+      },
+      {
+        id: ListID.TrendingMonth,
+        title: "Trending This Month",
+        subtitle: "The same ranking over a month, where a slow climb still shows",
+        style: SectionStyle.DetailedTripleRowPaged,
+        viewMore: false,
+        limit: 12,
+        load: () => this.trending(TrendingDays.Month),
+      },
+      {
+        id: ListID.Hot,
+        title: "Hot Updates",
+        subtitle: "New chapters from the series the site marks hot",
+        style: SectionStyle.DetailedTripleRowPaged,
+        limit: 12,
+        load: (page) =>
+          this.browse({ page, sort: SortID.Updated, ascending: false, filters: HOT_FILTER }),
       },
       {
         id: ListID.Latest,
@@ -173,6 +206,30 @@ class MangafireSource implements ChapterSource, SearchProvider, PageLinkResolver
         load: (page) => this.browse({ page, sort: SortID.ViewsWeek, ascending: false }),
       },
       {
+        id: ListID.ViewedMonth,
+        title: "Most Viewed This Month",
+        subtitle: "Thirty days of opens, so one big week counts for less",
+        style: SectionStyle.DetailedTripleRowPaged,
+        limit: 12,
+        load: (page) => this.browse({ page, sort: SortID.ViewsMonth, ascending: false }),
+      },
+      {
+        id: ListID.ViewedAll,
+        title: "Most Viewed of All Time",
+        subtitle: "The titles the site has served most since it started",
+        style: SectionStyle.DetailedTripleRowPaged,
+        limit: 12,
+        load: (page) => this.browse({ page, sort: SortID.ViewsTotal, ascending: false }),
+      },
+      {
+        id: ListID.Followed,
+        title: "Most Followed",
+        subtitle: "What readers keep in their library, not just what they open",
+        style: SectionStyle.DetailedTripleRowPaged,
+        limit: 12,
+        load: (page) => this.browse({ page, sort: SortID.Follows, ascending: false }),
+      },
+      {
         id: ListID.Added,
         title: "New Arrivals",
         subtitle: "Titles added to the catalogue most recently",
@@ -187,6 +244,30 @@ class MangafireSource implements ChapterSource, SearchProvider, PageLinkResolver
         style: SectionStyle.DetailedTripleRowPaged,
         limit: 12,
         load: (page) => this.browse({ page, sort: SortID.Score, ascending: false }),
+      },
+      {
+        id: ListID.Year,
+        title: "Newest Series",
+        subtitle: "Serialised most recently, by the year of publication",
+        style: SectionStyle.DetailedTripleRowPaged,
+        limit: 12,
+        load: (page) => this.browse({ page, sort: SortID.Year, ascending: false }),
+      },
+      {
+        id: ListID.Alphabetical,
+        title: "A to Z",
+        subtitle: "The whole catalogue, from the top",
+        style: SectionStyle.SimpleTripleRow,
+        limit: 12,
+        load: (page) => this.browse({ page, sort: SortID.Title, ascending: true }),
+      },
+      {
+        id: ListID.Reversed,
+        title: "Z to A",
+        subtitle: "And the same catalogue from the other end",
+        style: SectionStyle.SimpleTripleRow,
+        limit: 12,
+        load: (page) => this.browse({ page, sort: SortID.Title, ascending: false }),
       },
     ];
   }
@@ -384,8 +465,8 @@ class MangafireSource implements ChapterSource, SearchProvider, PageLinkResolver
 
   // -- listings ----------------------------------------------------------------
 
-  private async trending(): Promise<PagedSearchResult> {
-    const envelope = await this.json("/top-titles", { type: "trending", days: 7, limit: PER_PAGE });
+  private async trending(days: number): Promise<PagedSearchResult> {
+    const envelope = await this.json("/top-titles", { type: "trending", days, limit: PER_PAGE });
     return { results: highlights(envelope["items"]), isLastPage: true };
   }
 
