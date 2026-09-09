@@ -58,6 +58,7 @@ const HERO_STYLES = new Set([3, 4]);
 const MIN_HERO_ITEMS = 3;
 const MAX_SECTION_ITEMS = 20;
 
+const PANEL_MODE = { 0: "PAGED_MANGA", 1: "PAGED_COMIC", 2: "PAGED_VERTICAL", 3: "WEBTOON" };
 const PUBLICATION_STATUS = { 1: "ONGOING", 2: "COMPLETED", 3: "CANCELLED", 4: "HIATUS" };
 const CONTENT_RATING = { 0: "SAFE", 1: "SUGGESTIVE", 2: "MATURE", 3: "EXPLICIT" };
 
@@ -372,7 +373,21 @@ async function verify(name, probe, verbose) {
       preview.content = content;
       assert(content?.title, "content.title is empty");
       assert(content?.cover !== undefined, "content.cover missing");
-      return `"${content.title}"${content.cover ? "" : " (no cover)"}`;
+      // Absent, the app opens everything as right-to-left paged manga. That is wrong for
+      // every webtoon and every western comic, and it is invisible until someone reads
+      // one: Mkissa shipped hardcoded `contentType: MANGA` and no panel mode, so a Korean
+      // manhwa opened page-by-page, right to left. The site knows which it is — Mkissa was
+      // already fetching `type` and `countryOfOrigin` and using neither.
+      assert(
+        content?.recommendedPanelMode !== undefined,
+        "content.recommendedPanelMode is missing — the app then opens this as right-to-left " +
+          "paged manga, which is wrong for a webtoon or a comic. Map the site's own type " +
+          "field to a ReadingMode (WEBTOON for manhwa/manhua/webtoon, PAGED_COMIC for " +
+          "western comics, PAGED_MANGA for manga and doujinshi) and set contentType from " +
+          "the same field rather than hardcoding one.",
+      );
+      const mode = PANEL_MODE[content.recommendedPanelMode] ?? content.recommendedPanelMode;
+      return `"${content.title}" · ${mode}${content.cover ? "" : " (no cover)"}`;
     });
 
     let chapters;

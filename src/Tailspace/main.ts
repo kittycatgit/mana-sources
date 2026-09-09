@@ -4,6 +4,7 @@ import {
   ContentType,
   DefinedLanguages,
   PublicationStatus,
+  ReadingMode,
   SearchExcludableMultiPickerSheet,
   SectionStyle,
   additionalInfo,
@@ -58,7 +59,7 @@ import {
 const info: SourceInfo = {
   id: "tailspace",
   name: "Tailspace",
-  version: "1.1.2",
+  version: "1.1.3",
   description: "Pulls furry comics from tailspace.com",
   website: BASE_URL,
   rating: CatalogRating.EXPLICIT,
@@ -191,6 +192,10 @@ class TailspaceSource implements ChapterSource, SearchProvider, PageLinkResolver
       summary: richText(comic["description"]),
       tags,
       contentType: ContentType.COMIC,
+      // Tailspace carries no format field — `category` is the cast's gender, not a layout.
+      // Every comic is western page art (its own reader defaults to "gallery", one full
+      // page at a time, and pages measure like pages, not webtoon strips).
+      recommendedPanelMode: ReadingMode.PAGED_COMIC,
       contentRating: ContentRating.EXPLICIT,
       status:
         STATUS_BY_STATE[readString(comic["state"]).toLowerCase()] ?? PublicationStatus.ONGOING,

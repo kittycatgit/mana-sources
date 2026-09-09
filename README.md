@@ -17,14 +17,16 @@ from there.
 | ------ | ------- | -------- | ------ |
 | Ehentai | 1.2.2 | Multi-language | Explicit |
 | Hiperdex | 1.2.2 | English | Explicit |
+| Hitomi | 1.5.3 | Multi-language | Explicit |
 | Imhentai | 1.1.0 | Multi-language | Explicit |
 | Madaradex | 1.1.2 | English | Explicit |
 | Manga18fx | 1.2.2 | English | Explicit |
 | Mangaball | 1.3.6 | Multi-language | Mixed |
 | Mangafire | 1.2.2 | Multi-language | Mixed |
 | Mkissa | 1.0.1 | Multi-language | Mixed |
+| Mangak | 1.0.0 | English | Mixed |
 | Nhentai | 1.2.2 | Multi-language | Explicit |
-| Tailspace | 1.1.2 | English | Explicit |
+| Tailspace | 1.1.3 | English | Explicit |
 | Weebcentral | 1.2.2 | English | Mixed |
 
 See [CHANGELOG.md](CHANGELOG.md) for what changed and when.
