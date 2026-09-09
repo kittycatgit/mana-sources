@@ -26,7 +26,7 @@
       "path": "Ehentai",
       "environment": "source",
       "intents": 6294541,
-      "hash": "5fbb31595fbb31595fbb31595fbb31595fbb31595fbb31595fbb31595fbb3159"
+      "hash": "775f1ac0775f1ac0775f1ac0775f1ac0775f1ac0775f1ac0775f1ac0775f1ac0"
     },
     {
       "id": "hiperdex",
@@ -48,12 +48,12 @@
       "path": "Hiperdex",
       "environment": "source",
       "intents": 2104332,
-      "hash": "749378b4749378b4749378b4749378b4749378b4749378b4749378b4749378b4"
+      "hash": "4badbe014badbe014badbe014badbe014badbe014badbe014badbe014badbe01"
     },
     {
       "id": "hitomi",
       "name": "Hitomi",
-      "version": "1.4.2",
+      "version": "1.4.3",
       "description": "Reads doujinshi, manga and CG sets from hitomi.la",
       "website": "https://hitomi.la",
       "rating": 2,
@@ -76,7 +76,7 @@
       "path": "Hitomi",
       "environment": "source",
       "intents": 2100237,
-      "hash": "45601e4145601e4145601e4145601e4145601e4145601e4145601e4145601e41"
+      "hash": "066d9eec066d9eec066d9eec066d9eec066d9eec066d9eec066d9eec066d9eec"
     },
     {
       "id": "imhentai",
@@ -104,7 +104,7 @@
       "path": "Imhentai",
       "environment": "source",
       "intents": 2104329,
-      "hash": "4be250c34be250c34be250c34be250c34be250c34be250c34be250c34be250c3"
+      "hash": "22fc9d2222fc9d2222fc9d2222fc9d2222fc9d2222fc9d2222fc9d2222fc9d22"
     },
     {
       "id": "madaradex",
@@ -126,7 +126,7 @@
       "path": "Madaradex",
       "environment": "source",
       "intents": 2104332,
-      "hash": "18c33c3118c33c3118c33c3118c33c3118c33c3118c33c3118c33c3118c33c31"
+      "hash": "41a8ecd141a8ecd141a8ecd141a8ecd141a8ecd141a8ecd141a8ecd141a8ecd1"
     },
     {
       "id": "manga18fx",
@@ -148,7 +148,7 @@
       "path": "Manga18fx",
       "environment": "source",
       "intents": 2100233,
-      "hash": "2bdaa7482bdaa7482bdaa7482bdaa7482bdaa7482bdaa7482bdaa7482bdaa748"
+      "hash": "02f4f34802f4f34802f4f34802f4f34802f4f34802f4f34802f4f34802f4f348"
     },
     {
       "id": "mangaball",
@@ -174,7 +174,7 @@
       "path": "Mangaball",
       "environment": "source",
       "intents": 2104329,
-      "hash": "096a67d1096a67d1096a67d1096a67d1096a67d1096a67d1096a67d1096a67d1"
+      "hash": "32501b3332501b3332501b3332501b3332501b3332501b3332501b3332501b33"
     },
     {
       "id": "mangafire",
@@ -200,7 +200,7 @@
       "path": "Mangafire",
       "environment": "source",
       "intents": 6298637,
-      "hash": "57568e3c57568e3c57568e3c57568e3c57568e3c57568e3c57568e3c57568e3c"
+      "hash": "7fc3bddb7fc3bddb7fc3bddb7fc3bddb7fc3bddb7fc3bddb7fc3bddb7fc3bddb"
     },
     {
       "id": "nhentai",
@@ -224,7 +224,7 @@
       "path": "Nhentai",
       "environment": "source",
       "intents": 2104329,
-      "hash": "2d35d2c82d35d2c82d35d2c82d35d2c82d35d2c82d35d2c82d35d2c82d35d2c8"
+      "hash": "561b83c4561b83c4561b83c4561b83c4561b83c4561b83c4561b83c4561b83c4"
     },
     {
       "id": "tailspace",
@@ -246,7 +246,7 @@
       "path": "Tailspace",
       "environment": "source",
       "intents": 2104328,
-      "hash": "2fdc9a602fdc9a602fdc9a602fdc9a602fdc9a602fdc9a602fdc9a602fdc9a60"
+      "hash": "06f6e94306f6e94306f6e94306f6e94306f6e94306f6e94306f6e94306f6e943"
     },
     {
       "id": "weebcentral",
@@ -268,7 +268,7 @@
       "path": "Weebcentral",
       "environment": "source",
       "intents": 2104328,
-      "hash": "0d3364510d3364510d3364510d3364510d3364510d3364510d3364510d336451"
+      "hash": "361917f7361917f7361917f7361917f7361917f7361917f7361917f7361917f7"
     }
   ]
 }
