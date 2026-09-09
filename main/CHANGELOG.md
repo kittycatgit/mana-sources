@@ -211,7 +211,11 @@ are UTC. Format loosely follows [Keep a Changelog](https://keepachangelog.com/en
 - Chapter images carry the site as referer plus the `mdx_fp`/`mdx_auth` cookies the CDN
   requires.
 
-## Hitomi (current: v1.4.0)
+## Hitomi (current: v1.4.1)
+
+### 2026-09-09
+
+- Popular rows and search read through the WebView again.
 
 ### 2026-09-09
 
