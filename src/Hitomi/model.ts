@@ -10,6 +10,13 @@ import type { PreferenceValue } from "./forms/index.ts";
 
 export const BASE_URL = "https://hitomi.la";
 export const LTN_URL = "https://ltn.gold-usergeneratedcontent.net";
+
+/**
+ * The page the WebView loads before reading bytes: script-free, so the site's own scripts
+ * — which leave `eval` returning nothing on the home page as of 2026-09-09 — never run,
+ * and same-origin, so the CDN sees the referer it expects. Loads in a fraction of the time.
+ */
+export const BYTES_PAGE = `${BASE_URL}/robots.txt`;
 export const TAG_INDEX_URL = "https://tagindex.hitomi.la";
 export const THUMBNAIL_URL = "https://tn.gold-usergeneratedcontent.net";
 export const IMAGE_DOMAIN = "gold-usergeneratedcontent.net";

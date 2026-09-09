@@ -1,6 +1,6 @@
 import type { WebViewPageInstance } from "@mana-app/types";
 
-import { BASE_URL, LTN_URL } from "./model.ts";
+import { BYTES_PAGE, LTN_URL } from "./model.ts";
 
 /**
  * The site's ranked listings, read inside an auxiliary WebView.
@@ -34,7 +34,7 @@ export async function nozomiIds(
   let page: WebViewPageInstance | undefined;
   try {
     page = await WebViewPage.create();
-    await page.goto(BASE_URL, { waitUntil: "domcontentloaded" });
+    await page.goto(BYTES_PAGE, { waitUntil: "domcontentloaded" });
     return await page.evaluate<number[][], [string[], string, number]>(
       readListings,
       [...paths],

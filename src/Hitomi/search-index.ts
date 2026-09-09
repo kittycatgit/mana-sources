@@ -1,6 +1,6 @@
 import type { WebViewPageInstance } from "@mana-app/types";
 
-import { BASE_URL, LTN_URL } from "./model.ts";
+import { BYTES_PAGE, LTN_URL } from "./model.ts";
 
 /**
  * The site's own search, run inside an auxiliary WebView.
@@ -40,7 +40,7 @@ export async function searchIndexIds(
   let page: WebViewPageInstance | undefined;
   try {
     page = await WebViewPage.create();
-    await page.goto(BASE_URL, { waitUntil: "domcontentloaded" });
+    await page.goto(BYTES_PAGE, { waitUntil: "domcontentloaded" });
     const ids = await page.evaluate<number[], [string, string, string, number]>(
       runIndexSearch,
       query,
