@@ -352,7 +352,12 @@ are UTC. Format loosely follows [Keep a Changelog](https://keepachangelog.com/en
   status picker adds "Releasing", which the site's own panel omits.
 - Covers and chapter images carry the site as referer.
 
-## Tailspace (current: v1.1.2)
+## Tailspace (current: v1.1.3)
+
+### 2026-09-09
+
+- Comics open in the left-to-right paged comic reader instead of right-to-left manga.
+
 
 ### 2026-09-09
 
