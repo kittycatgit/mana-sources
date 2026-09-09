@@ -25,7 +25,11 @@ are UTC. Format loosely follows [Keep a Changelog](https://keepachangelog.com/en
 - Home: Trending Today, Latest Updates, Recently Added, Most Followed, Most Read This Week, Highest Rated and Longest Series.
 - Search filters by genre, status, type, content rating, demographic, format and chapter count, and sorts ten ways.
 - Opening a mangak.io link goes straight to the title.
-## Hitomi (current: v1.5.3)
+## Hitomi (current: v1.5.4)
+
+### 2026-09-09
+
+- Back to the 1.5.2 source.
 
 ### 2026-09-09
 
