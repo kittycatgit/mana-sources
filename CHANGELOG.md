@@ -12,6 +12,88 @@ are UTC. Format loosely follows [Keep a Changelog](https://keepachangelog.com/en
 - Home: Trending Today, Latest Updates, Recently Added, Most Followed, Most Read This Week, Highest Rated and Longest Series.
 - Search filters by genre, status, type, content rating, demographic, format and chapter count, and sorts ten ways.
 - Opening a mangak.io link goes straight to the title.
+## Hitomi (current: v1.5.3)
+
+### 2026-09-09
+
+- Artist CG, Game CG and image sets open left-to-right as stills; doujinshi and manga still open right-to-left.
+
+### 2026-09-09
+
+- A home row the site returns nothing for is left off the page instead of shown as "No Results".
+
+### 2026-09-09
+
+- Home rows and search pages holding an older gallery come back filled instead of empty.
+- Tags carry their ♀ and ♂ marker on every gallery.
+
+### 2026-09-09
+
+- Every listing pages through the whole site instead of stopping at 25 titles.
+- Search and every listing can be ordered by date added or by the day's, week's, month's or year's most read.
+- Home: Popular Today, Just Added, Popular This Week, Popular This Month, Popular This Year, Doujinshi, Manga, Artist CG, Game CG, Image Sets.
+- Search takes several terms at once, and a tag, type or language filter narrows a typed query rather than replacing it.
+- Nothing opens a WebView any more, on the home page or in search.
+
+### 2026-09-09
+
+- A search or Popular row that fails in the WebView says why, instead of showing a shorter list.
+
+### 2026-09-09
+
+- Popular rows and search load a script-free page of the site instead of its home page.
+
+### 2026-09-09
+
+- The home page shows at once with the feed rows filled; the Popular rows fill in after.
+
+### 2026-09-09
+
+- Popular rows and search read through the WebView again.
+
+### 2026-09-09
+
+- The four Popular rows are on the home page on every device.
+- Search and the Popular rows no longer open a WebView.
+
+### 2026-09-09
+
+- Home rows load one at a time again, as the app asks for them.
+
+### 2026-09-09
+
+- The home page arrives with every row already filled.
+- The Popular rows fetch only the twelve titles they show.
+
+
+### 2026-09-08
+
+- Added Popular Today, Popular This Week, Popular This Month and Popular This Year.
+- Those four rows need a WebView; without one they are left off rather than shown empty.
+
+### 2026-09-07
+
+- Search runs the site's own search: several words narrow each other, `-word` excludes,
+  and `namespace:value` works.
+- Search results page instead of returning one 25-entry feed.
+- A query matching nothing returns an empty page instead of an error card.
+- An exactly-named term wins over a longer one containing it — "dragon ball" no longer
+  resolves to `dragon ball z`.
+- New Language setting covering all 45 languages, applied to the home page and search.
+- New in English only appears when no language is set.
+
+### 2026-09-06
+
+- Reads hitomi.la through its Atom feeds, gallery JSON and tag index; every page on the
+  site renders client-side and arrives empty.
+- Listings are 25 galleries deep and report `isLastPage` on the first page.
+- Home: Just Added, New in English, Doujinshi, Manga, Game CG. Artist CG left out — it
+  shares roughly 70% of Just Added.
+- Search matches one term at a time, the way the site's own box does. Gallery titles are
+  not searchable.
+- Type and Language filters, all 45 languages. No sort options — every feed is
+  newest-first.
+- Chapter images need the site as referer.
 
 ## Mangaball (current: v1.3.6)
 
@@ -220,68 +302,6 @@ are UTC. Format loosely follows [Keep a Changelog](https://keepachangelog.com/en
 - Chapter images carry the site as referer plus the `mdx_fp`/`mdx_auth` cookies the CDN
   requires.
 
-## Hitomi (current: v1.4.5)
-
-### 2026-09-09
-
-- A search or Popular row that fails in the WebView says why, instead of showing a shorter list.
-
-### 2026-09-09
-
-- Popular rows and search load a script-free page of the site instead of its home page.
-
-### 2026-09-09
-
-- The home page shows at once with the feed rows filled; the Popular rows fill in after.
-
-### 2026-09-09
-
-- Popular rows and search read through the WebView again.
-
-### 2026-09-09
-
-- The four Popular rows are on the home page on every device.
-- Search and the Popular rows no longer open a WebView.
-
-### 2026-09-09
-
-- Home rows load one at a time again, as the app asks for them.
-
-### 2026-09-09
-
-- The home page arrives with every row already filled.
-- The Popular rows fetch only the twelve titles they show.
-
-
-### 2026-09-08
-
-- Added Popular Today, Popular This Week, Popular This Month and Popular This Year.
-- Those four rows need a WebView; without one they are left off rather than shown empty.
-
-### 2026-09-07
-
-- Search runs the site's own search: several words narrow each other, `-word` excludes,
-  and `namespace:value` works.
-- Search results page instead of returning one 25-entry feed.
-- A query matching nothing returns an empty page instead of an error card.
-- An exactly-named term wins over a longer one containing it — "dragon ball" no longer
-  resolves to `dragon ball z`.
-- New Language setting covering all 45 languages, applied to the home page and search.
-- New in English only appears when no language is set.
-
-### 2026-09-06
-
-- Reads hitomi.la through its Atom feeds, gallery JSON and tag index; every page on the
-  site renders client-side and arrives empty.
-- Listings are 25 galleries deep and report `isLastPage` on the first page.
-- Home: Just Added, New in English, Doujinshi, Manga, Game CG. Artist CG left out — it
-  shares roughly 70% of Just Added.
-- Search matches one term at a time, the way the site's own box does. Gallery titles are
-  not searchable.
-- Type and Language filters, all 45 languages. No sort options — every feed is
-  newest-first.
-- Chapter images need the site as referer.
-
 ## Weebcentral (current: v1.2.2)
 
 ### 2026-09-09
@@ -344,7 +364,12 @@ are UTC. Format loosely follows [Keep a Changelog](https://keepachangelog.com/en
   status picker adds "Releasing", which the site's own panel omits.
 - Covers and chapter images carry the site as referer.
 
-## Tailspace (current: v1.1.2)
+## Tailspace (current: v1.1.3)
+
+### 2026-09-09
+
+- Comics open in the left-to-right paged comic reader instead of right-to-left manga.
+
 
 ### 2026-09-09
 
