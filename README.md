@@ -17,7 +17,7 @@ from there.
 | ------ | ------- | -------- | ------ |
 | Ehentai | 1.2.2 | Multi-language | Explicit |
 | Hiperdex | 1.2.2 | English | Explicit |
-| Hitomi | 1.5.3 | Multi-language | Explicit |
+| Hitomi | 1.5.4 | Multi-language | Explicit |
 | Imhentai | 1.1.0 | Multi-language | Explicit |
 | Madaradex | 1.1.2 | English | Explicit |
 | Manga18fx | 1.2.2 | English | Explicit |

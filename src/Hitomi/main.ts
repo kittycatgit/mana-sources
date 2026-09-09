@@ -1,6 +1,7 @@
 import {
   CatalogRating,
   ContentRating,
+  ContentType,
   DefinedLanguages,
   PublicationStatus,
   SearchPickerSheet,
@@ -57,7 +58,6 @@ import {
   ANY_TAG,
   ANY_TYPE,
   BASE_URL,
-  DEFAULT_READING,
   FilterID,
   IMAGE_DOMAIN,
   IMAGE_KEY_TTL,
@@ -68,7 +68,6 @@ import {
   ListID,
   PREFERENCE_DEFAULTS,
   PreferenceID,
-  READING_BY_TYPE,
   SORT_OPTIONS,
   SortID,
   TAG_INDEX_URL,
@@ -91,7 +90,7 @@ import { indexVersion, wordIds } from "./search-index.ts";
 const info: SourceInfo = {
   id: "hitomi",
   name: "Hitomi",
-  version: "1.5.3",
+  version: "1.5.4",
   description: "Reads doujinshi, manga and CG sets from hitomi.la",
   website: BASE_URL,
   rating: CatalogRating.EXPLICIT,
@@ -294,15 +293,12 @@ class HitomiSource
       characterSection(characterNames(gallery)),
     ].filter((section) => section !== undefined);
 
-    const reading = READING_BY_TYPE[text(gallery.type)] ?? DEFAULT_READING;
-
     return {
       title: galleryTitle(gallery, id),
       cover: coverUrl(gallery),
       summary: summaryOf(gallery),
       tags,
-      contentType: reading.contentType,
-      recommendedPanelMode: reading.readingMode,
+      contentType: ContentType.COMIC,
       contentRating: ContentRating.EXPLICIT,
       // A gallery is a finished upload rather than a serial: the site publishes no status
       // wording at all, and every entry is complete on the day it appears.

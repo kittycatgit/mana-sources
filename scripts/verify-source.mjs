@@ -373,20 +373,20 @@ async function verify(name, probe, verbose) {
       preview.content = content;
       assert(content?.title, "content.title is empty");
       assert(content?.cover !== undefined, "content.cover missing");
-      // Absent, the app opens everything as right-to-left paged manga. That is wrong for
-      // every webtoon and every western comic, and it is invisible until someone reads
-      // one: Mkissa shipped hardcoded `contentType: MANGA` and no panel mode, so a Korean
-      // manhwa opened page-by-page, right to left. The site knows which it is — Mkissa was
-      // already fetching `type` and `countryOfOrigin` and using neither.
-      assert(
-        content?.recommendedPanelMode !== undefined,
-        "content.recommendedPanelMode is missing — the app then opens this as right-to-left " +
-          "paged manga, which is wrong for a webtoon or a comic. Map the site's own type " +
-          "field to a ReadingMode (WEBTOON for manhwa/manhua/webtoon, PAGED_COMIC for " +
-          "western comics, PAGED_MANGA for manga and doujinshi) and set contentType from " +
-          "the same field rather than hardcoding one.",
-      );
-      const mode = PANEL_MODE[content.recommendedPanelMode] ?? content.recommendedPanelMode;
+      // Absent, the app opens everything as right-to-left paged manga — wrong for every
+      // webtoon and every western comic, and invisible until someone reads one. Said, not
+      // failed: a source whose galleries genuinely are right-to-left is correct without it,
+      // and a gate here would block putting such a source back the way it was.
+      if (content?.recommendedPanelMode === undefined) {
+        console.log(
+          `      ${DIM}content.recommendedPanelMode is not set, so the app opens this ` +
+            `right-to-left — check that is right for what this site carries.${RESET}`,
+        );
+      }
+      const mode =
+        content?.recommendedPanelMode === undefined
+          ? "no panel mode"
+          : (PANEL_MODE[content.recommendedPanelMode] ?? content.recommendedPanelMode);
       return `"${content.title}" · ${mode}${content.cover ? "" : " (no cover)"}`;
     });
 
