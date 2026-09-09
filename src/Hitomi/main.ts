@@ -83,13 +83,14 @@ import {
   type ImageKey,
   type Suggestion,
   type TermTarget,
+  type Text,
 } from "./model.ts";
 import { indexVersion, wordIds } from "./search-index.ts";
 
 const info: SourceInfo = {
   id: "hitomi",
   name: "Hitomi",
-  version: "1.5.0",
+  version: "1.5.1",
   description: "Reads doujinshi, manga and CG sets from hitomi.la",
   website: BASE_URL,
   rating: CatalogRating.EXPLICIT,
@@ -120,6 +121,9 @@ const ROW_LIMIT = 12;
 const HERO_LIMIT = 6;
 
 type ParsedTerm = { value: string; negated: boolean };
+
+/** A gallery record together with the id the listing filed it under. */
+type Listed = { id: string; gallery: GalleryInfo };
 
 class HitomiSource
   implements ChapterSource, SearchProvider, PageLinkResolver, SourcePreferenceProvider
@@ -267,36 +271,30 @@ class HitomiSource
   }
 
   async getContent(contentId: string): Promise<Content> {
-    const gallery = await this.gallery(contentId);
-    const japaneseTitle = gallery.japanese_title?.trim() ?? "";
+    const id = String(contentId);
+    const gallery = await this.gallery(id);
+    const japaneseTitle = text(gallery.japanese_title).trim();
 
-    const tags: Tag[] = (gallery.tags ?? []).map((entry) => ({
-      id: tagId(entry.tag, entry.female === "1", entry.male === "1"),
-      title: tagTitle(entry.tag, entry.female === "1", entry.male === "1"),
-      contentRating: ContentRating.EXPLICIT,
-    }));
+    const tags: Tag[] = (gallery.tags ?? []).map((entry) => {
+      const name = text(entry.tag);
+      const female = flag(entry.female);
+      const male = flag(entry.male);
+      return {
+        id: tagId(name, female, male),
+        title: tagTitle(name, female, male),
+        contentRating: ContentRating.EXPLICIT,
+      };
+    });
 
     const sections = [
-      creditSection(
-        "artists",
-        "Artists",
-        (gallery.artists ?? []).map((entry) => entry.artist),
-      ),
-      creditSection(
-        "groups",
-        "Circles",
-        (gallery.groups ?? []).map((entry) => entry.group),
-      ),
-      creditSection(
-        "series",
-        "Series",
-        (gallery.parodys ?? []).map((entry) => entry.parody),
-      ),
-      characterSection((gallery.characters ?? []).map((entry) => entry.character)),
+      creditSection("artists", "Artists", artistNames(gallery)),
+      creditSection("groups", "Circles", groupNames(gallery)),
+      creditSection("series", "Series", parodyNames(gallery)),
+      characterSection(characterNames(gallery)),
     ].filter((section) => section !== undefined);
 
     return {
-      title: galleryTitle(gallery, contentId),
+      title: galleryTitle(gallery, id),
       cover: coverUrl(gallery),
       summary: summaryOf(gallery),
       tags,
@@ -305,42 +303,44 @@ class HitomiSource
       // A gallery is a finished upload rather than a serial: the site publishes no status
       // wording at all, and every entry is complete on the day it appears.
       status: PublicationStatus.COMPLETED,
-      webUrl: webUrl(gallery, contentId),
+      webUrl: webUrl(gallery, id),
       ...(japaneseTitle === "" ? {} : { additionalTitles: [japaneseTitle] }),
       ...(sections.length === 0 ? {} : { additionalInfo: sections }),
     };
   }
 
   async getChapters(contentId: string): Promise<Chapter[]> {
-    const gallery = await this.gallery(contentId);
+    const id = String(contentId);
+    const gallery = await this.gallery(id);
     const count = (gallery.files ?? []).length;
     if (count === 0) return [];
 
     return [
       {
-        chapterId: contentId,
+        chapterId: id,
         number: 1,
         index: 0,
         date:
           parseGalleryDate(gallery.date) ?? parseGalleryDate(gallery.datepublished) ?? new Date(0),
-        language: LANGUAGE_CODES[gallery.language ?? ""] ?? DefinedLanguages.UNIVERSAL,
+        language: LANGUAGE_CODES[text(gallery.language)] ?? DefinedLanguages.UNIVERSAL,
         title: count === 1 ? "1 page" : `${count} pages`,
-        webUrl: webUrl(gallery, contentId),
+        webUrl: webUrl(gallery, id),
       },
     ];
   }
 
   async getChapterData(contentId: string, chapterId: string): Promise<ChapterData> {
-    const gallery = await this.gallery(contentId);
+    const id = String(contentId);
+    const gallery = await this.gallery(id);
     const files = gallery.files ?? [];
     if (files.length === 0) {
       throw new Error(
-        `Hitomi lists no images for gallery ${contentId} (chapter ${chapterId}). Video galleries and withdrawn uploads have none.`,
+        `Hitomi lists no images for gallery ${id} (chapter ${String(chapterId)}). Video galleries and withdrawn uploads have none.`,
       );
     }
 
     const key = await this.imageKeys();
-    return { pages: files.map((file) => ({ url: pageUrl(file.hash, key) })) };
+    return { pages: files.map((file) => ({ url: pageUrl(text(file.hash), key) })) };
   }
 
   async willRequestImage(imageURL: string): Promise<NetworkRequest> {
@@ -388,7 +388,7 @@ class HitomiSource
         `Hitomi listed ${ids.length} galleries for this page but returned metadata for none of them.`,
       );
     }
-    return { results: found.map(toHighlight), isLastPage };
+    return { results: found.map((entry) => toHighlight(entry.id, entry.gallery)), isLastPage };
   }
 
   /**
@@ -515,11 +515,20 @@ class HitomiSource
     return value;
   }
 
-  private async galleriesFor(ids: readonly number[]): Promise<GalleryInfo[]> {
+  /**
+   * The listing's own id is the one carried through, not the `id` inside the record: the
+   * CDN answers some `galleries/<id>.js` with a record filed under a different id, and that
+   * id is the one the reader would then ask for.
+   */
+  private async galleriesFor(ids: readonly number[]): Promise<Listed[]> {
     const galleries = await Promise.all(
-      ids.map((id) => this.gallery(String(id)).catch((): GalleryInfo | undefined => undefined)),
+      ids.map(async (id): Promise<Listed | undefined> => {
+        const contentId = String(id);
+        const gallery = await this.gallery(contentId).catch(() => undefined);
+        return gallery === undefined ? undefined : { id: contentId, gallery };
+      }),
     );
-    return galleries.filter((gallery): gallery is GalleryInfo => gallery !== undefined);
+    return galleries.filter((entry): entry is Listed => entry !== undefined);
   }
 
   private async gallery(contentId: string): Promise<GalleryInfo> {
@@ -679,18 +688,51 @@ function thumbnailUrl(hash: string): string {
 }
 
 function coverUrl(gallery: GalleryInfo): string {
-  const hash = (gallery.files ?? [])[0]?.hash ?? "";
+  const hash = text((gallery.files ?? [])[0]?.hash);
   return hash === "" ? "" : thumbnailUrl(hash);
 }
 
 // -- gallery shapes ----------------------------------------------------------
 
+/** Every field the gallery JSON carries can arrive as a number; everything returned from
+ * here is a string, and a number reaching the app fails the whole reply to decode. */
+function text(value: Text | undefined): string {
+  return value === null || value === undefined ? "" : String(value);
+}
+
+/** A tag's gender flag, which is `"1"` on some galleries and `1` on others. */
+function flag(value: Text | undefined): boolean {
+  return text(value) === "1";
+}
+
+function names(entries: readonly string[]): string[] {
+  return entries.filter((name) => name !== "");
+}
+
+function artistNames(gallery: GalleryInfo): string[] {
+  return names((gallery.artists ?? []).map((entry) => text(entry.artist)));
+}
+
+function groupNames(gallery: GalleryInfo): string[] {
+  return names((gallery.groups ?? []).map((entry) => text(entry.group)));
+}
+
+function parodyNames(gallery: GalleryInfo): string[] {
+  return names((gallery.parodys ?? []).map((entry) => text(entry.parody)));
+}
+
+function characterNames(gallery: GalleryInfo): string[] {
+  return names((gallery.characters ?? []).map((entry) => text(entry.character)));
+}
+
 function galleryTitle(gallery: GalleryInfo, contentId: string): string {
-  return gallery.title?.trim() || gallery.japanese_title?.trim() || `Gallery ${contentId}`;
+  return (
+    text(gallery.title).trim() || text(gallery.japanese_title).trim() || `Gallery ${contentId}`
+  );
 }
 
 function webUrl(gallery: GalleryInfo, contentId: string): string {
-  const path = gallery.galleryurl ?? "";
+  const path = text(gallery.galleryurl);
   if (path.startsWith("/")) return `${BASE_URL}${path}`;
   return `${BASE_URL}/galleries/${contentId}.html`;
 }
@@ -721,30 +763,29 @@ function pageCount(gallery: GalleryInfo): string {
   return pages === 1 ? "1 page" : `${pages} pages`;
 }
 
-function toHighlight(gallery: GalleryInfo): Highlight {
-  const artists = (gallery.artists ?? []).map((entry) => entry.artist);
-  const subtitle = [joinNames(artists), pageCount(gallery)]
+function toHighlight(contentId: string, gallery: GalleryInfo): Highlight {
+  const subtitle = [joinNames(artistNames(gallery)), pageCount(gallery)]
     .filter((part) => part !== "")
     .join(" · ");
 
   return {
-    id: gallery.id,
-    title: galleryTitle(gallery, gallery.id),
+    id: contentId,
+    title: galleryTitle(gallery, contentId),
     cover: coverUrl(gallery),
     contentRating: ContentRating.EXPLICIT,
-    webUrl: webUrl(gallery, gallery.id),
+    webUrl: webUrl(gallery, contentId),
     ...(subtitle === "" ? {} : { subtitle }),
   };
 }
 
 /** Hitomi publishes no blurb, so the summary is written out of the metadata it does have. */
 function summaryOf(gallery: GalleryInfo): string {
-  const type = TYPE_TITLES[gallery.type ?? ""] ?? "Gallery";
-  const artists = joinNames((gallery.artists ?? []).map((entry) => entry.artist));
-  const groups = joinNames((gallery.groups ?? []).map((entry) => entry.group));
-  const parodies = (gallery.parodys ?? []).map((entry) => entry.parody);
-  const characters = joinNames((gallery.characters ?? []).map((entry) => entry.character));
-  const language = gallery.language_localname ?? titleCase(gallery.language ?? "");
+  const type = TYPE_TITLES[text(gallery.type)] ?? "Gallery";
+  const artists = joinNames(artistNames(gallery));
+  const groups = joinNames(groupNames(gallery));
+  const parodies = parodyNames(gallery);
+  const characters = joinNames(characterNames(gallery));
+  const language = text(gallery.language_localname) || titleCase(text(gallery.language));
 
   const credit = artists === "" ? (groups === "" ? "" : ` from ${groups}`) : ` by ${artists}`;
   const extent = [
@@ -804,18 +845,19 @@ function safeParse(raw: string): unknown {
  * `2026-09-06 00:14:00-05` and `2025-08-29` are the two shapes the site publishes. The
  * offset comes without minutes, which `Date` will not parse, so it is completed here.
  */
-function parseGalleryDate(raw: string | null): Date | undefined {
-  if (!raw) return undefined;
+function parseGalleryDate(raw: Text | undefined): Date | undefined {
+  const value = text(raw);
+  if (value === "") return undefined;
 
   const full = /^(\d{4}-\d{2}-\d{2}) (\d{2}:\d{2}:\d{2})(?:\.\d+)?([+-]\d{2})(?::?(\d{2}))?$/.exec(
-    raw,
+    value,
   );
   if (full) {
     const parsed = new Date(`${full[1]}T${full[2]}${full[3]}:${full[4] ?? "00"}`);
     return Number.isNaN(parsed.getTime()) ? undefined : parsed;
   }
 
-  const dateOnly = /^(\d{4})-(\d{2})-(\d{2})$/.exec(raw);
+  const dateOnly = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
   if (dateOnly) {
     return new Date(Date.UTC(Number(dateOnly[1]), Number(dateOnly[2]) - 1, Number(dateOnly[3])));
   }

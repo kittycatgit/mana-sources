@@ -306,35 +306,44 @@ export const TYPE_TITLES: Record<string, string> = {
   anime: "Anime",
 };
 
+/**
+ * A field of the gallery JSON. The site serialises each value as its database column rather
+ * than as the field, so the same field is a string for one gallery and a number for the
+ * next — `id` comes as `"3907438"` and as `3907438`, a tag's gender flag as `"1"` and as
+ * `1`. Everything this source hands back is declared as a string, so every one of these
+ * goes through `text()` before it is returned or compared.
+ */
+export type Text = string | number | null;
+
 export type GalleryFile = {
-  hash: string;
-  name: string;
+  hash: Text;
+  name: Text;
   width?: number;
   height?: number;
 };
 
 export type GalleryTag = {
-  tag: string;
-  female?: string;
-  male?: string;
+  tag: Text;
+  female?: Text;
+  male?: Text;
 };
 
 export type GalleryInfo = {
-  id: string;
-  title: string | null;
-  japanese_title: string | null;
-  type: string | null;
-  language: string | null;
-  language_localname: string | null;
-  date: string | null;
-  datepublished: string | null;
-  galleryurl: string | null;
+  id: string | number;
+  title: Text;
+  japanese_title: Text;
+  type: Text;
+  language: Text;
+  language_localname: Text;
+  date: Text;
+  datepublished: Text;
+  galleryurl: Text;
   files: GalleryFile[] | null;
   tags: GalleryTag[] | null;
-  artists: { artist: string }[] | null;
-  groups: { group: string }[] | null;
-  parodys: { parody: string }[] | null;
-  characters: { character: string }[] | null;
+  artists: { artist: Text }[] | null;
+  groups: { group: Text }[] | null;
+  parodys: { parody: Text }[] | null;
+  characters: { character: Text }[] | null;
 };
 
 export type ImageKey = {

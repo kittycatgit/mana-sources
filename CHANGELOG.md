@@ -4,7 +4,12 @@ Notable changes to the extensions in this repository, grouped by extension —
 each one versions independently (see `info.version` in its `main.ts`). Dates
 are UTC. Format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## Hitomi (current: v1.5.0)
+## Hitomi (current: v1.5.1)
+
+### 2026-09-09
+
+- Home rows and search pages holding an older gallery come back filled instead of empty.
+- Tags carry their ♀ and ♂ marker on every gallery.
 
 ### 2026-09-09
 
