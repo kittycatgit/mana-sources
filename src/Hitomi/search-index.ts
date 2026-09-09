@@ -53,7 +53,7 @@ export async function searchIndexIds(
     // No WebView at all is the one case the caller can do something about; any other
     // failure is said out loud, because a silently shorter list hides that anything broke.
     if (typeof WebViewPage === "undefined") return undefined;
-    if (error instanceof Error && /^WebViewPage/.test(error.message)) throw error;
+    if (error instanceof Error && error.message.startsWith("WebViewPage")) throw error;
     const message = error instanceof Error ? error.message : String(error);
     throw new Error(`Hitomi's search could not run in the WebView: ${message}`);
   } finally {
