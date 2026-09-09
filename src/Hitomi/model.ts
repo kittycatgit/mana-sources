@@ -1,5 +1,7 @@
 import {
+  ContentType,
   DefinedLanguages,
+  ReadingMode,
   SearchMenuPicker,
   SearchPickerSheet,
   type Option,
@@ -305,6 +307,28 @@ export const TYPE_TITLES: Record<string, string> = {
   imageset: "Image set",
   anime: "Anime",
 };
+
+export type Reading = { contentType: ContentType; readingMode: ReadingMode };
+
+const MANGA_READING: Reading = {
+  contentType: ContentType.MANGA,
+  readingMode: ReadingMode.PAGED_MANGA,
+};
+const STILLS_READING: Reading = {
+  contentType: ContentType.COMIC,
+  readingMode: ReadingMode.PAGED_COMIC,
+};
+
+/** Only the two types that are Japanese sequential art read right-to-left; the CG sets are stills. */
+export const READING_BY_TYPE: Record<string, Reading> = {
+  doujinshi: MANGA_READING,
+  manga: MANGA_READING,
+  artistcg: STILLS_READING,
+  gamecg: STILLS_READING,
+  imageset: STILLS_READING,
+};
+
+export const DEFAULT_READING = MANGA_READING;
 
 /**
  * A field of the gallery JSON. The site serialises each value as its database column rather

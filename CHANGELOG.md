@@ -4,7 +4,11 @@ Notable changes to the extensions in this repository, grouped by extension —
 each one versions independently (see `info.version` in its `main.ts`). Dates
 are UTC. Format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## Hitomi (current: v1.5.2)
+## Hitomi (current: v1.5.3)
+
+### 2026-09-09
+
+- Artist CG, Game CG and image sets open left-to-right as stills; doujinshi and manga still open right-to-left.
 
 ### 2026-09-09
 
