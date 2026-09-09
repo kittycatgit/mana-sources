@@ -22,7 +22,7 @@ from there.
 | Manga18fx | 1.2.2 | English | Explicit |
 | Mangaball | 1.3.6 | Multi-language | Mixed |
 | Mangafire | 1.2.2 | Multi-language | Mixed |
-| Mkissa | 1.0.0 | Multi-language | Mixed |
+| Mkissa | 1.0.1 | Multi-language | Mixed |
 | Nhentai | 1.2.2 | Multi-language | Explicit |
 | Tailspace | 1.1.2 | English | Explicit |
 | Weebcentral | 1.2.2 | English | Mixed |

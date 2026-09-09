@@ -1,6 +1,8 @@
 import {
+  ContentType,
   DefinedLanguages,
   PublicationStatus,
+  ReadingMode,
   SearchMenuPicker,
   SearchPickerSheet,
   type Option,
@@ -248,6 +250,37 @@ export const LANGUAGE_BY_COUNTRY: Record<string, string> = {
   JP: DefinedLanguages.JAPANESE,
   KR: DefinedLanguages.KOREAN,
   CN: DefinedLanguages.CHINESE,
+};
+
+// `type` is the site's own label for the format, and it is empty far more often than not:
+// across 17,000-odd distinct titles harvested from every sort and every origin it takes
+// only "Manga", "Manhwa" and "Manhua", and four titles in five carry none of them —
+// "Fist Demon of Mount Hua" and "Volcanic Age" are both bare. `countryOfOrigin` is the
+// fallback, and it is already what a card's subtitle shows.
+export const FORMAT_BY_COUNTRY: Record<string, string> = {
+  JP: "Manga",
+  KR: "Manhwa",
+  CN: "Manhua",
+};
+
+export const CONTENT_TYPE_BY_FORMAT: Record<string, ContentType> = {
+  manga: ContentType.MANGA,
+  doujinshi: ContentType.MANGA,
+  manhwa: ContentType.MANHWA,
+  manhua: ContentType.MANHUA,
+  webtoon: ContentType.COMIC,
+  comic: ContentType.COMIC,
+};
+
+// Korean and Chinese webcomics are drawn as one scrolling strip; manga and doujinshi are
+// paged right-to-left, and a western comic is paged the other way.
+export const READING_MODE_BY_FORMAT: Record<string, ReadingMode> = {
+  manga: ReadingMode.PAGED_MANGA,
+  doujinshi: ReadingMode.PAGED_MANGA,
+  manhwa: ReadingMode.WEBTOON,
+  manhua: ReadingMode.WEBTOON,
+  webtoon: ReadingMode.WEBTOON,
+  comic: ReadingMode.PAGED_COMIC,
 };
 
 const CARD_FIELDS = `_id name englishName thumbnail tbObj{u} type status countryOfOrigin score availableChapters lastChapterDate`;

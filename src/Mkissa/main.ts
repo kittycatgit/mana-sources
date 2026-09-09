@@ -4,6 +4,7 @@ import {
   ContentType,
   DefinedLanguages,
   PublicationStatus,
+  ReadingMode,
   SearchExcludableMultiPickerSheet,
   SectionStyle,
   additionalInfo,
@@ -48,7 +49,9 @@ import {
   BASE_URL,
   CHAPTER_READ_QUERY,
   CONTENT_QUERY,
+  CONTENT_TYPE_BY_FORMAT,
   CountryOrigin,
+  FORMAT_BY_COUNTRY,
   FilterID,
   GENRE_OPTIONS,
   IMAGE_BASE_URL,
@@ -61,6 +64,7 @@ import {
   PREFERENCE_NAMESPACE,
   PREFERENCE_SECTIONS,
   PreferenceID,
+  READING_MODE_BY_FORMAT,
   SEARCH_FIELDS,
   SORT_BY,
   SORT_OPTIONS,
@@ -74,7 +78,7 @@ import { postGraphql } from "./page-fetch.ts";
 const info: SourceInfo = {
   id: "mkissa",
   name: "Mkissa",
-  version: "1.0.0",
+  version: "1.0.1",
   description: "Reads the manga catalogue behind mkissa.to",
   website: BASE_URL,
   rating: CatalogRating.MIXED,
@@ -233,6 +237,8 @@ class MkissaSource implements ChapterSource, SearchProvider, PageLinkResolver {
     const authors = readStrings(manga["authors"]);
     const magazine = readString(manga["magazine"]);
 
+    const format = formatOf(manga).toLowerCase();
+
     const trackers: Record<string, string> = {};
     const anilist = readString(manga["aniListId"]);
     const mal = readString(manga["malId"]);
@@ -256,7 +262,8 @@ class MkissaSource implements ChapterSource, SearchProvider, PageLinkResolver {
       cover: coverUrl(manga),
       summary: summaryOf(manga, magazine),
       tags,
-      contentType: ContentType.MANGA,
+      contentType: CONTENT_TYPE_BY_FORMAT[format] ?? ContentType.MANGA,
+      recommendedPanelMode: READING_MODE_BY_FORMAT[format] ?? ReadingMode.PAGED_MANGA,
       contentRating: ratingOf(genres),
       status: statusOf(manga),
       webUrl: contentUrl(contentId),
@@ -495,11 +502,7 @@ function displayTitle(entry: Record<string, unknown>): string {
 function formatOf(entry: Record<string, unknown>): string {
   const declared = readString(entry["type"]);
   if (declared) return declared;
-  const country = readString(entry["countryOfOrigin"]);
-  if (country === "KR") return "Manhwa";
-  if (country === "CN") return "Manhua";
-  if (country === "JP") return "Manga";
-  return "";
+  return FORMAT_BY_COUNTRY[readString(entry["countryOfOrigin"])] ?? "";
 }
 
 function chapterCount(entry: Record<string, unknown>, translation: string): number {
