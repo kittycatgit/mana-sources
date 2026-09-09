@@ -4,6 +4,15 @@ Notable changes to the extensions in this repository, grouped by extension —
 each one versions independently (see `info.version` in its `main.ts`). Dates
 are UTC. Format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## Mangak (current: v1.0.0)
+
+### 2026-09-09
+
+- Reads mangak.io through the API its own pages call.
+- Home: Trending Today, Latest Updates, Recently Added, Most Followed, Most Read This Week, Highest Rated and Longest Series.
+- Search filters by genre, status, type, content rating, demographic, format and chapter count, and sorts ten ways.
+- Opening a mangak.io link goes straight to the title.
+
 ## Mangaball (current: v1.3.6)
 
 ### 2026-09-09
