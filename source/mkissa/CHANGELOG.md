@@ -4,7 +4,12 @@ Notable changes to the extensions in this repository, grouped by extension —
 each one versions independently (see `info.version` in its `main.ts`). Dates
 are UTC. Format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## Mkissa (current: v1.0.0)
+## Mkissa (current: v1.0.1)
+
+### 2026-09-09
+
+- Manhwa and manhua open as scrolling webtoons instead of right-to-left paged manga.
+- A series' format follows the site's own label, falling back to the country it came from.
 
 ### 2026-09-09
 

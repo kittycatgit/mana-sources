@@ -5,7 +5,7 @@
     {
       "id": "mkissa",
       "name": "Mkissa",
-      "version": "1.0.0",
+      "version": "1.0.1",
       "description": "Reads the manga catalogue behind mkissa.to",
       "website": "https://mkissa.to",
       "rating": 1,
@@ -25,7 +25,7 @@
       "path": "Mkissa",
       "environment": "source",
       "intents": 2104333,
-      "hash": "2a8cff102a8cff102a8cff102a8cff102a8cff102a8cff102a8cff102a8cff10"
+      "hash": "06cac6d206cac6d206cac6d206cac6d206cac6d206cac6d206cac6d206cac6d2"
     }
   ]
 }
