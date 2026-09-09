@@ -36,6 +36,30 @@ export function toPageSections(specs: readonly SectionSpec[]): PageSection[] {
   }));
 }
 
+/**
+ * Every row fetched at once and returned already filled, with the empty ones dropped.
+ *
+ * A section returned without `items` is resolved by the app one call at a time; fetched
+ * together the page costs its slowest row instead of the sum. A row whose request fails or
+ * comes back with nothing is left out of the home page altogether rather than shown as an
+ * empty card — the user asked for no empty rows, and a row the site could not fill today is
+ * better absent than blank.
+ */
+export async function fillPageSections(specs: readonly SectionSpec[]): Promise<PageSection[]> {
+  const loaded = await Promise.allSettled(specs.map((spec) => spec.load(1)));
+  const sections: PageSection[] = [];
+  toPageSections(specs).forEach((section, index) => {
+    const outcome = loaded[index];
+    const spec = specs[index];
+    if (!outcome || !spec || outcome.status !== "fulfilled") return;
+    const { results } = outcome.value;
+    const items = spec.limit === undefined ? results : results.slice(0, spec.limit);
+    if (items.length === 0) return;
+    sections.push({ ...section, items });
+  });
+  return sections;
+}
+
 export function sectionById(
   specs: readonly SectionSpec[],
   id: string | undefined,

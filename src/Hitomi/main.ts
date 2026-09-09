@@ -40,7 +40,7 @@ import {
   pageOf,
   resolveSection,
   resolveSortId,
-  toPageSections,
+  fillPageSections,
   type PreferenceValue,
   type SectionSpec,
 } from "./forms/index.ts";
@@ -90,7 +90,7 @@ import { indexVersion, wordIds } from "./search-index.ts";
 const info: SourceInfo = {
   id: "hitomi",
   name: "Hitomi",
-  version: "1.5.1",
+  version: "1.5.2",
   description: "Reads doujinshi, manga and CG sets from hitomi.la",
   website: BASE_URL,
   rating: CatalogRating.EXPLICIT,
@@ -245,7 +245,7 @@ class HitomiSource
   }
 
   async getSectionsForPage(_link: PageLink): Promise<PageSection[]> {
-    return toPageSections(await this.sections());
+    return fillPageSections(await this.sections());
   }
 
   async resolvePageSection(_link: PageLink, sectionID: string): Promise<ResolvedPageSection> {
