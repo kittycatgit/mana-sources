@@ -1,0 +1,31 @@
+{
+  "repositoryName": "Demon | Mana Sources",
+  "thumbnail": "https://avatars.githubusercontent.com/u/204405496",
+  "sources": [
+    {
+      "id": "mkissa",
+      "name": "Mkissa",
+      "version": "1.0.0",
+      "description": "Reads the manga catalogue behind mkissa.to",
+      "website": "https://mkissa.to",
+      "rating": 1,
+      "supportedLanguages": [
+        "en_US",
+        "ja_JP",
+        "ko_KR",
+        "zh-CN"
+      ],
+      "thumbnail": "Mkissa.png",
+      "developers": [
+        {
+          "name": "Demon",
+          "github": "https://github.com/kittycatgit"
+        }
+      ],
+      "path": "Mkissa",
+      "environment": "source",
+      "intents": 2104333,
+      "hash": "2a8cff102a8cff102a8cff102a8cff102a8cff102a8cff102a8cff102a8cff10"
+    }
+  ]
+}
