@@ -261,9 +261,25 @@ class HarnessWebViewPageInstance {
     if (this.live) {
       this.url = url;
       const html = await evaluateInBrowser("return document.documentElement.outerHTML");
-      this.html = html.ok && typeof html.value === "string" ? html.value : "";
-      if (!looksChallenged(this.html)) return;
-      this.live = false; // Challenged even there: fall through and report it the usual way.
+      if (html.ok) {
+        this.html = typeof html.value === "string" ? html.value : "";
+        if (!looksChallenged(this.html)) return;
+        this.live = false; // Challenged even there: fall through and report it the usual way.
+      } else if (/result is not a function/.test(html.error ?? "")) {
+        // The page's own scripts have broken the eval path Playwright evaluates through —
+        // hitomi.la does — so nothing can run on that page from here. A WKWebView on a
+        // device is not affected. A script-free document on the same origin keeps what a
+        // source reading through the page actually depends on (origin, cookies, referer),
+        // so evaluation moves there, while `html` stays the page that was asked for.
+        const bare = new URL("/robots.txt", url).href;
+        this.live = await openInBrowser(bare);
+        const fetched = this.live ? await fetchThroughBrowser(url) : null;
+        this.html = fetched?.data ?? "";
+        if (this.live && this.html && !looksChallenged(this.html)) return;
+        this.live = false;
+      } else {
+        this.live = false;
+      }
     }
 
     const controller = new AbortController();
