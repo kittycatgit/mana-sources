@@ -27,7 +27,7 @@ from there.
 | Mangak | 1.0.0 | English | Mixed |
 | Nhentai | 1.2.2 | Multi-language | Explicit |
 | Tailspace | 1.1.3 | English | Explicit |
-| Weebcentral | 1.2.2 | English | Mixed |
+| Weebcentral | 1.2.3 | English | Mixed |
 
 See [CHANGELOG.md](CHANGELOG.md) for what changed and when.
 

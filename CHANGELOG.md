@@ -319,7 +319,11 @@ are UTC. Format loosely follows [Keep a Changelog](https://keepachangelog.com/en
 - Chapter images carry the site as referer plus the `mdx_fp`/`mdx_auth` cookies the CDN
   requires.
 
-## Weebcentral (current: v1.2.2)
+## Weebcentral (current: v1.2.3)
+
+### 2026-09-15
+
+- Checking a library for updates no longer fails some titles with "Too Many Requests"; chapter lists are asked for one at a time. Reading and browsing are unchanged.
 
 ### 2026-09-09
 

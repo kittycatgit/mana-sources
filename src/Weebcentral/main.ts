@@ -68,7 +68,7 @@ import {
 const info: SourceInfo = {
   id: "weebcentral",
   name: "Weebcentral",
-  version: "1.2.2",
+  version: "1.2.3",
   description: "Pulls manga, manhwa and manhua from weebcentral.com",
   website: BASE_URL,
   rating: CatalogRating.MIXED,
@@ -83,11 +83,16 @@ const config: SourceConfig = {
   owningLinks: ["weebcentral.com"],
 };
 
+/** How many times a rate-limited request is asked again before the reader is told. */
+const RATE_LIMIT_RETRIES = 3;
+
 class WeebcentralSource implements ChapterSource, SearchProvider, PageLinkResolver {
   readonly info = info;
   readonly config = config;
 
   private client: NetworkClient | undefined;
+  /** The tail of the chapter-list queue; see `chapterListPage`. */
+  private chapterListQueue: Promise<void> = Promise.resolve();
 
   private get http(): NetworkClient {
     this.client ??= buildClient({
@@ -327,7 +332,7 @@ class WeebcentralSource implements ChapterSource, SearchProvider, PageLinkResolv
   }
 
   async getChapters(contentId: string): Promise<Chapter[]> {
-    const $ = await this.page(`${seriesUrl(contentId)}/full-chapter-list`);
+    const $ = await this.chapterListPage(`${seriesUrl(contentId)}/full-chapter-list`);
     // The list is rendered newest-first and `index` has to run from the first chapter, so
     // it is reversed before anything is assigned an index.
     const rows = $('a[href*="/chapters/"]').toArray().reverse();
@@ -423,6 +428,56 @@ class WeebcentralSource implements ChapterSource, SearchProvider, PageLinkResolv
       throw new Error(`Weebcentral returned an empty page for ${url}.`);
     }
     return load(response.data);
+  }
+
+  /**
+   * The chapter list, fetched one caller at a time.
+   *
+   * Weebcentral refuses requests that arrive together rather than requests that arrive
+   * often: paced one every 200ms it serves a dozen chapter lists happily, while a burst of
+   * twenty-five gets one through and answers the rest with 429. Checking a library for
+   * updates asks for every title at once, so it is the one thing that reliably trips it —
+   * which is why only some titles failed, and why pressing retry has always worked.
+   *
+   * Queueing them costs nothing: the client is already limited to five requests a second,
+   * so the same work takes the same time either way. It only stops them arriving at the
+   * same instant. Reading and browsing do not queue — a burst never came from there, and a
+   * page of a chapter should not wait behind anything.
+   */
+  private async chapterListPage(url: string): Promise<CheerioAPI> {
+    const run = async (): Promise<CheerioAPI> => {
+      for (let attempt = 0; ; attempt++) {
+        const response = await this.http.get(url, {
+          // A 429 has to arrive as a reply rather than a throw, so it can be asked again.
+          validateStatus: (status: number) => (status >= 200 && status < 300) || status === 429,
+        });
+
+        if (response.status !== 429) {
+          if (!response.data) {
+            throw new Error(`Weebcentral returned an empty page for ${url}.`);
+          }
+          return load(response.data);
+        }
+
+        if (attempt >= RATE_LIMIT_RETRIES) {
+          throw new Error(
+            `Weebcentral turned down ${RATE_LIMIT_RETRIES + 1} attempts at ${url} in a row ` +
+              `(HTTP 429). Updating fewer titles at once gives it less to turn down.`,
+          );
+        }
+        // The client's own rate limit spaces this next attempt out; there is no timer in a
+        // source to wait on, and asking again immediately is what that pacing prevents.
+      }
+    };
+
+    // Each call waits for the one before it, whether that succeeded or failed — a failure
+    // must not carry down the chain and take every later title with it.
+    const result = this.chapterListQueue.then(run, run);
+    this.chapterListQueue = result.then(
+      () => undefined,
+      () => undefined,
+    );
+    return result;
   }
 }
 
