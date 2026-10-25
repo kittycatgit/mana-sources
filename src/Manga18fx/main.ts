@@ -3,6 +3,7 @@ import {
   ContentRating,
   ContentType,
   DefinedLanguages,
+  HttpClient,
   SearchPickerSheet,
   SectionStyle,
   additionalInfo,
@@ -32,7 +33,7 @@ import {
 import { load, type Cheerio, type CheerioAPI } from "cheerio";
 import type { AnyNode } from "domhandler";
 
-import { HTML_ACCEPT, buildClient } from "./client.ts";
+import { HTML_ACCEPT, acceptStatus, buildClient } from "./client.ts";
 import {
   FilterReader,
   PreferenceStore,
@@ -74,7 +75,7 @@ import {
 const info: SourceInfo = {
   id: "manga18fx",
   name: "Manga18fx",
-  version: "1.2.2",
+  version: "1.2.3",
   description: "Pulls adult manhwa, manhua and manga from manga18fx.com",
   website: BASE_URL,
   rating: CatalogRating.EXPLICIT,
@@ -96,11 +97,11 @@ class Manga18fxSource
   readonly config = config;
 
   private readonly preferences = new PreferenceStore(PREFERENCE_NAMESPACE, PREFERENCE_DEFAULTS);
-  private client: NetworkClient | undefined;
+  private client: HttpClient | undefined;
   private genreOptions: Option[] | undefined;
   private titleCache: { contentId: string; at: number; document: CheerioAPI } | undefined;
 
-  private get http(): NetworkClient {
+  private get http(): HttpClient {
     this.client ??= buildClient({
       baseUrl: BASE_URL,
       requests: 3,
@@ -395,9 +396,9 @@ class Manga18fxSource
     const response = await this.http.get(url, {
       // Paging past the end answers 404 with the listing template and no rows, which is
       // the end of the list rather than a failure — the parser reports zero either way.
-      validateStatus: (status) => (status >= 200 && status < 300) || status === 404,
+      ...acceptStatus(404),
     });
-    return load(response.data);
+    return load(await response.text());
   }
 }
 

@@ -254,7 +254,11 @@ are UTC. Format loosely follows [Keep a Changelog](https://keepachangelog.com/en
 - Each gallery is one chapter.
 - Pages served under HTTP 451 are accepted, so age-notice regions still work.
 
-## Manga18fx (current: v1.2.2)
+## Manga18fx (current: v1.2.3)
+
+### 2026-10-26
+
+- Rebuilt for the current Mana release, which replaced how sources talk to the network.
 
 ### 2026-09-09
 
