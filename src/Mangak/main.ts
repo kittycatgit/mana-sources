@@ -3,6 +3,7 @@ import {
   ContentRating,
   ContentType,
   DefinedLanguages,
+  HttpClient,
   ReadingMode,
   SearchExcludableMultiPickerSheet,
   SectionStyle,
@@ -12,12 +13,13 @@ import {
   type ChapterPage,
   type ChapterSource,
   type Content,
+  type CoverRequestHandler,
   type DeepLinkContext,
   type Highlight,
-  type NetworkRequest,
   type Option,
   type PageLink,
   type PageLinkResolver,
+  type PageRequestHandler,
   type PageSection,
   type PagedSearchResult,
   type ResolvedPageSection,
@@ -32,7 +34,7 @@ import {
   type Tag,
 } from "@mana-app/types";
 
-import { JSON_ACCEPT, buildClient } from "./client.ts";
+import { JSON_ACCEPT, buildClient, buildImageClient } from "./client.ts";
 import {
   FilterReader,
   buildSearchForm,
@@ -66,7 +68,7 @@ import {
 const info: SourceInfo = {
   id: "mangak",
   name: "Mangak",
-  version: "1.0.0",
+  version: "1.0.1",
   description: "Reads manga, manhwa and manhua from mangak.io",
   website: BASE_URL,
   rating: CatalogRating.MIXED,
@@ -81,14 +83,22 @@ const config: SourceConfig = {
   owningLinks: ["mangak.io"],
 };
 
-class MangakSource implements ChapterSource, SearchProvider, PageLinkResolver {
+class MangakSource
+  implements
+    ChapterSource,
+    SearchProvider,
+    PageLinkResolver,
+    CoverRequestHandler,
+    PageRequestHandler
+{
   readonly info = info;
   readonly config = config;
 
-  private client: NetworkClient | undefined;
+  private client: HttpClient | undefined;
+  private images: HttpClient | undefined;
   private genreOptions: Option[] | undefined;
 
-  private get http(): NetworkClient {
+  private get http(): HttpClient {
     this.client ??= buildClient({
       baseUrl: BASE_URL,
       requests: 5,
@@ -97,6 +107,11 @@ class MangakSource implements ChapterSource, SearchProvider, PageLinkResolver {
       json: true,
     });
     return this.client;
+  }
+
+  private get imageHttp(): HttpClient {
+    this.images ??= buildImageClient({ referer: `${BASE_URL}/`, origin: BASE_URL });
+    return this.images;
   }
 
   /**
@@ -317,10 +332,14 @@ class MangakSource implements ChapterSource, SearchProvider, PageLinkResolver {
     return { pages };
   }
 
-  async willRequestImage(imageURL: string): Promise<NetworkRequest> {
-    // Both CDNs — pages on rx.qvzr*.org, covers on rx.resmk.org — answer 403 with an HTML
-    // error page to any request that does not name the site as its referer.
-    return { url: imageURL, headers: { origin: BASE_URL, referer: `${BASE_URL}/` } };
+  // Both CDNs — pages on rx.qvzr*.org, covers on rx.resmk.org — answer 403 with an HTML
+  // error page to any request that does not name the site as its referer.
+  getCoverTransport(): HttpClient {
+    return this.imageHttp;
+  }
+
+  getPageTransport(): HttpClient {
+    return this.imageHttp;
   }
 
   async handleURL(url: string): Promise<DeepLinkContext | null> {
@@ -404,7 +423,7 @@ class MangakSource implements ChapterSource, SearchProvider, PageLinkResolver {
 
   private async json(path: string, params?: ApiParams): Promise<unknown> {
     const response = await this.http.get(withQuery(`${API_URL}${path}`, params));
-    const envelope = readRecord(safeParse(response.data));
+    const envelope = readRecord(safeParse(await response.text()));
     if (envelope["success"] !== true) {
       throw new Error(
         `Mangak rejected ${path}: ${readString(envelope["message"]) || "no reason given"}`,
