@@ -1,8 +1,10 @@
 import {
   CatalogRating,
+  CloudflareError,
   ContentRating,
   ContentType,
   DefinedLanguages,
+  HttpClient,
   PublicationStatus,
   SectionStyle,
   additionalInfo,
@@ -75,7 +77,7 @@ import {
 const info: SourceInfo = {
   id: "imhentai",
   name: "Imhentai",
-  version: "1.1.0",
+  version: "1.1.1",
   description: "Browses the doujinshi, manga and artist CG galleries on imhentai.xxx",
   website: BASE_URL,
   rating: CatalogRating.EXPLICIT,
@@ -104,11 +106,11 @@ class ImhentaiSource
   readonly info = info;
   readonly config = config;
 
-  private client: NetworkClient | undefined;
+  private client: HttpClient | undefined;
   private readonly preferences = new PreferenceStore(PREFERENCE_NAMESPACE, PREFERENCE_DEFAULTS);
   private gallery: { contentId: string; html: string } | undefined;
 
-  private get http(): NetworkClient {
+  private get http(): HttpClient {
     this.client ??= buildClient({ baseUrl: BASE_URL, requests: 3, interval: 1 });
     return this.client;
   }
@@ -303,7 +305,7 @@ class ImhentaiSource
   private async listing(query: ListingQuery): Promise<PagedSearchResult> {
     const page = pageOf({ page: query.page });
     const response = await this.http.get(withQuery(SEARCH_URL, listingParams(query, page)));
-    return parseListing(response.data, page);
+    return parseListing(await response.text(), page);
   }
 
   private async galleryHtml(contentId: string): Promise<string> {
@@ -312,7 +314,7 @@ class ImhentaiSource
     const url = galleryUrl(contentId);
     let html: string;
     try {
-      html = (await this.http.get(url)).data;
+      html = await (await this.http.get(url)).text();
     } catch (error) {
       // Cloudflare challenges every route on this site except /search/, so the gallery page
       // is only reachable through the WebView carrying the clearance the user established
