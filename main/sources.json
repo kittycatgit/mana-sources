@@ -26,7 +26,7 @@
       "path": "Ehentai",
       "environment": "source",
       "intents": 106957833,
-      "hash": "586220c5586220c5586220c5586220c5586220c5586220c5586220c5586220c5"
+      "hash": "6115d2316115d2316115d2316115d2316115d2316115d2316115d2316115d231"
     },
     {
       "id": "hiperdex",
@@ -48,7 +48,7 @@
       "path": "Hiperdex",
       "environment": "source",
       "intents": 102767624,
-      "hash": "2893e4112893e4112893e4112893e4112893e4112893e4112893e4112893e411"
+      "hash": "1df429d81df429d81df429d81df429d81df429d81df429d81df429d81df429d8"
     },
     {
       "id": "hitomi",
@@ -76,7 +76,7 @@
       "path": "Hitomi",
       "environment": "source",
       "intents": 102767625,
-      "hash": "77e90d0777e90d0777e90d0777e90d0777e90d0777e90d0777e90d0777e90d07"
+      "hash": "418ee571418ee571418ee571418ee571418ee571418ee571418ee571418ee571"
     },
     {
       "id": "imhentai",
@@ -104,7 +104,7 @@
       "path": "Imhentai",
       "environment": "source",
       "intents": 2104329,
-      "hash": "4a7f49b04a7f49b04a7f49b04a7f49b04a7f49b04a7f49b04a7f49b04a7f49b0"
+      "hash": "03f73bcb03f73bcb03f73bcb03f73bcb03f73bcb03f73bcb03f73bcb03f73bcb"
     },
     {
       "id": "madaradex",
@@ -126,7 +126,7 @@
       "path": "Madaradex",
       "environment": "source",
       "intents": 102767624,
-      "hash": "7d69091b7d69091b7d69091b7d69091b7d69091b7d69091b7d69091b7d69091b"
+      "hash": "3c0ee99c3c0ee99c3c0ee99c3c0ee99c3c0ee99c3c0ee99c3c0ee99c3c0ee99c"
     },
     {
       "id": "manga18fx",
@@ -148,14 +148,14 @@
       "path": "Manga18fx",
       "environment": "source",
       "intents": 2100233,
-      "hash": "70dde77170dde77170dde77170dde77170dde77170dde77170dde77170dde771"
+      "hash": "2a55d6642a55d6642a55d6642a55d6642a55d6642a55d6642a55d6642a55d664"
     },
     {
       "id": "mangaball",
       "name": "Mangaball",
-      "version": "1.3.7",
-      "description": "Pulls manga, manhwa and manhua from mangaball.net",
-      "website": "https://mangaball.net",
+      "version": "1.4.0",
+      "description": "Pulls manga, manhwa and manhua from mangaball.com",
+      "website": "https://mangaball.com",
       "rating": 1,
       "supportedLanguages": [
         "en_US",
@@ -173,8 +173,8 @@
       ],
       "path": "Mangaball",
       "environment": "source",
-      "intents": 2104329,
-      "hash": "6da4127a6da4127a6da4127a6da4127a6da4127a6da4127a6da4127a6da4127a"
+      "intents": 102767625,
+      "hash": "584ba661584ba661584ba661584ba661584ba661584ba661584ba661584ba661"
     },
     {
       "id": "mangafire",
@@ -200,7 +200,7 @@
       "path": "Mangafire",
       "environment": "source",
       "intents": 106961929,
-      "hash": "083caebb083caebb083caebb083caebb083caebb083caebb083caebb083caebb"
+      "hash": "3e4b61763e4b61763e4b61763e4b61763e4b61763e4b61763e4b61763e4b6176"
     },
     {
       "id": "mangak",
@@ -222,7 +222,7 @@
       "path": "Mangak",
       "environment": "source",
       "intents": 106961928,
-      "hash": "386b85a3386b85a3386b85a3386b85a3386b85a3386b85a3386b85a3386b85a3"
+      "hash": "7ef38fa77ef38fa77ef38fa77ef38fa77ef38fa77ef38fa77ef38fa77ef38fa7"
     },
     {
       "id": "mkissa",
@@ -247,7 +247,7 @@
       "path": "Mkissa",
       "environment": "source",
       "intents": 102767625,
-      "hash": "01b0b8dc01b0b8dc01b0b8dc01b0b8dc01b0b8dc01b0b8dc01b0b8dc01b0b8dc"
+      "hash": "44d7552344d7552344d7552344d7552344d7552344d7552344d7552344d75523"
     },
     {
       "id": "nhentai",
@@ -271,7 +271,7 @@
       "path": "Nhentai",
       "environment": "source",
       "intents": 2104329,
-      "hash": "18d1f26118d1f26118d1f26118d1f26118d1f26118d1f26118d1f26118d1f261"
+      "hash": "5f59fbac5f59fbac5f59fbac5f59fbac5f59fbac5f59fbac5f59fbac5f59fbac"
     },
     {
       "id": "tailspace",
@@ -293,7 +293,7 @@
       "path": "Tailspace",
       "environment": "source",
       "intents": 2104328,
-      "hash": "793b8637793b8637793b8637793b8637793b8637793b8637793b8637793b8637"
+      "hash": "32b37c2d32b37c2d32b37c2d32b37c2d32b37c2d32b37c2d32b37c2d32b37c2d"
     },
     {
       "id": "weebcentral",
@@ -315,7 +315,7 @@
       "path": "Weebcentral",
       "environment": "source",
       "intents": 2104328,
-      "hash": "03a522a303a522a303a522a303a522a303a522a303a522a303a522a303a522a3"
+      "hash": "4a2d30244a2d30244a2d30244a2d30244a2d30244a2d30244a2d30244a2d3024"
     }
   ]
 }
