@@ -333,9 +333,11 @@ export async function evaluateInBrowser(script, args = []) {
   // gone by the time the script runs, so every source lost its arguments entirely. The
   // collision is a host behaviour this cannot reproduce; `references/recon.md` carries the
   // rule that keeps sources clear of it instead.
+  // `script` is a function body — it `return`s its value — so the caller can put the
+  // bundle's async helpers in front of the statement that needs them.
   const fn = `async () => {
     const args = ${JSON.stringify(args)};
-    const value = await (async () => { ${script.startsWith("return") ? script : `return ${script}`} })();
+    const value = await (async () => { ${script} })();
     return JSON.stringify({ value: value === undefined ? null : value });
   }`;
 

@@ -18,12 +18,13 @@ import path from "node:path";
 import vm from "node:vm";
 import { fileURLToPath } from "node:url";
 import {
-  CloudflareError,
+  INTENT_NAMES,
   ManaStore,
-  NetworkClient,
-  NetworkError,
-  WebViewPage,
+  createHttpHost,
   decodeIntents,
+  expectedIntents,
+  hostRuntimeSource,
+  webViewPageFor,
 } from "./harness/runtime.mjs";
 import { assisted, closeBrowser } from "./harness/browser.mjs";
 
@@ -62,28 +63,36 @@ const PANEL_MODE = { 0: "PAGED_MANGA", 1: "PAGED_COMIC", 2: "PAGED_VERTICAL", 3:
 const PUBLICATION_STATUS = { 1: "ONGOING", 2: "COMPLETED", 3: "CANCELLED", 4: "HIATUS" };
 const CONTENT_RATING = { 0: "SAFE", 1: "SUGGESTIVE", 2: "MATURE", 3: "EXPLICIT" };
 
+/** `RequestOrigin` in the runtime: which transport the app asks a source for. */
+const ORIGIN = { Cover: 1, Page: 2 };
+
 /**
  * Fetches a handful of URLs and reports the ones that do not come back as images.
  *
- * A source with `willRequestImage` is telling the app how to ask for its images — most
- * often a referer a CDN refuses to serve without, and sometimes cookies alongside it.
- * Fetching bare would report 403 on a source that works perfectly in the app, so the
- * handler is applied here too, `cookies` included.
+ * A source with `getCoverTransport` or `getPageTransport` is telling the app which client
+ * to load its images through — most often one that sends a referer the CDN refuses to
+ * serve without, sometimes one that mints a cookie first. Fetching bare would report 403
+ * on a source that works perfectly in the app, so each URL goes through the same
+ * `loadImage` the app calls, which dispatches to the transport and hands back the body.
+ * A source with no transport for that kind of image is fetched bare, as the app does.
  */
-async function checkImageUrls(urls, target) {
+async function checkImageUrls(urls, loaded) {
+  const { target, host, loadImage } = loaded;
   const broken = [];
-  for (const url of urls) {
+  for (const { url, origin } of urls) {
+    const method = origin === ORIGIN.Page ? "getPageTransport" : "getCoverTransport";
     try {
-      const request = target?.willRequestImage ? await target.willRequestImage(url) : undefined;
-      const headers = {};
-      for (const [key, value] of Object.entries(request?.headers ?? {})) {
-        headers[key] = String(value);
+      if (typeof target[method] === "function") {
+        const native = await loadImage({ url, origin });
+        const type = String(native.headers?.["content-type"] ?? "");
+        const length = host.bytesOf(native.bodyID).byteLength;
+        host.release(native.bodyID);
+        if (!type.startsWith("image/") || length === 0) {
+          broken.push(`${url} -> HTTP ${native.status} ${type} (${length} bytes)`);
+        }
+        continue;
       }
-      const cookies = request?.cookies ?? [];
-      if (cookies.length > 0) {
-        headers.cookie = cookies.map((cookie) => `${cookie.name}=${cookie.value}`).join("; ");
-      }
-      const response = await fetch(request?.url ?? url, { headers });
+      const response = await fetch(url);
       const type = response.headers.get("content-type") ?? "";
       if (!response.ok || !type.startsWith("image/")) {
         broken.push(`${url} -> HTTP ${response.status} ${type}`);
@@ -107,24 +116,32 @@ function parseArgs(argv) {
   return args;
 }
 
+/**
+ * Loads the bundle the way the app does: the HTTP host first, so its operation scope
+ * patches the realm's promises before the bundle creates any, then the bundle itself.
+ *
+ * Every method is then called through `run`, which opens a source operation around it —
+ * the thing the app does per call, and what gives a request its owner. A request made
+ * outside one is refused by the bundle, and a body read after its operation closed throws,
+ * so a source that keeps a response past the end of its method fails here rather than on
+ * a device.
+ */
 function loadTarget(bundlePath) {
   const code = fs.readFileSync(bundlePath, "utf-8");
-  const store = new ManaStore();
+  const host = createHttpHost();
 
   const sandbox = {
-    NetworkClient,
-    NetworkError,
-    CloudflareError,
-    ObjectStore: store,
+    __manaHTTPBridge: host.bridge,
+    ObjectStore: new ManaStore(),
     SecureStore: new ManaStore(),
-    WebViewPage,
+    WebViewPage: webViewPageFor(() => sandbox.__manaSerializedFunctionPrelude),
     console,
     setTimeout,
     clearTimeout,
     setInterval,
     clearInterval,
-    fetch,
     AbortController,
+    AbortSignal,
     TextEncoder,
     TextDecoder,
     URL,
@@ -136,11 +153,21 @@ function loadTarget(bundlePath) {
   sandbox.self = sandbox;
 
   const context = vm.createContext(sandbox);
+  vm.runInContext(hostRuntimeSource(), context, { filename: "http-host.generated.js" });
   vm.runInContext(code, context, { filename: path.basename(bundlePath) });
 
   const Target = context.Target;
   if (!Target) throw new Error(`No Target exported by ${path.basename(bundlePath)}`);
-  return new Target();
+  const ManaHTTP = context.ManaHTTP;
+  if (!ManaHTTP?.runHttpOperation) throw new Error("The HTTP host runtime did not install");
+  const target = new Target();
+
+  return {
+    target,
+    host,
+    run: (callback) => ManaHTTP.runHttpOperation(callback),
+    loadImage: (request) => ManaHTTP.runHttpOperation(() => ManaHTTP.loadImage(target, request)),
+  };
 }
 
 /**
@@ -285,13 +312,37 @@ async function verify(name, probe, verbose) {
     throw new Error(`${bundlePath} not found — run "npm run build" first`);
   }
 
-  const target = loadTarget(bundlePath);
-  if (target.onEnvironmentLoaded) await target.onEnvironmentLoaded();
+  const loaded = loadTarget(bundlePath);
+  const { target, run } = loaded;
+  if (target.onEnvironmentLoaded) await run(() => target.onEnvironmentLoaded());
 
   const results = [];
   const meta = { name, info: target.info, intents: undefined };
   /** What a user would actually see, gathered for --verbose and the image check. */
   const preview = { sections: [], search: [], content: undefined, chapters: [], pages: [] };
+
+  // A bundle that throws while the build evaluates it still lands in dist/sources/, so
+  // every step below can be green on a source the app will never list. And the bits are
+  // what the app reads: a method with no bit is a feature that does not exist.
+  await step(results, "catalogue", async () => {
+    const manifestPath = path.join(ROOT, "dist", "sources.json");
+    assert(fs.existsSync(manifestPath), "dist/sources.json not found — run \"npm run build\" first");
+    const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf-8"));
+    const entry = (manifest.sources ?? []).find((s) => s.name === name);
+    assert(entry, `${name} is not in dist/sources.json — the build log says why it was dropped`);
+    meta.intents = entry.intents;
+    const expected = expectedIntents(target);
+    const actual = new Set([...INTENT_NAMES.keys()].filter((bit) => (entry.intents >> bit) & 1));
+    const missing = [...expected].filter((bit) => !actual.has(bit)).map((bit) => INTENT_NAMES[bit]);
+    const extra = [...actual].filter((bit) => !expected.has(bit)).map((bit) => INTENT_NAMES[bit]);
+    assert(
+      missing.length === 0 && extra.length === 0,
+      `intents in dist/sources.json do not match the instance` +
+        (missing.length ? `\nnot set: ${missing.join(", ")}` : "") +
+        (extra.length ? `\nset without a method: ${extra.join(", ")}` : ""),
+    );
+    return `${entry.intents} · ${decodeIntents(entry.intents).join(", ")}`;
+  });
 
   await step(results, "info", async () => {
     assert(target.info?.id, "info.id missing");
@@ -305,12 +356,14 @@ async function verify(name, probe, verbose) {
   });
 
   if (target.getSearchForm) {
-    await step(results, "getSearchForm", async () => checkSearchForm(await target.getSearchForm()));
+    await step(results, "getSearchForm", async () =>
+      checkSearchForm(await run(() => target.getSearchForm())),
+    );
   }
 
   if (target.getSortOptions) {
     await step(results, "getSortOptions", async () => {
-      const options = await target.getSortOptions();
+      const options = await run(() => target.getSortOptions());
       assert(Array.isArray(options) && options.length > 0, "no sort options returned");
       return `${options.length} options`;
     });
@@ -318,7 +371,7 @@ async function verify(name, probe, verbose) {
 
   if (target.getPreferenceMenu) {
     await step(results, "getPreferenceMenu", async () => {
-      const form = await target.getPreferenceMenu();
+      const form = await run(() => target.getPreferenceMenu());
       assert(form && Array.isArray(form.sections), "no sections returned");
       return `${form.sections.length} sections`;
     });
@@ -329,7 +382,7 @@ async function verify(name, probe, verbose) {
     // The step's return value is its printed detail, so anything a step needs to hand
     // onwards is stashed here instead — returning the array printed a blank detail.
     await step(results, "getSectionsForPage", async () => {
-      const found = await target.getSectionsForPage({ id: "home" });
+      const found = await run(() => target.getSectionsForPage({ id: "home" }));
       assert(Array.isArray(found) && found.length > 0, "no sections returned");
       sections = found;
       return `${found.length} sections`;
@@ -338,13 +391,13 @@ async function verify(name, probe, verbose) {
     if (Array.isArray(sections)) {
       if (target.willResolveSectionsForPage) {
         await step(results, "willResolveSectionsForPage", async () => {
-          await target.willResolveSectionsForPage({ id: "home" });
+          await run(() => target.willResolveSectionsForPage({ id: "home" }));
           return "ok";
         });
       }
       for (const section of sections) {
         await step(results, `resolvePageSection(${section.id})`, async () => {
-          const resolved = await target.resolvePageSection({ id: "home" }, section.id);
+          const resolved = await run(() => target.resolvePageSection({ id: "home" }, section.id));
           preview.sections.push({ section, items: resolved?.items ?? [] });
           return checkHighlights(resolved?.items, section.id);
         });
@@ -353,7 +406,7 @@ async function verify(name, probe, verbose) {
   }
 
   const searched = await step(results, "search", async () => {
-    const page = await target.search({ page: 1, query: probe.query ?? "" });
+    const page = await run(() => target.search({ page: 1, query: probe.query ?? "" }));
     assert(typeof page?.isLastPage === "boolean", "isLastPage missing");
     preview.search = page.results ?? [];
     return checkHighlights(page.results, "search");
@@ -369,7 +422,7 @@ async function verify(name, probe, verbose) {
     });
   } else {
     await step(results, "getContent", async () => {
-      const content = await target.getContent(contentId);
+      const content = await run(() => target.getContent(contentId));
       preview.content = content;
       assert(content?.title, "content.title is empty");
       assert(content?.cover !== undefined, "content.cover missing");
@@ -393,7 +446,7 @@ async function verify(name, probe, verbose) {
     let chapters;
     if (target.getChapters) {
       await step(results, "getChapters", async () => {
-        const found = await target.getChapters(contentId);
+        const found = await run(() => target.getChapters(contentId));
         preview.chapters = found ?? [];
         const detail = checkChapters(found);
         chapters = found;
@@ -423,7 +476,7 @@ async function verify(name, probe, verbose) {
         // break still shows up as FAIL.
         let data;
         try {
-          data = await target.getChapterData(contentId, chapterId);
+          data = await run(() => target.getChapterData(contentId, chapterId));
         } catch (error) {
           if (probe.pagesDependOnUpstream) {
             throw new Skip(`upstream has no pages: ${firstLine(error)}`);
@@ -481,15 +534,17 @@ async function verify(name, probe, verbose) {
   // Shape checks pass happily on a cover URL that 404s, which is a blank grid for the
   // user. Sample a few of the URLs the source actually produced and fetch them.
   const sampled = [
-    ...preview.sections.flatMap((entry) => entry.items.slice(0, 1).map((item) => item.cover)),
-    preview.search[0]?.cover,
-    preview.content?.cover,
-    preview.pages[0]?.url,
-  ].filter((url) => typeof url === "string" && url.startsWith("http"));
+    ...preview.sections.flatMap((entry) =>
+      entry.items.slice(0, 1).map((item) => ({ url: item.cover, origin: ORIGIN.Cover })),
+    ),
+    { url: preview.search[0]?.cover, origin: ORIGIN.Cover },
+    { url: preview.content?.cover, origin: ORIGIN.Cover },
+    { url: preview.pages[0]?.url, origin: ORIGIN.Page },
+  ].filter(({ url }) => typeof url === "string" && url.startsWith("http"));
 
   if (sampled.length > 0) {
     await step(results, "images", async () => {
-      const broken = await checkImageUrls(sampled, target);
+      const broken = await checkImageUrls(sampled, loaded);
       // A chapter page that does not serve is a reader that cannot read: always a failure.
       // A cover is the site's own data, and one dead cover in a sample of twenty is a title
       // whose upstream image has gone — mangaball's covers are proxied from mangaupdates,

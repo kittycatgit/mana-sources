@@ -4,12 +4,24 @@
 /**
  * Host shims for running a built `.mana` bundle outside the Mana app.
  *
- * The bundle is self-contained JavaScript that ends in
- * `globalThis.Target = __exports__.Target` and expects the host to provide
- * `NetworkClient`, `CloudflareError`, `NetworkError`, `ObjectStore` and
- * `SecureStore` as globals. These implementations mirror the contract the
- * in-app runtime provides, backed by Node's `fetch`.
+ * Since `@mana-app/types@0.1.1` a bundle carries its own copy of the HTTP runtime —
+ * `HttpClient`, `HttpResponse`, the errors, the rate limiter, the Cloudflare check — and
+ * asks the host for exactly one thing: an adapter at `globalThis.__manaHTTPBridge` that
+ * moves bytes. So what this file stands in for is the native side only: the fetch, where a
+ * body lives between the reply and the read, cancellation, the operation that scopes one
+ * source method, and the ciphers the app runs in native code. Everything above that line
+ * runs inside the bundle exactly as it does on a device, which is the point: `verify`
+ * exercises the client the app ships rather than a copy of it.
+ *
+ * The bundle still expects `ObjectStore`, `SecureStore` and `WebViewPage` as host globals,
+ * and the operation scope comes from the package's own `http-host.generated.js`, which
+ * `hostRuntimeSource()` reads out of `node_modules` so the two sides cannot drift.
  */
+
+import crypto from "node:crypto";
+import fs from "node:fs";
+import path from "node:path";
+import { createRequire } from "node:module";
 
 import { evaluateInBrowser, fetchThroughBrowser, openInBrowser } from "./browser.mjs";
 
@@ -31,206 +43,333 @@ function looksChallenged(body) {
   return typeof body === "string" && CHALLENGE.test(body.slice(0, 8192));
 }
 
-const STATUS_MESSAGES = {
-  400: "Bad Request",
-  401: "Unauthorized",
-  403: "Forbidden",
-  404: "Not Found.",
-  405: "Method Not Allowed",
-  410: "Gone.",
-  429: "Too Many Requests.",
-  500: "Internal Server Error.",
-  502: "Bad Gateway",
-  503: "Service Unavailable.",
-  504: "Gateway Timeout",
-};
-
-export class NetworkError extends Error {
-  constructor(name, message, req, res) {
-    super(message);
-    this.name = name;
-    this.req = req;
-    this.res = res;
-  }
-}
-
-export class CloudflareError extends Error {
-  constructor(resolutionURL) {
-    super(`Cloudflare challenge encountered${resolutionURL ? ` (${resolutionURL})` : ""}`);
-    this.name = "CloudflareError";
-    this.resolutionURL = resolutionURL;
-  }
-}
-
 /**
- * Encodes an object body the way the host runtime does.
+ * The host half of the HTTP runtime, read from the installed package.
  *
- * A source posts `body: { action: "..." }` and states the content type in its headers. Node
- * `fetch` has no such convention: it stringifies a plain object, so the server received
- * `[object Object]` and answered 400 — which surfaced as the source's own error and read
- * like the site had broken, when the same call works in the app. Anything already in a
- * form `fetch` understands is passed through untouched.
+ * It installs `globalThis.ManaHTTP` with `runHttpOperation` and `loadImage` — the two calls
+ * the app makes around a source method and an image — and patches `Promise.prototype.then`
+ * so the operation follows every continuation. It has to run inside the same realm as the
+ * bundle, because that is whose promises it patches and whose `globalThis` it stores the
+ * current operation on.
  */
-function encodeBody(body, headers) {
-  if (body === undefined || body === null || typeof body === "string") return body;
-  if (body instanceof URLSearchParams || body instanceof ArrayBuffer || ArrayBuffer.isView(body)) {
-    return body;
-  }
-  if (typeof body !== "object") return String(body);
-
-  const type = String(
-    Object.entries(headers).find(([key]) => key.toLowerCase() === "content-type")?.[1] ?? "",
-  ).toLowerCase();
-  if (type.includes("json")) return JSON.stringify(body);
-  return new URLSearchParams(
-    Object.entries(body)
-      .filter(([, value]) => value !== undefined && value !== null)
-      .map(([key, value]) => [key, String(value)]),
-  ).toString();
+export function hostRuntimeSource() {
+  const require = createRequire(import.meta.url);
+  const packageRoot = path.dirname(require.resolve("@mana-app/types/package.json"));
+  return fs.readFileSync(path.join(packageRoot, "dist", "runtime", "http-host.generated.js"), "utf-8");
 }
 
-function buildUrl(url, params) {
-  if (!params) return url;
-  const entries = Object.entries(params).filter(
-    ([, value]) => value !== undefined && value !== null && value !== "",
-  );
-  if (entries.length === 0) return url;
-  const query = entries
-    .map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(String(v))}`)
-    .join("&");
-  return `${url}${url.includes("?") ? "&" : "?"}${query}`;
+/** `HttpMethod` in the bundle is a numeric enum; these are its names in order. */
+const METHODS = ["GET", "HEAD", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"];
+/** `BridgeOperation`, in declaration order. */
+const OPERATIONS = [
+  "Fetch",
+  "Read",
+  "Release",
+  "Cancel",
+  "CreateBody",
+  "RetainBody",
+  "Invalidate",
+  "BeginOperation",
+  "EndOperation",
+  "Decrypt",
+  "DeriveKey",
+];
+const BODY_BYTES = 3;
+const READ_BASE64 = 1;
+const READ_BYTES = 2;
+const ALGORITHM = { AesCtr: 0, AesCbc: 1, AesGcm: 2, Xor: 3, EvpBytesToKey: 4, Pbkdf2: 5 };
+const PADDING = { Pkcs7: 0, Zero: 1, None: 2 };
+const HASHES = ["sha1", "sha256", "sha512"];
+
+function headersObject(headers) {
+  const out = {};
+  for (const [key, value] of headers.entries()) {
+    if (key.toLowerCase() === "set-cookie") continue;
+    out[key] = value;
+  }
+  // Iteration yields each `set-cookie` on its own and `fromEntries` would keep the last;
+  // joined the way older runtimes did, which is what the sources' cookie readers expect.
+  const cookies = headers.getSetCookie?.() ?? [];
+  if (cookies.length > 0) out["set-cookie"] = cookies.join(", ");
+  return out;
 }
 
-async function applyAll(value, transformers) {
-  let current = value;
-  for (const transform of transformers) current = await transform(current);
-  return current;
+/** Text of a body that could be an interstitial: HTML, or a refusal of unknown type. */
+function challengeText(bytes, headers, status) {
+  const type = String(headers["content-type"] ?? "").toLowerCase();
+  if (type && !type.includes("html") && status !== 403 && status !== 503) return "";
+  return Buffer.from(bytes.buffer, bytes.byteOffset, Math.min(bytes.byteLength, 8192)).toString("utf8");
 }
 
-function asArray(value) {
-  if (!value) return [];
-  return Array.isArray(value) ? value : [value];
+function base64Of(bytes) {
+  return Buffer.from(bytes.buffer, bytes.byteOffset, bytes.byteLength).toString("base64");
 }
 
-/**
- * Reads the private fields `NetworkClientBuilder` sets. The builder ships in
- * `@mana-app/types` and calls `new NetworkClient(this)`, so the field names
- * here are the actual contract, not a guess.
- */
-export class NetworkClient {
-  constructor(builder) {
-    this.requestTransformers = builder?.requestTransformers ?? [];
-    this.responseTransformers = builder?.responseTransformers ?? [];
-    this.baseHeaders = builder?.headers ?? {};
-    this.cookies = builder?.cookies ?? [];
-    this.timeout = builder?.timeout ?? 30_000;
-    this.requestsPerSecond = builder?.requestsPerSecond ?? 0;
-    this.statusValidator = builder?.statusValidator;
-    this.maxRetries = builder?.maxRetries ?? 0;
-    this.lastRequestAt = 0;
+/** A `CipherSpec` or key spec crosses as JSON with its byte fields in base64. */
+function decodeSpec(spec) {
+  const parsed = JSON.parse(String(spec));
+  const out = {};
+  for (const [key, value] of Object.entries(parsed)) {
+    out[key] = ["key", "counter", "iv", "additionalData", "password", "salt"].includes(key)
+      ? Buffer.from(String(value), "base64")
+      : value;
   }
+  return out;
+}
 
-  get(url, config = {}) {
-    return this.request({ ...config, url, method: "GET" });
-  }
+function stripZeroPadding(bytes) {
+  let end = bytes.length;
+  while (end > 0 && bytes[end - 1] === 0) end--;
+  return bytes.subarray(0, end);
+}
 
-  post(url, config = {}) {
-    return this.request({ ...config, url, method: "POST" });
-  }
-
-  async request(req) {
-    await this.throttle();
-
-    const prepared = await applyAll(
-      {
-        ...req,
-        headers: { ...this.baseHeaders, ...(req.headers ?? {}) },
-      },
-      [...this.requestTransformers, ...asArray(req.transformRequest)],
-    );
-
-    const target = buildUrl(prepared.url, prepared.params);
-    const headers = {};
-    for (const [key, value] of Object.entries(prepared.headers ?? {})) {
-      headers[key] = String(value);
+/** The ciphers the app runs natively, so a source that decrypts is exercised here too. */
+function decrypt(spec, data) {
+  const bits = spec.key ? spec.key.length * 8 : 0;
+  switch (spec.algorithm) {
+    case ALGORITHM.AesCtr: {
+      const cipher = crypto.createDecipheriv(`aes-${bits}-ctr`, spec.key, spec.counter);
+      return Buffer.concat([cipher.update(data), cipher.final()]);
     }
-    const cookies = [...this.cookies, ...(prepared.cookies ?? [])];
-    if (cookies.length > 0) {
-      headers.cookie = cookies.map((c) => `${c.name}=${c.value}`).join("; ");
+    case ALGORITHM.AesCbc: {
+      const cipher = crypto.createDecipheriv(`aes-${bits}-cbc`, spec.key, spec.iv);
+      cipher.setAutoPadding(spec.padding === PADDING.Pkcs7);
+      const plain = Buffer.concat([cipher.update(data), cipher.final()]);
+      return spec.padding === PADDING.Zero ? stripZeroPadding(plain) : plain;
     }
-
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), prepared.timeout ?? this.timeout);
-
-    let raw;
-    try {
-      raw = await fetch(target, {
-        method: prepared.method ?? "GET",
-        headers,
-        body: encodeBody(prepared.body, headers),
-        redirect: "follow",
-        signal: controller.signal,
-      });
-    } finally {
-      clearTimeout(timer);
-    }
-
-    // `responseEncoding: "base64"` (types 0.0.27) hands the body back as base64 so a binary
-    // file survives the bridge; anything else is decoded as UTF-8 text the way it always was.
-    const asBase64 = prepared.responseEncoding === "base64";
-    let data = asBase64
-      ? Buffer.from(await raw.arrayBuffer()).toString("base64")
-      : await raw.text();
-    let status = raw.status;
-    let headersOut = Object.fromEntries(raw.headers.entries());
-
-    // Node cannot clear a challenge — the fingerprint is what is being judged, not the
-    // request — so the same URL is re-issued inside the user's browser, where the site's
-    // own cookies and a clearance it already granted apply. If that route is unavailable
-    // the challenge page falls through untouched and the source reports it as before.
-    if (!asBase64 && looksChallenged(data)) {
-      const viaBrowser = await fetchThroughBrowser(target, {
-        method: prepared.method ?? "GET",
-        body: prepared.body,
-      });
-      if (viaBrowser && !looksChallenged(viaBrowser.data)) {
-        data = viaBrowser.data;
-        status = viaBrowser.status;
-        headersOut = viaBrowser.headers;
+    case ALGORITHM.AesGcm: {
+      if (data.length < 16) throw operationError("AES-GCM input is shorter than its tag");
+      const cipher = crypto.createDecipheriv(`aes-${bits}-gcm`, spec.key, spec.iv);
+      cipher.setAuthTag(data.subarray(data.length - 16));
+      if (spec.additionalData) cipher.setAAD(spec.additionalData);
+      try {
+        return Buffer.concat([cipher.update(data.subarray(0, data.length - 16)), cipher.final()]);
+      } catch (error) {
+        throw operationError(String(error?.message ?? error));
       }
     }
-
-    const response = { data, status, headers: headersOut, request: prepared };
-
-    const validate = prepared.validateStatus ?? this.statusValidator;
-    const ok = validate ? validate(status) : status >= 200 && status < 300;
-
-    const transformed = await applyAll(response, [
-      ...this.responseTransformers,
-      ...asArray(prepared.transformResponse),
-    ]);
-
-    if (!ok) {
-      throw new NetworkError(
-        "NetworkError",
-        STATUS_MESSAGES[status] ?? `Request failed with status ${status}`,
-        prepared,
-        transformed,
-      );
+    case ALGORITHM.Xor: {
+      const out = Buffer.from(data);
+      const end = spec.limit === undefined ? out.length : Math.min(out.length, spec.offset + spec.limit);
+      for (let i = spec.offset, k = 0; i < end; i++) {
+        out[i] ^= spec.key[k];
+        k = k + 1 === spec.key.length ? 0 : k + 1;
+      }
+      return out;
     }
-
-    return transformed;
-  }
-
-  async throttle() {
-    if (!this.requestsPerSecond) return;
-    const minGap = 1000 / this.requestsPerSecond;
-    const wait = this.lastRequestAt + minGap - Date.now();
-    if (wait > 0) await new Promise((resolve) => setTimeout(resolve, wait));
-    this.lastRequestAt = Date.now();
+    default:
+      throw new Error(`Unsupported cipher ${spec.algorithm}`);
   }
 }
 
+function operationError(message) {
+  const error = new Error(message);
+  error.name = "OperationError";
+  return error;
+}
+
+function deriveKey(spec) {
+  switch (spec.algorithm) {
+    case ALGORITHM.EvpBytesToKey: {
+      // OpenSSL's EVP_BytesToKey with MD5 and one iteration: D_i = MD5(D_{i-1} + password + salt).
+      const wanted = spec.keySize + spec.ivSize;
+      const blocks = [];
+      let previous = Buffer.alloc(0);
+      let length = 0;
+      while (length < wanted) {
+        previous = crypto.createHash("md5").update(previous).update(spec.password).update(spec.salt).digest();
+        blocks.push(previous);
+        length += previous.length;
+      }
+      return Buffer.concat(blocks).subarray(0, wanted);
+    }
+    case ALGORITHM.Pbkdf2:
+      return crypto.pbkdf2Sync(spec.password, spec.salt, spec.iterations, spec.length, HASHES[spec.hash] ?? "sha256");
+    default:
+      throw new Error(`Unsupported key derivation ${spec.algorithm}`);
+  }
+}
+
+/**
+ * The native side of the HTTP runtime, backed by Node's `fetch`.
+ *
+ * Bodies are held here by id, as they are on a device, and handed to the bundle only when
+ * it asks to read one — so a source that keeps a response past the end of its method, or
+ * reads a body the operation has already released, fails here the way it fails in the app
+ * rather than passing on a copy the harness quietly kept. `requiresOperation` is on for the
+ * same reason: a request made outside a source operation is one the app refuses.
+ *
+ * Node cannot clear a Cloudflare challenge — the fingerprint is what is being judged, not
+ * the request — so a reply that is an interstitial is re-issued inside the user's browser,
+ * where the site's own cookies and a clearance it already granted apply. If that route is
+ * unavailable the challenge page falls through untouched and the bundle's own check
+ * reports it as before.
+ */
+export function createHttpHost() {
+  /** @type {Map<string, { bytes: Uint8Array, operationID: string | undefined }>} */
+  const bodies = new Map();
+  /** @type {Map<string, AbortController>} */
+  const inflight = new Map();
+  let sequence = 0;
+
+  const keep = (bytes, operationID) => {
+    const bodyID = `body-${++sequence}`;
+    bodies.set(bodyID, { bytes: new Uint8Array(bytes), operationID });
+    return { bodyID, sessionID: "harness" };
+  };
+  const bytesOf = (bodyID) => {
+    const body = bodies.get(bodyID);
+    if (!body) throw new Error(`Response body ${bodyID} has been released`);
+    return body.bytes;
+  };
+
+  const operations = {
+    async Fetch(message) {
+      const controller = new AbortController();
+      inflight.set(message.requestID, controller);
+      const timer = setTimeout(() => {
+        const error = new Error("HTTP request deadline exceeded");
+        error.name = "TimeoutError";
+        controller.abort(error);
+      }, message.timeoutMs ?? 30_000);
+      try {
+        const method = METHODS[message.method] ?? "GET";
+        const body =
+          message.bodyKind === undefined
+            ? undefined
+            : message.bodyKind === BODY_BYTES
+              ? Buffer.from(message.bytes ?? Buffer.from(String(message.body ?? ""), "base64"))
+              : String(message.body ?? "");
+        const response = await fetch(message.url, {
+          method,
+          headers: message.headers ?? {},
+          body,
+          redirect: "follow",
+          signal: controller.signal,
+        });
+        let data = new Uint8Array(await response.arrayBuffer());
+        let status = response.status;
+        let headers = headersObject(response.headers);
+        let url = response.url || message.url;
+
+        if (looksChallenged(challengeText(data, headers, status))) {
+          const viaBrowser = await fetchThroughBrowser(message.url, {
+            method,
+            body: typeof body === "string" ? body : undefined,
+          });
+          if (viaBrowser && !looksChallenged(viaBrowser.data)) {
+            data = new Uint8Array(Buffer.from(viaBrowser.data, "utf8"));
+            status = viaBrowser.status;
+            headers = viaBrowser.headers;
+            url = message.url;
+          }
+        }
+        return { ...keep(data, message.operationID), status, url, headers };
+      } finally {
+        clearTimeout(timer);
+        inflight.delete(message.requestID);
+      }
+    },
+
+    Read(message) {
+      const bytes = bytesOf(message.bodyID);
+      if (message.reader === READ_BYTES) return { bytes: new Uint8Array(bytes) };
+      if (message.reader === READ_BASE64) return { value: base64Of(bytes) };
+      return { value: Buffer.from(bytes.buffer, bytes.byteOffset, bytes.byteLength).toString("utf8") };
+    },
+
+    Release(message) {
+      bodies.delete(message.bodyID);
+      return {};
+    },
+
+    Cancel(message) {
+      inflight.get(message.requestID)?.abort();
+      return {};
+    },
+
+    CreateBody(message) {
+      const bytes = message.bytes ?? Buffer.from(String(message.value ?? ""), "base64");
+      return keep(bytes, message.operationID);
+    },
+
+    RetainBody(message) {
+      const body = bodies.get(message.bodyID);
+      if (body) body.operationID = undefined;
+      return {};
+    },
+
+    Invalidate() {
+      bodies.clear();
+      return {};
+    },
+
+    BeginOperation() {
+      return {};
+    },
+
+    /** Everything the operation fetched goes with it, except what it handed to the app. */
+    EndOperation(message) {
+      const kept = new Set(message.keepBodyIDs ?? []);
+      for (const [bodyID, body] of bodies) {
+        if (body.operationID === message.operationID && !kept.has(bodyID)) bodies.delete(bodyID);
+      }
+      return {};
+    },
+
+    Decrypt(message) {
+      const spec = decodeSpec(message.spec);
+      if (message.bodyID !== undefined) {
+        const plain = decrypt(spec, bytesOf(message.bodyID));
+        const contentType = sniffImageType(plain);
+        return { ...keep(plain, message.operationID), ...(contentType ? { contentType } : {}) };
+      }
+      const input = message.bytes ?? Buffer.from(String(message.value ?? ""), "base64");
+      return { value: base64Of(decrypt(spec, Buffer.from(input))) };
+    },
+
+    DeriveKey(message) {
+      return { value: base64Of(deriveKey(decodeSpec(message.spec))) };
+    },
+  };
+
+  const bridge = {
+    metadataOnly: false,
+    requiresOperation: true,
+    binary: false,
+    crypto: Object.values(ALGORITHM),
+    now: () => Date.now(),
+    async send(message) {
+      const handler = operations[OPERATIONS[message?.operation] ?? ""];
+      if (!handler) throw new Error(`Unsupported bridge operation ${message?.operation}`);
+      return handler(message);
+    },
+  };
+
+  return {
+    bridge,
+    /** The bytes of a body the bundle exported to the host, for the harness to inspect. */
+    bytesOf,
+    release(bodyID) {
+      bodies.delete(bodyID);
+    },
+    get held() {
+      return bodies.size;
+    },
+  };
+}
+
+/** Decrypted pages say what they are in their first bytes; the app sniffs the same way. */
+function sniffImageType(data) {
+  const at = (i) => (i < data.length ? data[i] : -1);
+  if (at(0) === 0xff && at(1) === 0xd8 && at(2) === 0xff) return "image/jpeg";
+  if (at(0) === 0x89 && at(1) === 0x50 && at(2) === 0x4e && at(3) === 0x47) return "image/png";
+  if (at(0) === 0x47 && at(1) === 0x49 && at(2) === 0x46) return "image/gif";
+  if (at(0) === 0x52 && at(1) === 0x49 && at(2) === 0x46 && at(3) === 0x46 && at(8) === 0x57) {
+    return "image/webp";
+  }
+  return undefined;
+}
 
 /**
  * Stand-in for the host's auxiliary WKWebView.
@@ -244,10 +383,16 @@ export class NetworkClient {
  * What it deliberately does not do is pretend: anything beyond reading the loaded
  * document throws by name rather than returning undefined, so a source that depends on
  * real browser behaviour fails here loudly instead of passing and breaking in the app.
+ *
+ * `prelude` is the bundle's `__manaSerializedFunctionPrelude`. The toolchain lowers every
+ * `async` function to a generator driven by an `__async` helper that lives in the bundle,
+ * so the text of a function handed to `evaluate` names a helper the page does not have;
+ * the app puts the helpers in front of the script, and so does this.
  */
 class HarnessWebViewPageInstance {
-  constructor(timeout) {
+  constructor(timeout, prelude) {
     this.timeout = timeout;
+    this.prelude = prelude;
     this.html = "";
     this.url = "";
     // Whether this page is a real one in the browser, or the cheerio stand-in.
@@ -308,19 +453,24 @@ class HarnessWebViewPageInstance {
     // does, leaving verify a SKIP rather than a misleading FAIL.
     if (looksChallenged(this.html)) {
       const viaBrowser = await fetchThroughBrowser(this.url);
-      if (!viaBrowser || looksChallenged(viaBrowser.data)) throw new CloudflareError(this.url);
+      if (!viaBrowser || looksChallenged(viaBrowser.data)) {
+        const error = new Error(`The requested resource is Cloudflare protected (${this.url})`);
+        error.name = "CloudflareError";
+        throw error;
+      }
       this.html = viaBrowser.data;
     }
   }
 
   async evaluate(fn, ...args) {
-    return this.evaluateScript(`(${fn.toString()}).apply(null, args)`, args);
+    return this.evaluateScript(`return (${fn.toString()}).apply(null, args);`, args);
   }
 
   async evaluateScript(script, args = []) {
     if (!this.html) throw new Error("WebViewPage: evaluate called before goto");
+    const body = `${this.prelude}\n${script.trimStart().startsWith("return") ? script : `return ${script}`}`;
     if (this.live) {
-      const result = await evaluateInBrowser(script, args);
+      const result = await evaluateInBrowser(body, args);
       if (result.ok) return result.value;
       // The page was real a moment ago and is not answering now. Reading the markup with
       // cheerio would quietly return the wrong answer, so say what happened instead.
@@ -338,7 +488,7 @@ class HarnessWebViewPageInstance {
       "window",
       "location",
       "args",
-      `"use strict"; return (async () => { ${script.startsWith("return") ? script : `return ${script}`} })();`,
+      `"use strict"; return (async () => { ${body} })();`,
     );
     return run(document, { document, location: { href: this.url } }, { href: this.url }, args);
   }
@@ -396,11 +546,19 @@ function buildDocumentShim($, url) {
   };
 }
 
-export const WebViewPage = {
-  async create(options = {}) {
-    return new HarnessWebViewPageInstance(options.timeout ?? 30);
-  },
-};
+/**
+ * The `WebViewPage` global for one bundle. `prelude` is read when a page is created rather
+ * than when the global is made, because the bundle sets it as it loads.
+ *
+ * @param {() => string} prelude
+ */
+export function webViewPageFor(prelude) {
+  return {
+    async create(options = {}) {
+      return new HarnessWebViewPageInstance(options.timeout ?? 30, prelude() ?? "");
+    },
+  };
+}
 
 /** In-memory stand-in for the app's key-value stores. */
 export class ManaStore {
@@ -451,7 +609,13 @@ export class ManaStore {
   }
 }
 
-/** The intent bit layout the mana-dev runtime uses, in declaration order. */
+/**
+ * The intent bit layout the mana-dev runtime uses, in declaration order.
+ *
+ * Bit 2 was `imageRequestHandler` (`willRequestImage`) and is no longer set by any
+ * toolchain from 0.2.0: an image is fetched through the client `getCoverTransport` or
+ * `getPageTransport` returns, and each of those has a bit of its own at the end.
+ */
 export const INTENT_NAMES = [
   "preferenceMenuBuilder",
   "requiresSetup",
@@ -478,8 +642,57 @@ export const INTENT_NAMES = [
   "canHandleURL",
   "allowsMultipleInstances",
   "requiresAuthenticationToAccessContent",
+  "coverTransport",
+  "pageTransport",
 ];
 
 export function decodeIntents(mask) {
   return INTENT_NAMES.filter((_, index) => (mask >> index) & 1);
+}
+
+/**
+ * The intents `mana-dev build` would compute for this instance — the evaluator in its
+ * `runtime/emulator.js`, mirrored — so `verify` can hold the catalogue to what the bundle
+ * actually defines.
+ */
+export function expectedIntents(target) {
+  const bits = new Set();
+  const has = (name) => typeof target?.[name] === "function";
+  if (has("getPreferenceMenu")) bits.add(0);
+  if (has("getSetupMenu") && has("validateSetupForm") && has("isRunnerSetup")) bits.add(1);
+  if (has("getSectionsForPage") && has("resolvePageSection")) bits.add(3);
+  if (has("getLibraryPageLinks")) bits.add(4);
+  const basic = has("handleBasicAuth");
+  const webview = has("getWebAuthRequestURL") && has("didReceiveSessionCookieFromWebAuthResponse");
+  const oauth = has("getOAuthRequestURL") && has("handleOAuthCallback");
+  if (has("getAuthenticatedUser") && has("handleUserSignOut") && (basic || webview || oauth)) {
+    bits.add(5);
+    if (basic) {
+      bits.add(6);
+      if (target.BasicAuthenticationUIIdentifier === 0) bits.add(7);
+    } else if (webview) bits.add(8);
+    else bits.add(9);
+  }
+  if (has("search")) bits.add(10);
+  if (has("getSearchForm")) bits.add(11);
+  if (has("getSortOptions")) bits.add(12);
+  if (has("getContent")) {
+    if (has("onChaptersMarked") && has("onChapterRead")) bits.add(13);
+    if (has("onContentsAddedToLibrary") && has("onContentsRemovedFromLibrary")) bits.add(14);
+    if (has("syncUserLibrary")) bits.add(15);
+    if (has("onPageRead")) bits.add(16);
+    if (has("getProgressState")) bits.add(17);
+    if (has("getGroupedUpdates")) bits.add(18);
+    if (has("shouldRedrawImage") && has("redrawImageWithSize")) bits.add(19);
+    if (has("getChapterData")) {
+      bits.add(21);
+      if (!has("getChapters")) bits.add(20);
+    }
+  }
+  if (has("handleURL")) bits.add(22);
+  if (target?.config?.allowsMultipleInstances) bits.add(23);
+  if (target?.config?.requiresAuthenticationToAccessContent) bits.add(24);
+  if (has("getCoverTransport")) bits.add(25);
+  if (has("getPageTransport")) bits.add(26);
+  return bits;
 }
