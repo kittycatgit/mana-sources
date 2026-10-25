@@ -298,7 +298,12 @@ are UTC. Format loosely follows [Keep a Changelog](https://keepachangelog.com/en
 - `getContent`, `getChapters` and `getChapterData` SKIP under `npm run verify` — they read
   a challenged route. All three were checked against gallery HTML captured from a browser.
 
-## Madaradex (current: v1.1.2)
+## Madaradex (current: v1.1.3)
+
+### 2026-10-26
+
+- Rebuilt for the current Mana release, which replaced how sources talk to the network.
+- Covers and pages load through the source's own request client.
 
 ### 2026-09-09
 

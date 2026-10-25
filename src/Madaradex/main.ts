@@ -1,8 +1,10 @@
 import {
+  Body,
   CatalogRating,
   ContentRating,
   ContentType,
   DefinedLanguages,
+  HttpClient,
   SearchMultiPickerSheet,
   SectionStyle,
   additionalInfo,
@@ -11,12 +13,14 @@ import {
   type ChapterPage,
   type ChapterSource,
   type Content,
+  type CoverRequestHandler,
   type Cookie,
   type Highlight,
-  type NetworkRequest,
+  type HttpRequest,
   type Option,
   type PageLink,
   type PageLinkResolver,
+  type PageRequestHandler,
   type PageSection,
   type PagedSearchResult,
   type ResolvedPageSection,
@@ -33,7 +37,14 @@ import {
 import { load, type Cheerio, type CheerioAPI } from "cheerio";
 import type { AnyNode } from "domhandler";
 
-import { HTML_ACCEPT, JSON_ACCEPT, buildClient } from "./client.ts";
+import {
+  HTML_ACCEPT,
+  JSON_ACCEPT,
+  acceptStatus,
+  buildClient,
+  buildImageClient,
+  cookieHeader,
+} from "./client.ts";
 import {
   FilterReader,
   buildSearchForm,
@@ -72,7 +83,7 @@ import {
 const info: SourceInfo = {
   id: "madaradex",
   name: "Madaradex",
-  version: "1.1.2",
+  version: "1.1.3",
   description: "Pulls manga, manhwa and manhua from madaradex.org",
   website: BASE_URL,
   rating: CatalogRating.EXPLICIT,
@@ -87,18 +98,26 @@ const config: SourceConfig = {
   owningLinks: ["madaradex.org"],
 };
 
-class MadaradexSource implements ChapterSource, SearchProvider, PageLinkResolver {
+class MadaradexSource
+  implements
+    ChapterSource,
+    SearchProvider,
+    PageLinkResolver,
+    CoverRequestHandler,
+    PageRequestHandler
+{
   readonly info = info;
   readonly config = config;
 
-  private client: NetworkClient | undefined;
+  private client: HttpClient | undefined;
+  private images: HttpClient | undefined;
   private genreOptions: Option[] | undefined;
   private titleCache: { contentId: string; at: number; document: CheerioAPI } | undefined;
   private fingerprint: string | undefined;
   private shieldGrant: { cookies: Cookie[]; expires: number } | undefined;
   private shieldRefresh: Promise<Cookie[]> | undefined;
 
-  private get http(): NetworkClient {
+  private get http(): HttpClient {
     this.client ??= buildClient({
       baseUrl: BASE_URL,
       requests: 3,
@@ -106,6 +125,25 @@ class MadaradexSource implements ChapterSource, SearchProvider, PageLinkResolver
       accept: HTML_ACCEPT,
     });
     return this.client;
+  }
+
+  // Chapter pages live on cdn.madaradex.org, which answers 403 with the site's own error
+  // page unless the request carries madaradex.org as its referer. Covers are served from
+  // the site itself and do not need it, but the header costs them nothing.
+  //
+  // Sending `origin` alongside it puts the 403 back: the CDN reads an origin as a
+  // cross-site XHR and refuses, where a bare referer reads as an <img> on the page.
+  private get imageHttp(): HttpClient {
+    this.images ??= buildImageClient({
+      referer: `${BASE_URL}/`,
+      prepare: async (request: HttpRequest) => {
+        if (!request.url.startsWith(CDN_URL)) return request;
+        const cookies = await this.shieldCookies();
+        if (cookies.length > 0) request.headers.set("cookie", cookieHeader(cookies));
+        return request;
+      },
+    });
+    return this.images;
   }
 
   private sections(adult: string | undefined): SectionSpec[] {
@@ -305,18 +343,12 @@ class MadaradexSource implements ChapterSource, SearchProvider, PageLinkResolver
     return { pages };
   }
 
-  async willRequestImage(imageURL: string): Promise<NetworkRequest> {
-    // Chapter pages live on cdn.madaradex.org, which answers 403 with the site's own error
-    // page unless the request carries madaradex.org as its referer. Covers are served from
-    // the site itself and do not need it, but the header costs them nothing.
-    //
-    // Sending `origin` alongside it puts the 403 back: the CDN reads an origin as a
-    // cross-site XHR and refuses, where a bare referer reads as an <img> on the page.
-    const request: NetworkRequest = { url: imageURL, headers: { referer: `${BASE_URL}/` } };
-    if (!imageURL.startsWith(CDN_URL)) return request;
+  getCoverTransport(): HttpClient {
+    return this.imageHttp;
+  }
 
-    const cookies = await this.shieldCookies();
-    return cookies.length === 0 ? request : { ...request, cookies };
+  getPageTransport(): HttpClient {
+    return this.imageHttp;
   }
 
   /**
@@ -344,16 +376,18 @@ class MadaradexSource implements ChapterSource, SearchProvider, PageLinkResolver
     // does, so a refresh reuses the one the earlier grant was issued against.
     const fingerprint = (this.fingerprint ??= randomFingerprint());
 
-    const response = await this.http.post(`${BASE_URL}${AJAX_PATH}`, {
-      headers: {
-        accept: JSON_ACCEPT,
-        "content-type": "application/x-www-form-urlencoded; charset=UTF-8",
+    const response = await this.http.post(
+      `${BASE_URL}${AJAX_PATH}`,
+      Body.form({ action: SHIELD_ACTION }),
+      {
+        headers: {
+          accept: JSON_ACCEPT,
+          cookie: cookieHeader([{ name: SHIELD_FINGERPRINT_COOKIE, value: fingerprint }]),
+        },
       },
-      body: { action: SHIELD_ACTION },
-      cookies: [{ name: SHIELD_FINGERPRINT_COOKIE, value: fingerprint }],
-    });
+    );
 
-    const setCookie = headerOf(response.headers, "set-cookie");
+    const setCookie = response.headers.get("set-cookie") ?? "";
     const token = cookieValue(setCookie, SHIELD_TOKEN_COOKIE);
     // A site that has dropped the plugin stops issuing the token; the referer alone is then
     // what it was before, so this reports no cookies rather than failing the whole read.
@@ -417,12 +451,10 @@ class MadaradexSource implements ChapterSource, SearchProvider, PageLinkResolver
   }
 
   private async page(url: string): Promise<CheerioAPI> {
-    const response = await this.http.get(url, {
-      // Paging past the last page answers 404 with an empty listing, which is the end of
-      // the list rather than a failure — the parsers report zero rows for it either way.
-      validateStatus: (status) => (status >= 200 && status < 300) || status === 404,
-    });
-    return load(response.data);
+    // Paging past the last page answers 404 with an empty listing, which is the end of
+    // the list rather than a failure — the parsers report zero rows for it either way.
+    const response = await this.http.get(url, acceptStatus(404));
+    return load(await response.text());
   }
 
   /**
@@ -568,21 +600,13 @@ function randomFingerprint(): string {
   return value;
 }
 
-function headerOf(headers: Record<string, unknown>, name: string): string {
-  for (const [key, value] of Object.entries(headers)) {
-    if (key.toLowerCase() !== name) continue;
-    return Array.isArray(value) ? value.map(String).join("; ") : String(value ?? "");
-  }
-  return "";
-}
-
 function cookieValue(setCookie: string, name: string): string {
   return new RegExp(`(?:^|[;,\\s])${name}=([^;,\\s]+)`).exec(setCookie)?.[1] ?? "";
 }
 
 /**
  * Four fifths of the token's own `Max-Age`, so a grant is replaced before the CDN starts
- * refusing it — `willRequestImage` never sees the response and cannot retry on a 403.
+ * refusing it — the page transport never sees the response and cannot retry on a 403.
  */
 function tokenLifetime(setCookie: string): number {
   const seconds = Number.parseInt(/max-age=(\d+)/i.exec(setCookie)?.[1] ?? "", 10);

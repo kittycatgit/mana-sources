@@ -19,7 +19,7 @@ from there.
 | Hiperdex | 1.2.3 | English | Explicit |
 | Hitomi | 1.5.5 | Multi-language | Explicit |
 | Imhentai | 1.1.0 | Multi-language | Explicit |
-| Madaradex | 1.1.2 | English | Explicit |
+| Madaradex | 1.1.3 | English | Explicit |
 | Manga18fx | 1.2.2 | English | Explicit |
 | Mangaball | 1.3.6 | Multi-language | Mixed |
 | Mangafire | 1.2.2 | Multi-language | Mixed |
