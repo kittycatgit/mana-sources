@@ -3,6 +3,7 @@ import {
   ContentRating,
   ContentType,
   DefinedLanguages,
+  HttpClient,
   PublicationStatus,
   ReadingMode,
   SearchExcludableMultiPickerSheet,
@@ -14,14 +15,15 @@ import {
   type ChapterPage,
   type ChapterSource,
   type Content,
+  type CoverRequestHandler,
   type DeepLinkContext,
   type Form,
   type Highlight,
   type LinkItem,
-  type NetworkRequest,
   type Option,
   type PageLink,
   type PageLinkResolver,
+  type PageRequestHandler,
   type PageSection,
   type PagedSearchResult,
   type ResolvedPageSection,
@@ -37,7 +39,7 @@ import {
   type Tag,
 } from "@mana-app/types";
 
-import { JSON_ACCEPT, buildClient } from "./client.ts";
+import { JSON_ACCEPT, buildClient, buildImageClient } from "./client.ts";
 import {
   FilterReader,
   PreferenceStore,
@@ -88,7 +90,7 @@ import {
 const info: SourceInfo = {
   id: "mangafire",
   name: "Mangafire",
-  version: "1.2.2",
+  version: "1.2.3",
   description: "Reads manga, manhwa and manhua from mangafire.to",
   website: BASE_URL,
   rating: CatalogRating.MIXED,
@@ -118,16 +120,24 @@ type ChapterRecord = {
   createdAt: number;
 };
 
-class MangafireSource implements ChapterSource, SearchProvider, PageLinkResolver {
+class MangafireSource
+  implements
+    ChapterSource,
+    SearchProvider,
+    PageLinkResolver,
+    CoverRequestHandler,
+    PageRequestHandler
+{
   readonly info = info;
   readonly config = config;
 
   private readonly preferences = new PreferenceStore(PREFERENCE_NAMESPACE, PREFERENCE_DEFAULTS);
 
-  private client: NetworkClient | undefined;
+  private client: HttpClient | undefined;
+  private images: HttpClient | undefined;
   private options: FilterOptions | undefined;
 
-  private get http(): NetworkClient {
+  private get http(): HttpClient {
     this.client ??= buildClient({
       baseUrl: BASE_URL,
       requests: 5,
@@ -139,6 +149,11 @@ class MangafireSource implements ChapterSource, SearchProvider, PageLinkResolver
       json: true,
     });
     return this.client;
+  }
+
+  private get imageHttp(): HttpClient {
+    this.images ??= buildImageClient({ referer: `${BASE_URL}/`, origin: BASE_URL });
+    return this.images;
   }
 
   /**
@@ -439,11 +454,15 @@ class MangafireSource implements ChapterSource, SearchProvider, PageLinkResolver
     return { pages };
   }
 
-  async willRequestImage(imageURL: string): Promise<NetworkRequest> {
-    // The page CDN answers 403 with an HTML error page to anyone whose request does not
-    // name the site as its referer. Covers are served without one, but sending it costs
-    // nothing and both live under the same handler.
-    return { url: imageURL, headers: { origin: BASE_URL, referer: `${BASE_URL}/` } };
+  // The page CDN answers 403 with an HTML error page to anyone whose request does not
+  // name the site as its referer. Covers are served without one, but sending it costs
+  // nothing and both live under the same handler.
+  getCoverTransport(): HttpClient {
+    return this.imageHttp;
+  }
+
+  getPageTransport(): HttpClient {
+    return this.imageHttp;
   }
 
   async handleURL(url: string): Promise<DeepLinkContext | null> {
@@ -587,7 +606,7 @@ class MangafireSource implements ChapterSource, SearchProvider, PageLinkResolver
 
   private async json(path: string, params?: ApiParams): Promise<Record<string, unknown>> {
     const response = await this.http.get(apiUrl(path, params));
-    return readRecord(safeParse(response.data));
+    return readRecord(safeParse(await response.text()));
   }
 }
 

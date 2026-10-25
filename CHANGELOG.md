@@ -128,7 +128,12 @@ are UTC. Format loosely follows [Keep a Changelog](https://keepachangelog.com/en
 
 - Home rows load one at a time again, as the app asks for them.
 
-## Mangafire (current: v1.2.2)
+## Mangafire (current: v1.2.3)
+
+### 2026-10-26
+
+- Rebuilt for the current Mana release, which replaced how sources talk to the network.
+- Covers and pages load through the source's own request client.
 
 ### 2026-09-09
 
