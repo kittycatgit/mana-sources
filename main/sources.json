@@ -26,7 +26,7 @@
       "path": "Ehentai",
       "environment": "source",
       "intents": 106957833,
-      "hash": "668a3aa6668a3aa6668a3aa6668a3aa6668a3aa6668a3aa6668a3aa6668a3aa6"
+      "hash": "586220c5586220c5586220c5586220c5586220c5586220c5586220c5586220c5"
     },
     {
       "id": "hiperdex",
@@ -48,7 +48,7 @@
       "path": "Hiperdex",
       "environment": "source",
       "intents": 102767624,
-      "hash": "187fbd0c187fbd0c187fbd0c187fbd0c187fbd0c187fbd0c187fbd0c187fbd0c"
+      "hash": "2893e4112893e4112893e4112893e4112893e4112893e4112893e4112893e411"
     },
     {
       "id": "hitomi",
@@ -76,7 +76,7 @@
       "path": "Hitomi",
       "environment": "source",
       "intents": 102767625,
-      "hash": "4703522a4703522a4703522a4703522a4703522a4703522a4703522a4703522a"
+      "hash": "77e90d0777e90d0777e90d0777e90d0777e90d0777e90d0777e90d0777e90d07"
     },
     {
       "id": "imhentai",
@@ -104,7 +104,7 @@
       "path": "Imhentai",
       "environment": "source",
       "intents": 2104329,
-      "hash": "096bab43096bab43096bab43096bab43096bab43096bab43096bab43096bab43"
+      "hash": "4a7f49b04a7f49b04a7f49b04a7f49b04a7f49b04a7f49b04a7f49b04a7f49b0"
     },
     {
       "id": "madaradex",
@@ -126,7 +126,7 @@
       "path": "Madaradex",
       "environment": "source",
       "intents": 102767624,
-      "hash": "418358f0418358f0418358f0418358f0418358f0418358f0418358f0418358f0"
+      "hash": "7d69091b7d69091b7d69091b7d69091b7d69091b7d69091b7d69091b7d69091b"
     },
     {
       "id": "manga18fx",
@@ -148,7 +148,7 @@
       "path": "Manga18fx",
       "environment": "source",
       "intents": 2100233,
-      "hash": "2fca45282fca45282fca45282fca45282fca45282fca45282fca45282fca4528"
+      "hash": "70dde77170dde77170dde77170dde77170dde77170dde77170dde77170dde771"
     },
     {
       "id": "mangaball",
@@ -174,7 +174,7 @@
       "path": "Mangaball",
       "environment": "source",
       "intents": 2104329,
-      "hash": "51484b5951484b5951484b5951484b5951484b5951484b5951484b5951484b59"
+      "hash": "6da4127a6da4127a6da4127a6da4127a6da4127a6da4127a6da4127a6da4127a"
     },
     {
       "id": "mangafire",
@@ -200,7 +200,7 @@
       "path": "Mangafire",
       "environment": "source",
       "intents": 106961929,
-      "hash": "38d6f23838d6f23838d6f23838d6f23838d6f23838d6f23838d6f23838d6f238"
+      "hash": "083caebb083caebb083caebb083caebb083caebb083caebb083caebb083caebb"
     },
     {
       "id": "mangak",
@@ -222,7 +222,7 @@
       "path": "Mangak",
       "environment": "source",
       "intents": 106961928,
-      "hash": "797f2314797f2314797f2314797f2314797f2314797f2314797f2314797f2314"
+      "hash": "386b85a3386b85a3386b85a3386b85a3386b85a3386b85a3386b85a3386b85a3"
     },
     {
       "id": "mkissa",
@@ -247,7 +247,7 @@
       "path": "Mkissa",
       "environment": "source",
       "intents": 102767625,
-      "hash": "3f62e8783f62e8783f62e8783f62e8783f62e8783f62e8783f62e8783f62e878"
+      "hash": "01b0b8dc01b0b8dc01b0b8dc01b0b8dc01b0b8dc01b0b8dc01b0b8dc01b0b8dc"
     },
     {
       "id": "nhentai",
@@ -271,7 +271,7 @@
       "path": "Nhentai",
       "environment": "source",
       "intents": 2104329,
-      "hash": "59e58f9359e58f9359e58f9359e58f9359e58f9359e58f9359e58f9359e58f93"
+      "hash": "18d1f26118d1f26118d1f26118d1f26118d1f26118d1f26118d1f26118d1f261"
     },
     {
       "id": "tailspace",
@@ -293,12 +293,12 @@
       "path": "Tailspace",
       "environment": "source",
       "intents": 2104328,
-      "hash": "3827e85f3827e85f3827e85f3827e85f3827e85f3827e85f3827e85f3827e85f"
+      "hash": "793b8637793b8637793b8637793b8637793b8637793b8637793b8637793b8637"
     },
     {
       "id": "weebcentral",
       "name": "Weebcentral",
-      "version": "1.2.4",
+      "version": "1.2.5",
       "description": "Pulls manga, manhwa and manhua from weebcentral.com",
       "website": "https://weebcentral.com",
       "rating": 1,
@@ -315,7 +315,7 @@
       "path": "Weebcentral",
       "environment": "source",
       "intents": 2104328,
-      "hash": "2fdfaaee2fdfaaee2fdfaaee2fdfaaee2fdfaaee2fdfaaee2fdfaaee2fdfaaee"
+      "hash": "03a522a303a522a303a522a303a522a303a522a303a522a303a522a303a522a3"
     }
   ]
 }
