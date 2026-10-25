@@ -3,6 +3,7 @@ import {
   ContentRating,
   ContentType,
   DefinedLanguages,
+  HttpClient,
   PublicationStatus,
   ReadingMode,
   SectionStyle,
@@ -76,7 +77,7 @@ import {
 const info: SourceInfo = {
   id: "nhentai",
   name: "Nhentai",
-  version: "1.2.2",
+  version: "1.2.3",
   description: "Reads doujinshi and manga galleries from nhentai.net",
   website: BASE_URL,
   rating: CatalogRating.EXPLICIT,
@@ -103,11 +104,11 @@ class NhentaiSource implements ChapterSource, SearchProvider, PageLinkResolver {
 
   private readonly preferences = new PreferenceStore(PREFERENCE_NAMESPACE, PREFERENCE_DEFAULTS);
 
-  private client: NetworkClient | undefined;
+  private client: HttpClient | undefined;
   private servers: Servers | undefined;
   private tagOptions: Option[] | undefined;
 
-  private get http(): NetworkClient {
+  private get http(): HttpClient {
     this.client ??= buildClient({
       baseUrl: BASE_URL,
       // The API documents per-endpoint anonymous limits as low as 8/min on
@@ -355,7 +356,7 @@ class NhentaiSource implements ChapterSource, SearchProvider, PageLinkResolver {
     // Alone among the listing endpoints this one answers with a bare JSON array rather than
     // the {result, num_pages, ...} envelope, and it is not paginated.
     const response = await this.http.get(`${API_URL}/galleries/popular`);
-    const results = await this.highlights(readArray(safeParse(response.data)));
+    const results = await this.highlights(readArray(safeParse(await response.text())));
     return { results, isLastPage: true };
   }
 
@@ -391,7 +392,7 @@ class NhentaiSource implements ChapterSource, SearchProvider, PageLinkResolver {
   }
 
   private async listing(url: string, page: number): Promise<PagedSearchResult> {
-    const envelope = readRecord(safeParse((await this.http.get(url)).data));
+    const envelope = readRecord(safeParse(await (await this.http.get(url)).text()));
     const results = await this.highlights(readArray(envelope["result"]));
 
     // `total` is null on /galleries/tagged even though the listing paginates correctly, and
@@ -415,7 +416,7 @@ class NhentaiSource implements ChapterSource, SearchProvider, PageLinkResolver {
     }
 
     const response = await this.http.get(`${API_URL}/galleries/${id}`);
-    const gallery = readRecord(safeParse(response.data));
+    const gallery = readRecord(safeParse(await response.text()));
     if (readNumber(gallery["id"]) === undefined) {
       throw new Error(`nhentai has no gallery ${id}. It may have been removed.`);
     }
@@ -430,7 +431,7 @@ class NhentaiSource implements ChapterSource, SearchProvider, PageLinkResolver {
       per_page: TAG_OPTION_COUNT,
       page: 1,
     });
-    const envelope = readRecord(safeParse((await this.http.get(url)).data));
+    const envelope = readRecord(safeParse(await (await this.http.get(url)).text()));
 
     const options = readArray(envelope["result"])
       .map(readRecord)
@@ -464,7 +465,7 @@ class NhentaiSource implements ChapterSource, SearchProvider, PageLinkResolver {
 
   private async cdnConfig(): Promise<Record<string, unknown>> {
     try {
-      return readRecord(safeParse((await this.http.get(`${API_URL}/cdn`)).data));
+      return readRecord(safeParse(await (await this.http.get(`${API_URL}/cdn`)).text()));
     } catch {
       // The published list is an optimisation over the constants in model.ts; a failed
       // config call must not take every cover and page down with it.

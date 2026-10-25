@@ -136,7 +136,11 @@ are UTC. Format loosely follows [Keep a Changelog](https://keepachangelog.com/en
 
 - Home rows load one at a time again, as the app asks for them.
 
-## Nhentai (current: v1.2.2)
+## Nhentai (current: v1.2.3)
+
+### 2026-10-26
+
+- Rebuilt for the current Mana release, which replaced how sources talk to the network.
 
 ### 2026-09-09
 

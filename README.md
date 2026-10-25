@@ -25,7 +25,7 @@ from there.
 | Mangafire | 1.2.3 | Multi-language | Mixed |
 | Mkissa | 1.0.2 | Multi-language | Mixed |
 | Mangak | 1.0.1 | English | Mixed |
-| Nhentai | 1.2.2 | Multi-language | Explicit |
+| Nhentai | 1.2.3 | Multi-language | Explicit |
 | Tailspace | 1.1.3 | English | Explicit |
 | Weebcentral | 1.2.3 | English | Mixed |
 
