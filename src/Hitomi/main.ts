@@ -3,6 +3,7 @@ import {
   ContentRating,
   ContentType,
   DefinedLanguages,
+  HttpClient,
   PublicationStatus,
   SearchPickerSheet,
   SectionStyle,
@@ -11,12 +12,13 @@ import {
   type ChapterData,
   type ChapterSource,
   type Content,
+  type CoverRequestHandler,
   type Form,
   type Highlight,
-  type NetworkRequest,
   type Option,
   type PageLink,
   type PageLinkResolver,
+  type PageRequestHandler,
   type PageSection,
   type PagedSearchResult,
   type ResolvedPageSection,
@@ -30,7 +32,7 @@ import {
   type Tag,
 } from "@mana-app/types";
 
-import { buildClient } from "./client.ts";
+import { acceptStatus, buildClient, buildImageClient } from "./client.ts";
 import {
   FilterReader,
   PreferenceStore,
@@ -90,7 +92,7 @@ import { indexVersion, wordIds } from "./search-index.ts";
 const info: SourceInfo = {
   id: "hitomi",
   name: "Hitomi",
-  version: "1.5.4",
+  version: "1.5.5",
   description: "Reads doujinshi, manga and CG sets from hitomi.la",
   website: BASE_URL,
   rating: CatalogRating.EXPLICIT,
@@ -126,12 +128,19 @@ type ParsedTerm = { value: string; negated: boolean };
 type Listed = { id: string; gallery: GalleryInfo };
 
 class HitomiSource
-  implements ChapterSource, SearchProvider, PageLinkResolver, SourcePreferenceProvider
+  implements
+    ChapterSource,
+    SearchProvider,
+    PageLinkResolver,
+    SourcePreferenceProvider,
+    CoverRequestHandler,
+    PageRequestHandler
 {
   readonly info = info;
   readonly config = config;
 
-  private client: NetworkClient | undefined;
+  private client: HttpClient | undefined;
+  private images: HttpClient | undefined;
   private imageKey: ImageKey | undefined;
   private version: { value: string; fetchedAt: number } | undefined;
   private tagOptions: Option[] | undefined;
@@ -143,7 +152,7 @@ class HitomiSource
     PREFERENCE_DEFAULTS,
   );
 
-  private get http(): NetworkClient {
+  private get http(): HttpClient {
     // Everything is a static file on a CDN the site itself hits 25 times per page view,
     // and a row of twelve is twelve gallery records, so the limit is set for a CDN rather
     // than for an application server.
@@ -154,6 +163,11 @@ class HitomiSource
       accept: "*/*",
     });
     return this.client;
+  }
+
+  private get imageHttp(): HttpClient {
+    this.images ??= buildImageClient({ referer: `${BASE_URL}/`, origin: BASE_URL });
+    return this.images;
   }
 
   private async sections(): Promise<SectionSpec[]> {
@@ -343,10 +357,14 @@ class HitomiSource
     return { pages: files.map((file) => ({ url: pageUrl(text(file.hash), key) })) };
   }
 
-  async willRequestImage(imageURL: string): Promise<NetworkRequest> {
-    // Both image hosts answer 404 — not 403 — to a request without the site as its referer,
-    // which reads as a missing file rather than as a rejection.
-    return { url: imageURL, headers: { origin: BASE_URL, referer: `${BASE_URL}/` } };
+  // Both image hosts answer 404 — not 403 — to a request without the site as its referer,
+  // which reads as a missing file rather than as a rejection.
+  getCoverTransport(): HttpClient {
+    return this.imageHttp;
+  }
+
+  getPageTransport(): HttpClient {
+    return this.imageHttp;
   }
 
   /** A home row: the same query as a search, with the row's own terms and order. */
@@ -540,10 +558,11 @@ class HitomiSource
     }
 
     const response = await this.http.get(`${LTN_URL}/galleries/${contentId}.js`);
-    const start = response.data.indexOf("{");
+    const script = await response.text();
+    const start = script.indexOf("{");
     if (start < 0) throw new Error(`Hitomi has no gallery ${contentId}.`);
 
-    const gallery = safeParse(response.data.slice(start)) as GalleryInfo | undefined;
+    const gallery = safeParse(script.slice(start)) as GalleryInfo | undefined;
     if (!gallery || typeof gallery !== "object") {
       throw new Error(`Hitomi returned unreadable metadata for gallery ${contentId}.`);
     }
@@ -558,7 +577,7 @@ class HitomiSource
     if (cached && Date.now() - cached.fetchedAt < IMAGE_KEY_TTL) return cached;
 
     const response = await this.http.get(`${LTN_URL}/gg.js`);
-    const key = parseImageKey(response.data);
+    const key = parseImageKey(await response.text());
     this.imageKey = key;
     return key;
   }
@@ -588,8 +607,8 @@ class HitomiSource
   }
 
   private async suggestions(url: string): Promise<Suggestion[]> {
-    const response = await this.http.get(url, { validateStatus: (status) => status < 500 });
-    const parsed = safeParse(response.data);
+    const response = await this.http.get(url, acceptStatus(404));
+    const parsed = safeParse(await response.text());
     if (!Array.isArray(parsed)) return [];
     return parsed.filter(
       (entry): entry is Suggestion =>

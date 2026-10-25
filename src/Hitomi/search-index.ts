@@ -1,3 +1,5 @@
+import { type HttpClient } from "@mana-app/types";
+
 import { int32s, readRange } from "./bytes.ts";
 import { LTN_URL } from "./model.ts";
 
@@ -118,9 +120,9 @@ function compare(left: Uint8Array, right: Uint8Array): number {
   return 0;
 }
 
-export async function indexVersion(http: NetworkClient): Promise<string> {
+export async function indexVersion(http: HttpClient): Promise<string> {
   const response = await http.get(`${LTN_URL}/galleriesindex/version?_=${Date.now()}`);
-  const version = response.data.trim();
+  const version = (await response.text()).trim();
   if (!/^\d+$/.test(version)) {
     throw new Error(`Hitomi's gallery index reported "${version}" as its version.`);
   }
@@ -128,7 +130,7 @@ export async function indexVersion(http: NetworkClient): Promise<string> {
 }
 
 async function leafIds(
-  http: NetworkClient,
+  http: HttpClient,
   version: string,
   offset: number,
   length: number,
@@ -153,11 +155,7 @@ async function leafIds(
  * publishes is its ids in descending order, so sorting the run is the same ordering the
  * site gets by intersecting the run with its own date index — for none of the cost.
  */
-export async function wordIds(
-  http: NetworkClient,
-  version: string,
-  word: string,
-): Promise<number[]> {
+export async function wordIds(http: HttpClient, version: string, word: string): Promise<number[]> {
   const key = sha256(utf8(word)).subarray(0, 4);
   let address = 0;
 

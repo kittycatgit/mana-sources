@@ -25,7 +25,12 @@ are UTC. Format loosely follows [Keep a Changelog](https://keepachangelog.com/en
 - Home: Trending Today, Latest Updates, Recently Added, Most Followed, Most Read This Week, Highest Rated and Longest Series.
 - Search filters by genre, status, type, content rating, demographic, format and chapter count, and sorts ten ways.
 - Opening a mangak.io link goes straight to the title.
-## Hitomi (current: v1.5.4)
+## Hitomi (current: v1.5.5)
+
+### 2026-10-26
+
+- Rebuilt for the current Mana release, which replaced how sources talk to the network.
+- Covers and pages load through the source's own request client.
 
 ### 2026-09-09
 
@@ -82,7 +87,6 @@ are UTC. Format loosely follows [Keep a Changelog](https://keepachangelog.com/en
 - The home page arrives with every row already filled.
 - The Popular rows fetch only the twelve titles they show.
 
-
 ### 2026-09-08
 
 - Added Popular Today, Popular This Week, Popular This Month and Popular This Year.
@@ -129,7 +133,6 @@ are UTC. Format loosely follows [Keep a Changelog](https://keepachangelog.com/en
 ### 2026-09-09
 
 - Home rows load one at a time again, as the app asks for them.
-
 
 ### 2026-09-09
 
@@ -203,11 +206,9 @@ are UTC. Format loosely follows [Keep a Changelog](https://keepachangelog.com/en
 
 - Home rows load one at a time again, as the app asks for them.
 
-
 ### 2026-09-09
 
 - The home page arrives with every row already filled.
-
 
 ### 2026-09-08
 
@@ -239,11 +240,9 @@ are UTC. Format loosely follows [Keep a Changelog](https://keepachangelog.com/en
 
 - Home rows load one at a time again, as the app asks for them.
 
-
 ### 2026-09-09
 
 - The home page arrives with every row already filled.
-
 
 ### 2026-09-08
 
@@ -275,11 +274,9 @@ are UTC. Format loosely follows [Keep a Changelog](https://keepachangelog.com/en
 
 - Home rows load one at a time again, as the app asks for them.
 
-
 ### 2026-09-09
 
 - The home page arrives with every row already filled.
-
 
 ### 2026-09-08
 
@@ -302,11 +299,9 @@ are UTC. Format loosely follows [Keep a Changelog](https://keepachangelog.com/en
 
 - Home rows load one at a time again, as the app asks for them.
 
-
 ### 2026-09-09
 
 - The home page arrives with every row already filled.
-
 
 ### 2026-09-08
 
@@ -329,11 +324,9 @@ are UTC. Format loosely follows [Keep a Changelog](https://keepachangelog.com/en
 
 - Home rows load one at a time again, as the app asks for them.
 
-
 ### 2026-09-09
 
 - The home page arrives with every row already filled.
-
 
 ### 2026-09-08
 
@@ -357,11 +350,9 @@ are UTC. Format loosely follows [Keep a Changelog](https://keepachangelog.com/en
 
 - Home rows load one at a time again, as the app asks for them.
 
-
 ### 2026-09-09
 
 - The home page arrives with every row already filled.
-
 
 ### 2026-09-08
 
@@ -391,16 +382,13 @@ are UTC. Format loosely follows [Keep a Changelog](https://keepachangelog.com/en
 
 - Comics open in the left-to-right paged comic reader instead of right-to-left manga.
 
-
 ### 2026-09-09
 
 - Home rows load one at a time again, as the app asks for them.
 
-
 ### 2026-09-09
 
 - The home page arrives with every row already filled.
-
 
 ### 2026-09-05 — Home page
 

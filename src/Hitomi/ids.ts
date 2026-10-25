@@ -1,3 +1,5 @@
+import { type HttpClient } from "@mana-app/types";
+
 import { int32s, readRange } from "./bytes.ts";
 import { PAGE_SIZE } from "./model.ts";
 
@@ -49,7 +51,7 @@ export function planKey(plan: IdPlan): string {
 }
 
 /** How many ids a list holds, taken from `content-range` rather than by reading it. */
-export async function listLength(http: NetworkClient, ref: ListRef): Promise<number> {
+export async function listLength(http: HttpClient, ref: ListRef): Promise<number> {
   if (ref.kind === "ids") return ref.ids.length;
   const { bytes, total } = await readRange(http, ref.url, 0, 3);
   if (total !== undefined) return Math.floor(total / 4);
@@ -57,7 +59,7 @@ export async function listLength(http: NetworkClient, ref: ListRef): Promise<num
 }
 
 async function slice(
-  http: NetworkClient,
+  http: HttpClient,
   ref: ListRef,
   from: number,
   count: number,
@@ -72,7 +74,7 @@ async function slice(
   };
 }
 
-async function whole(http: NetworkClient, ref: ListRef): Promise<number[]> {
+async function whole(http: HttpClient, ref: ListRef): Promise<number[]> {
   if (ref.kind === "ids") return [...ref.ids];
   const { bytes } = await readRange(http, ref.url);
   return int32s(bytes);
@@ -90,7 +92,7 @@ export type IdPage = { ids: number[]; isLastPage: boolean };
  * by the file rather than by how deep the reader went.
  */
 export async function resolvePage(
-  http: NetworkClient,
+  http: HttpClient,
   plan: IdPlan,
   page: number,
   cursor: PlanCursor,
