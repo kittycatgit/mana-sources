@@ -79,6 +79,9 @@ const ORIGIN = { Cover: 1, Page: 2 };
 async function checkImageUrls(urls, loaded) {
   const { target, host, loadImage } = loaded;
   const broken = [];
+  // An image host that challenges the harness is not an image that does not serve: the
+  // browser loads it and the app may too. Reported apart, as unproven rather than broken.
+  const challenged = [];
   for (const { url, origin } of urls) {
     const method = origin === ORIGIN.Page ? "getPageTransport" : "getCoverTransport";
     try {
@@ -98,10 +101,10 @@ async function checkImageUrls(urls, loaded) {
         broken.push(`${url} -> HTTP ${response.status} ${type}`);
       }
     } catch (error) {
-      broken.push(`${url} -> ${firstLine(error)}`);
+      (isCloudflare(error) ? challenged : broken).push(`${url} -> ${firstLine(error)}`);
     }
   }
-  return broken;
+  return { broken, challenged };
 }
 
 function parseArgs(argv) {
@@ -544,7 +547,7 @@ async function verify(name, probe, verbose) {
 
   if (sampled.length > 0) {
     await step(results, "images", async () => {
-      const broken = await checkImageUrls(sampled, loaded);
+      const { broken, challenged } = await checkImageUrls(sampled, loaded);
       // A chapter page that does not serve is a reader that cannot read: always a failure.
       // A cover is the site's own data, and one dead cover in a sample of twenty is a title
       // whose upstream image has gone — mangaball's covers are proxied from mangaupdates,
@@ -557,6 +560,11 @@ async function verify(name, probe, verbose) {
         broken.length <= 1,
         `unreachable image(s):\n      ${broken.join("\n      ")}`,
       );
+      if (challenged.length > 0) {
+        throw new Skip(
+          `${challenged.length} of ${sampled.length} behind a Cloudflare challenge the harness cannot clear — try them in the app\n      ${challenged.join("\n      ")}`,
+        );
+      }
       if (broken.length === 1) {
         return `${sampled.length} sampled, one cover not served — ${broken[0]}`;
       }
