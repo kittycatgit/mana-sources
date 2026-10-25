@@ -1,8 +1,11 @@
 import {
+  Body,
   CatalogRating,
+  CloudflareError,
   ContentRating,
   ContentType,
   DefinedLanguages,
+  HttpClient,
   PublicationStatus,
   ReadingMode,
   SearchExcludableMultiPickerSheet,
@@ -13,12 +16,13 @@ import {
   type ChapterPage,
   type ChapterSource,
   type Content,
+  type CoverRequestHandler,
   type Form,
   type Highlight,
-  type NetworkRequest,
-  type NetworkResponse,
+  type JsonValue,
   type PageLink,
   type PageLinkResolver,
+  type PageRequestHandler,
   type PageSection,
   type PagedSearchResult,
   type ResolvedPageSection,
@@ -31,7 +35,7 @@ import {
   type Tag,
 } from "@mana-app/types";
 
-import { buildClient, JSON_ACCEPT } from "./client.ts";
+import { JSON_ACCEPT, buildClient, buildImageClient } from "./client.ts";
 import {
   FilterReader,
   PreferenceStore,
@@ -78,7 +82,7 @@ import { postGraphql } from "./page-fetch.ts";
 const info: SourceInfo = {
   id: "mkissa",
   name: "Mkissa",
-  version: "1.0.1",
+  version: "1.0.2",
   description: "Reads the manga catalogue behind mkissa.to",
   website: BASE_URL,
   rating: CatalogRating.MIXED,
@@ -98,15 +102,23 @@ const config: SourceConfig = {
   owningLinks: ["mkissa.to"],
 };
 
-class MkissaSource implements ChapterSource, SearchProvider, PageLinkResolver {
+class MkissaSource
+  implements
+    ChapterSource,
+    SearchProvider,
+    PageLinkResolver,
+    CoverRequestHandler,
+    PageRequestHandler
+{
   readonly info = info;
   readonly config = config;
 
   private readonly preferences = new PreferenceStore(PREFERENCE_NAMESPACE, PREFERENCE_DEFAULTS);
 
-  private client: NetworkClient | undefined;
+  private client: HttpClient | undefined;
+  private images: HttpClient | undefined;
 
-  private get http(): NetworkClient {
+  private get http(): HttpClient {
     this.client ??= buildClient({
       baseUrl: API_URL,
       // The API answers "Too many requests, please try again in N seconds" to a burst; a
@@ -119,6 +131,11 @@ class MkissaSource implements ChapterSource, SearchProvider, PageLinkResolver {
       json: true,
     });
     return this.client;
+  }
+
+  private get imageHttp(): HttpClient {
+    this.images ??= buildImageClient({ referer: `${BASE_URL}/`, origin: BASE_URL });
+    return this.images;
   }
 
   private sections(): SectionSpec[] {
@@ -333,14 +350,15 @@ class MkissaSource implements ChapterSource, SearchProvider, PageLinkResolver {
     return { pages };
   }
 
-  async willRequestImage(imageURL: string): Promise<NetworkRequest> {
-    // Reader pages answer 403 with an HTML error unless the request carries the site as its
-    // referer. Covers serve bare today, and go through the same handler so they keep
-    // working if that changes.
-    return {
-      url: imageURL,
-      headers: { origin: BASE_URL, referer: `${BASE_URL}/` },
-    };
+  // Reader pages answer 403 with an HTML error unless the request carries the site as its
+  // referer. Covers serve bare today, and go through the same handler so they keep
+  // working if that changes.
+  getCoverTransport(): HttpClient {
+    return this.imageHttp;
+  }
+
+  getPageTransport(): HttpClient {
+    return this.imageHttp;
   }
 
   private async browse(query: BrowseQuery): Promise<PagedSearchResult> {
@@ -391,15 +409,8 @@ class MkissaSource implements ChapterSource, SearchProvider, PageLinkResolver {
     query: string,
     variables: Record<string, unknown>,
   ): Promise<Record<string, unknown>> {
-    const body = { query, variables };
-    // The host serialises `body` itself from the content type, so this stays an object —
-    // a string here would reach the API JSON-encoded a second time.
-    const direct = envelope(
-      await this.http.post(API_URL, {
-        headers: { "content-type": "application/json" },
-        body,
-      }),
-    );
+    const body = { query, variables: variables as JsonValue };
+    const direct = envelope(await (await this.http.post(API_URL, Body.json(body))).text());
     if (!direct.captcha) return dataOf(direct);
 
     // The API gates some queries behind a Turnstile solve that a plain request cannot
@@ -425,8 +436,7 @@ class MkissaSource implements ChapterSource, SearchProvider, PageLinkResolver {
 
 type Envelope = { payload: Record<string, unknown>; errors: string[]; captcha: boolean };
 
-function envelope(response: NetworkResponse | string): Envelope {
-  const raw = typeof response === "string" ? response : response.data;
+function envelope(raw: string): Envelope {
   const body = readRecord(safeParse(raw));
   const errors = readArray(body["errors"])
     .map((entry) => readString(readRecord(entry)["message"]))

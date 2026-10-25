@@ -4,7 +4,12 @@ Notable changes to the extensions in this repository, grouped by extension —
 each one versions independently (see `info.version` in its `main.ts`). Dates
 are UTC. Format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## Mkissa (current: v1.0.1)
+## Mkissa (current: v1.0.2)
+
+### 2026-10-26
+
+- Rebuilt for the current Mana release, which replaced how sources talk to the network.
+- Covers and pages load through the source's own request client.
 
 ### 2026-09-09
 
