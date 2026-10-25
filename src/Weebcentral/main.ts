@@ -4,6 +4,7 @@ import {
   ContentType,
   DefinedLanguages,
   HttpClient,
+  HttpStatusError,
   ReadingMode,
   SearchExcludableMultiPickerSheet,
   SectionStyle,
@@ -14,6 +15,7 @@ import {
   type ChapterSource,
   type Content,
   type Highlight,
+  type HttpResponse,
   type LinkItem,
   type PageLink,
   type PageLinkResolver,
@@ -33,7 +35,7 @@ import {
 import { load, type Cheerio, type CheerioAPI } from "cheerio";
 import type { AnyNode } from "domhandler";
 
-import { HTML_ACCEPT, acceptStatus, buildClient } from "./client.ts";
+import { HTML_ACCEPT, buildClient } from "./client.ts";
 import {
   FilterReader,
   buildSearchForm,
@@ -69,7 +71,7 @@ import {
 const info: SourceInfo = {
   id: "weebcentral",
   name: "Weebcentral",
-  version: "1.2.4",
+  version: "1.2.5",
   description: "Pulls manga, manhwa and manhua from weebcentral.com",
   website: BASE_URL,
   rating: CatalogRating.MIXED,
@@ -84,8 +86,15 @@ const config: SourceConfig = {
   owningLinks: ["weebcentral.com"],
 };
 
-/** How many times a rate-limited request is asked again before the reader is told. */
-const RATE_LIMIT_RETRIES = 3;
+/**
+ * How many times a rate-limited chapter list is asked again before the reader is told, and
+ * the deadline that has to hold all of those attempts and the waits between them: the
+ * client's timeout covers a request end to end, retries included, so the default 30 s would
+ * cut the last attempts off. The waits grow from a quarter of a second to five, so ten of
+ * them span about half a minute — longer than any refusal measured on the site.
+ */
+const RATE_LIMIT_RETRIES = 10;
+const RATE_LIMIT_DEADLINE_MS = 60_000;
 
 class WeebcentralSource implements ChapterSource, SearchProvider, PageLinkResolver {
   readonly info = info;
@@ -101,6 +110,9 @@ class WeebcentralSource implements ChapterSource, SearchProvider, PageLinkResolv
       requests: 5,
       interval: 1,
       accept: HTML_ACCEPT,
+      // A brief refusal on a listing or a series page is waited out rather than shown; the
+      // client only ever retries a GET, and only on a 429 or a 5xx.
+      maxRetries: 3,
     });
     return this.client;
   }
@@ -433,42 +445,46 @@ class WeebcentralSource implements ChapterSource, SearchProvider, PageLinkResolv
   }
 
   /**
-   * The chapter list, fetched one caller at a time.
+   * The chapter list, fetched one caller at a time, and waited for when the site refuses.
    *
-   * Weebcentral refuses requests that arrive together rather than requests that arrive
-   * often: paced one every 200ms it serves a dozen chapter lists happily, while a burst of
-   * twenty-five gets one through and answers the rest with 429. Checking a library for
-   * updates asks for every title at once, so it is the one thing that reliably trips it —
-   * which is why only some titles failed, and why pressing retry has always worked.
+   * Weebcentral answers 429 in streaks: measured from one address, a steady request a second
+   * ran for 224 requests without one, and bursts of thirty-four were served whole, yet once a
+   * refusal began it held for twenty seconds and more — and every request made in the
+   * meantime kept it going. Checking a library asks for every title's list at once, so one
+   * streak takes down whichever titles were still waiting, which is why only some fail and
+   * why pressing retry a moment later works. Version 1.2.3 queued the lists and asked again
+   * immediately on a 429, which only added requests to a streak that was already running.
    *
-   * Queueing them costs nothing: the client is already limited to five requests a second,
-   * so the same work takes the same time either way. It only stops them arriving at the
-   * same instant. Reading and browsing do not queue — a burst never came from there, and a
-   * page of a chapter should not wait behind anything.
+   * So two things: lists go one at a time, so a refusal is met by a single request rather
+   * than by every title the library holds; and a refused request waits before it is asked
+   * again — the client's own retry, which honours `retry-after` when the site sends it and
+   * otherwise backs off from a quarter of a second to five — for as long as a measured
+   * streak lasts. Reading and browsing do not queue; a page of a chapter should not wait
+   * behind a library update.
    */
   private async chapterListPage(url: string): Promise<CheerioAPI> {
     const run = async (): Promise<CheerioAPI> => {
-      for (let attempt = 0; ; attempt++) {
-        // A 429 has to arrive as a reply rather than a throw, so it can be asked again.
-        const response = await this.http.get(url, acceptStatus(429));
-
-        if (response.status !== 429) {
-          const html = await response.text();
-          if (!html) {
-            throw new Error(`Weebcentral returned an empty page for ${url}.`);
-          }
-          return load(html);
-        }
-
-        if (attempt >= RATE_LIMIT_RETRIES) {
+      let response: HttpResponse;
+      try {
+        response = await this.http.get(url, {
+          retry: RATE_LIMIT_RETRIES,
+          timeoutMs: RATE_LIMIT_DEADLINE_MS,
+        });
+      } catch (error) {
+        if (error instanceof HttpStatusError && error.response.status === 429) {
           throw new Error(
-            `Weebcentral turned down ${RATE_LIMIT_RETRIES + 1} attempts at ${url} in a row ` +
-              `(HTTP 429). Updating fewer titles at once gives it less to turn down.`,
+            `Weebcentral kept refusing ${url} for half a minute (HTTP 429). It limits how often one ` +
+              `reader may ask; try again in a little while.`,
           );
         }
-        // The client's own rate limit spaces this next attempt out; there is no timer in a
-        // source to wait on, and asking again immediately is what that pacing prevents.
+        throw error;
       }
+
+      const html = await response.text();
+      if (!html) {
+        throw new Error(`Weebcentral returned an empty page for ${url}.`);
+      }
+      return load(html);
     };
 
     // Each call waits for the one before it, whether that succeeded or failed — a failure
