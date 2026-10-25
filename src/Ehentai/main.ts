@@ -1,8 +1,10 @@
 import {
+  Body,
   CatalogRating,
   ContentRating,
   ContentType,
   DefinedLanguages,
+  HttpClient,
   PublicationStatus,
   ReadingMode,
   SectionStyle,
@@ -11,13 +13,14 @@ import {
   type ChapterPage,
   type ChapterSource,
   type Content,
+  type CoverRequestHandler,
   type DeepLinkContext,
   type Form,
   type Highlight,
-  type ImageRequestHandler,
-  type NetworkRequest,
+  type HttpRequest,
   type PageLink,
   type PageLinkResolver,
+  type PageRequestHandler,
   type PageSection,
   type PagedSearchResult,
   type ResolvedPageSection,
@@ -33,7 +36,7 @@ import {
 import { load, type Cheerio, type CheerioAPI } from "cheerio";
 import type { AnyNode } from "domhandler";
 
-import { HTML_ACCEPT, JSON_ACCEPT, buildClient } from "./client.ts";
+import { HTML_ACCEPT, JSON_ACCEPT, acceptStatus, buildClient, buildImageClient } from "./client.ts";
 import {
   FilterReader,
   PreferenceStore,
@@ -81,7 +84,7 @@ import {
 const info: SourceInfo = {
   id: "ehentai",
   name: "Ehentai",
-  version: "1.2.2",
+  version: "1.2.3",
   description: "Reads the doujinshi, manga and image galleries hosted on e-hentai.org",
   website: BASE_URL,
   rating: CatalogRating.EXPLICIT,
@@ -137,13 +140,15 @@ class EhentaiSource
     ChapterSource,
     SearchProvider,
     PageLinkResolver,
-    ImageRequestHandler,
-    SourcePreferenceProvider
+    SourcePreferenceProvider,
+    CoverRequestHandler,
+    PageRequestHandler
 {
   readonly info = info;
   readonly config = config;
 
-  private client: NetworkClient | undefined;
+  private client: HttpClient | undefined;
+  private images: HttpClient | undefined;
   /**
    * Listings are cursor-paged, not offset-paged: page N is only reachable through the
    * `next` link page N-1 printed. Each entry maps a listing's first URL to the trail of
@@ -153,7 +158,7 @@ class EhentaiSource
   private readonly preferences = new PreferenceStore(PREFERENCE_NAMESPACE, PREFERENCE_DEFAULTS);
   private gallery: Gallery | undefined;
 
-  private get http(): NetworkClient {
+  private get http(): HttpClient {
     this.client ??= buildClient({
       baseUrl: BASE_URL,
       requests: 4,
@@ -161,6 +166,15 @@ class EhentaiSource
       accept: HTML_ACCEPT,
     });
     return this.client;
+  }
+
+  private get imageHttp(): HttpClient {
+    this.images ??= buildImageClient({
+      referer: `${BASE_URL}/`,
+      prepare: async (request: HttpRequest) =>
+        isViewerUrl(request.url) ? { ...request, url: await this.imageOn(request.url) } : request,
+    });
+    return this.images;
   }
 
   private sections(): SectionSpec[] {
@@ -344,7 +358,7 @@ class EhentaiSource
    * image URL to derive — each one exists only inside the page it belongs to, and the
    * site's bulk viewer answers `eeenope` to anyone not signed in — so resolving them here
    * cost one request per page before the reader saw anything: 79 seconds on the 478-page
-   * gallery that led the home page. `willRequestImage` resolves a page at the moment the
+   * gallery that led the home page. The page transport resolves a page at the moment the
    * app asks for it instead, which is also when the image URL's `keystamp` is freshest.
    */
   async getChapterData(contentId: string, _chapterId: string): Promise<ChapterData> {
@@ -361,9 +375,12 @@ class EhentaiSource
     return { pages };
   }
 
-  async willRequestImage(imageURL: string): Promise<NetworkRequest> {
-    if (!isViewerUrl(imageURL)) return { url: imageURL };
-    return { url: await this.imageOn(imageURL) };
+  getCoverTransport(): HttpClient {
+    return this.imageHttp;
+  }
+
+  getPageTransport(): HttpClient {
+    return this.imageHttp;
   }
 
   async handleURL(url: string): Promise<DeepLinkContext | null> {
@@ -472,15 +489,13 @@ class EhentaiSource
     if (cached && `${cached.gid}/${cached.token}` === contentId) return cached;
 
     const [gid, token] = splitContentId(contentId);
-    const response = await this.http.post(API_URL, {
-      headers: { accept: JSON_ACCEPT, "content-type": "application/json" },
-      // The host serialises `body` itself from the content type, so a string here reaches
-      // the API JSON-encoded a second time and it answers "No method provided".
-      body: { method: "gdata", gidlist: [[gid, token]], namespace: 1 },
-      validateStatus: servedStatus,
-    });
+    const response = await this.http.post(
+      API_URL,
+      Body.json({ method: "gdata", gidlist: [[gid, token]], namespace: 1 }),
+      { headers: { accept: JSON_ACCEPT }, ...SERVED },
+    );
 
-    const payload = readRecord(safeParse(response.data));
+    const payload = readRecord(safeParse(await response.text()));
     const error = readString(payload["error"]);
     if (error !== "") {
       throw new Error(`E-Hentai rejected the metadata request for ${contentId}: ${error}`);
@@ -532,11 +547,8 @@ class EhentaiSource
   }
 
   private async get(url: string): Promise<string> {
-    const response = await this.http.get(url, {
-      headers: { accept: HTML_ACCEPT },
-      validateStatus: servedStatus,
-    });
-    return response.data;
+    const response = await this.http.get(url, { headers: { accept: HTML_ACCEPT }, ...SERVED });
+    return response.text();
   }
 }
 
@@ -547,9 +559,7 @@ class EhentaiSource
  * notice — an Australian reader gets every gallery under that status. Treating it as a
  * failure would leave those readers with an empty app.
  */
-function servedStatus(status: number): boolean {
-  return (status >= 200 && status < 300) || status === 451;
-}
+const SERVED = acceptStatus(451);
 
 function searchUrl(query: SearchQuery): string {
   return withQuery(`${BASE_URL}/`, {
