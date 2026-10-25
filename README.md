@@ -16,7 +16,7 @@ from there.
 | Source | Version | Language | Rating |
 | ------ | ------- | -------- | ------ |
 | Ehentai | 1.2.3 | Multi-language | Explicit |
-| Hiperdex | 1.2.2 | English | Explicit |
+| Hiperdex | 1.2.3 | English | Explicit |
 | Hitomi | 1.5.5 | Multi-language | Explicit |
 | Imhentai | 1.1.0 | Multi-language | Explicit |
 | Madaradex | 1.1.2 | English | Explicit |

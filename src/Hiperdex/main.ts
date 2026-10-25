@@ -1,8 +1,10 @@
 import {
   CatalogRating,
+  CloudflareError,
   ContentRating,
   ContentType,
   DefinedLanguages,
+  HttpClient,
   SearchMultiPickerSheet,
   SectionStyle,
   additionalInfo,
@@ -11,12 +13,13 @@ import {
   type ChapterPage,
   type ChapterSource,
   type Content,
+  type CoverRequestHandler,
   type Highlight,
-  type NetworkRequest,
-  type NetworkResponse,
+  type HttpResponse,
   type Option,
   type PageLink,
   type PageLinkResolver,
+  type PageRequestHandler,
   type PageSection,
   type PagedSearchResult,
   type ResolvedPageSection,
@@ -31,7 +34,14 @@ import {
   type Tag,
 } from "@mana-app/types";
 
-import { HTML_ACCEPT, JSON_ACCEPT, buildClient } from "./client.ts";
+import {
+  HTML_ACCEPT,
+  JSON_ACCEPT,
+  acceptStatus,
+  buildClient,
+  buildImageClient,
+  cookieHeader,
+} from "./client.ts";
 import {
   FilterReader,
   buildSearchForm,
@@ -74,7 +84,7 @@ import {
 const info: SourceInfo = {
   id: "hiperdex",
   name: "Hiperdex",
-  version: "1.2.2",
+  version: "1.2.3",
   description: "Pulls manga, manhwa and manhua from hiperdex.com",
   website: BASE_URL,
   rating: CatalogRating.EXPLICIT,
@@ -94,18 +104,26 @@ type RatingPolicy = {
   allowed?: readonly ContentRating[];
 };
 
-class HiperdexSource implements ChapterSource, SearchProvider, PageLinkResolver {
+class HiperdexSource
+  implements
+    ChapterSource,
+    SearchProvider,
+    PageLinkResolver,
+    CoverRequestHandler,
+    PageRequestHandler
+{
   readonly info = info;
   readonly config = config;
 
-  private client: NetworkClient | undefined;
+  private client: HttpClient | undefined;
+  private images: HttpClient | undefined;
   private session: string | undefined;
   private key: string | undefined;
   private genreOptions: Option[] | undefined;
   private readonly seriesIds = new Map<string, number>();
   private chapterCache: { contentId: string; records: Record<string, unknown>[] } | undefined;
 
-  private get http(): NetworkClient {
+  private get http(): HttpClient {
     this.client ??= buildClient({
       baseUrl: BASE_URL,
       requests: 5,
@@ -113,6 +131,11 @@ class HiperdexSource implements ChapterSource, SearchProvider, PageLinkResolver 
       accept: JSON_ACCEPT,
     });
     return this.client;
+  }
+
+  private get imageHttp(): HttpClient {
+    this.images ??= buildImageClient({ referer: `${BASE_URL}/`, origin: BASE_URL });
+    return this.images;
   }
 
   private sections(policy: RatingPolicy): SectionSpec[] {
@@ -378,13 +401,14 @@ class HiperdexSource implements ChapterSource, SearchProvider, PageLinkResolver 
     return { pages };
   }
 
-  async willRequestImage(imageURL: string): Promise<NetworkRequest> {
-    // Both CDNs answer 403 with an HTML error page unless the request carries the site as
-    // its referer — covers included, not just reader pages.
-    return {
-      url: imageURL,
-      headers: { origin: BASE_URL, referer: `${BASE_URL}/` },
-    };
+  // Both CDNs answer 403 with an HTML error page unless the request carries the site as
+  // its referer — covers included, not just reader pages.
+  getCoverTransport(): HttpClient {
+    return this.imageHttp;
+  }
+
+  getPageTransport(): HttpClient {
+    return this.imageHttp;
   }
 
   private async browse(query: SearchQuery, policy: RatingPolicy): Promise<PagedSearchResult> {
@@ -546,17 +570,17 @@ class HiperdexSource implements ChapterSource, SearchProvider, PageLinkResolver 
 
     const response = await this.landingPage();
     const match = new RegExp(`${SESSION_COOKIE}=([^;,\\s]+)`).exec(
-      headerOf(response.headers, "set-cookie"),
+      response.headers.get("set-cookie") ?? "",
     );
 
     this.session = match?.[1] ?? "";
     return this.session;
   }
 
-  private landingPage(): Promise<NetworkResponse> {
+  private landingPage(): Promise<HttpResponse> {
     return this.http.get(`${BASE_URL}/`, {
       headers: { accept: HTML_ACCEPT },
-      validateStatus: (status) => status >= 200 && status < 400,
+      ...acceptStatus(301, 302, 303, 307, 308),
     });
   }
 
@@ -569,14 +593,15 @@ class HiperdexSource implements ChapterSource, SearchProvider, PageLinkResolver 
   /** Re-reads the key out of the site's own bundle, for when the copy in `model.ts` ages out. */
   private async discoverApiKey(): Promise<string | undefined> {
     const home = await this.landingPage();
-    const asset = /<script[^>]+src="(\/assets\/index-[^"]+\.js)"/.exec(home.data)?.[1];
+    const asset = /<script[^>]+src="(\/assets\/index-[^"]+\.js)"/.exec(await home.text())?.[1];
     if (asset === undefined) return undefined;
 
     const bundle = await this.http.get(`${BASE_URL}${asset}`, { headers: { accept: "*/*" } });
-    const client = bundle.data.indexOf("/api/trpc");
+    const script = await bundle.text();
+    const client = script.indexOf("/api/trpc");
     if (client === -1) return undefined;
 
-    const region = bundle.data.slice(Math.max(0, client - 800), client);
+    const region = script.slice(Math.max(0, client - 800), client);
     const match = /atob\("([A-Za-z0-9+/=]+)"\)\s*\+\s*"([^"]*)"/.exec(region);
     if (match === null) return undefined;
 
@@ -609,11 +634,13 @@ class HiperdexSource implements ChapterSource, SearchProvider, PageLinkResolver 
 
     if (response.status >= 400) {
       throw new Error(
-        `Hiperdex rejected ${procedure} (HTTP ${response.status}): ${apiError(response.data)}`,
+        `Hiperdex rejected ${procedure} (HTTP ${response.status}): ${apiError(await response.text())}`,
       );
     }
 
-    const data = readRecord(readRecord(readRecord(safeParse(response.data))["result"])["data"]);
+    const data = readRecord(
+      readRecord(readRecord(safeParse(await response.text()))["result"])["data"],
+    );
     if (!("json" in data)) {
       throw new Error(`Hiperdex returned no data for ${procedure}. The API may have changed.`);
     }
@@ -625,16 +652,19 @@ class HiperdexSource implements ChapterSource, SearchProvider, PageLinkResolver 
     input: unknown,
     token: string,
     key: string,
-  ): Promise<NetworkResponse> {
+  ): Promise<HttpResponse> {
     const url = withQuery(`${API_URL}/${procedure}`, {
       input: input === undefined ? undefined : JSON.stringify({ json: input }),
     });
 
     return this.http.get(url, {
-      headers: { [API_KEY_HEADER]: key },
-      ...(token === "" ? {} : { cookies: [{ name: SESSION_COOKIE, value: token }] }),
-      // 401 is the expected answer to a stale session token and is retried, not thrown.
-      validateStatus: (status) => status >= 200 && status < 500,
+      headers: {
+        [API_KEY_HEADER]: key,
+        ...(token === "" ? {} : { cookie: cookieHeader([{ name: SESSION_COOKIE, value: token }]) }),
+      },
+      // 401 is the expected answer to a stale session token and is retried, not thrown; the
+      // other refusals carry the API's own message, which is reported rather than a bare status.
+      ...acceptStatus(400, 401, 404, 409, 422, 429),
     });
   }
 }
@@ -680,14 +710,6 @@ function readDate(value: unknown): Date | undefined {
   if (raw === "") return undefined;
   const date = new Date(raw);
   return Number.isFinite(date.getTime()) ? date : undefined;
-}
-
-function headerOf(headers: Record<string, unknown>, name: string): string {
-  for (const [key, value] of Object.entries(headers)) {
-    if (key.toLowerCase() !== name) continue;
-    return Array.isArray(value) ? value.map(readString).join("; ") : readString(value);
-  }
-  return "";
 }
 
 const BASE64_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";

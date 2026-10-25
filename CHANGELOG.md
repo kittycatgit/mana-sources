@@ -349,7 +349,12 @@ are UTC. Format loosely follows [Keep a Changelog](https://keepachangelog.com/en
   Translation / Anime Adaptation / Adult Content toggles, six sort orders either way.
 - Asks the site for non-adult results when the app's content rating requires it.
 
-## Hiperdex (current: v1.2.2)
+## Hiperdex (current: v1.2.3)
+
+### 2026-10-26
+
+- Rebuilt for the current Mana release, which replaced how sources talk to the network.
+- Covers and pages load through the source's own request client.
 
 ### 2026-09-09
 
