@@ -126,7 +126,11 @@ are UTC. Format loosely follows [Keep a Changelog](https://keepachangelog.com/en
   newest-first.
 - Chapter images need the site as referer.
 
-## Mangaball (current: v1.3.6)
+## Mangaball (current: v1.3.7)
+
+### 2026-10-26
+
+- Rebuilt for the current Mana release, which replaced how sources talk to the network.
 
 ### 2026-09-09
 

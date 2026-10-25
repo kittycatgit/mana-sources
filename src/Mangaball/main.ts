@@ -1,8 +1,10 @@
 import {
+  Body,
   CatalogRating,
   ContentRating,
   ContentType,
   DefinedLanguages,
+  HttpClient,
   ProviderLinkType,
   PublicationStatus,
   ReadingMode,
@@ -34,7 +36,7 @@ import {
 import { load, type Cheerio, type CheerioAPI } from "cheerio";
 import type { AnyNode } from "domhandler";
 
-import { HTML_ACCEPT, JSON_ACCEPT, buildClient } from "./client.ts";
+import { HTML_ACCEPT, JSON_ACCEPT, buildClient, cookieHeader } from "./client.ts";
 import {
   FilterReader,
   PreferenceStore,
@@ -89,7 +91,7 @@ const SESSION_TTL_MS = 20 * 60 * 1000;
 const info: SourceInfo = {
   id: "mangaball",
   name: "Mangaball",
-  version: "1.3.6",
+  version: "1.3.7",
   description: "Pulls manga, manhwa and manhua from mangaball.net",
   website: BASE_URL,
   rating: CatalogRating.MIXED,
@@ -116,12 +118,12 @@ class MangaballSource implements ChapterSource, SearchProvider, PageLinkResolver
   readonly info = info;
   readonly config = config;
 
-  private client: NetworkClient | undefined;
+  private client: HttpClient | undefined;
   private session: Session | undefined;
   private pending: Promise<Session> | undefined;
   private readonly preferences = new PreferenceStore(PREFERENCE_NAMESPACE, PREFERENCE_DEFAULTS);
 
-  private get http(): NetworkClient {
+  private get http(): HttpClient {
     this.client ??= buildClient({
       baseUrl: BASE_URL,
       // Eighteen rows resolve together. At four a second the last of them was not even sent
@@ -469,7 +471,9 @@ class MangaballSource implements ChapterSource, SearchProvider, PageLinkResolver
 
   async getChapterData(contentId: string, chapterId: string): Promise<ChapterData> {
     const response = await this.http.get(chapterUrl(chapterId));
-    const raw = /const\s+chapterImages\s*=\s*JSON\.parse\(`([\s\S]*?)`\)/.exec(response.data)?.[1];
+    const raw = /const\s+chapterImages\s*=\s*JSON\.parse\(`([\s\S]*?)`\)/.exec(
+      await response.text(),
+    )?.[1];
 
     const pages: ChapterPage[] = (parseImageList(raw) ?? [])
       .map((page) => absolute(page))
@@ -537,21 +541,23 @@ class MangaballSource implements ChapterSource, SearchProvider, PageLinkResolver
 
   private async post<T>(url: string, body: string, timeout?: number): Promise<T> {
     const session = await this.credentials();
-    const response = await this.http.post(url, {
-      headers: {
-        accept: JSON_ACCEPT,
-        "content-type": "application/x-www-form-urlencoded; charset=UTF-8",
-        "x-csrf-token": session.token,
-        "x-requested-with": "XMLHttpRequest",
+    const response = await this.http.post(
+      url,
+      Body.text(body, "application/x-www-form-urlencoded; charset=UTF-8"),
+      {
+        headers: {
+          accept: JSON_ACCEPT,
+          "x-csrf-token": session.token,
+          "x-requested-with": "XMLHttpRequest",
+          ...(session.cookie === undefined ? {} : { cookie: cookieHeader([session.cookie]) }),
+        },
+        ...(timeout === undefined ? {} : { timeoutMs: timeout }),
       },
-      ...(session.cookie === undefined ? {} : { cookies: [session.cookie] }),
-      ...(timeout === undefined ? {} : { timeout }),
-      body,
-    });
+    );
 
     let payload: unknown;
     try {
-      payload = JSON.parse(response.data);
+      payload = JSON.parse(await response.text());
     } catch {
       throw new Error(`Manga Ball answered ${url} with something that was not JSON.`);
     }
@@ -605,14 +611,14 @@ class MangaballSource implements ChapterSource, SearchProvider, PageLinkResolver
     }
 
     const response = await this.http.get(`${BASE_URL}/`);
-    const token = /name="csrf-token"\s+content="([^"]+)"/.exec(response.data)?.[1] ?? "";
+    const token = /name="csrf-token"\s+content="([^"]+)"/.exec(await response.text())?.[1] ?? "";
     if (!token) {
       throw new Error(
         "Manga Ball served no CSRF token. Its home page has to load before any of its API routes will answer.",
       );
     }
 
-    const value = sessionCookie(response.headers);
+    const value = sessionCookie(response.headers.get("set-cookie") ?? "");
     this.session = { token, ...(value ? { cookie: { name: "PHPSESSID", value } } : {}) };
     await ObjectStore.set(SESSION_KEY, { ...this.session, at: Date.now() });
     return this.session;
@@ -627,10 +633,11 @@ class MangaballSource implements ChapterSource, SearchProvider, PageLinkResolver
 
   private async page(url: string): Promise<CheerioAPI> {
     const response = await this.http.get(url);
-    if (!response.data) {
+    const html = await response.text();
+    if (!html) {
       throw new Error(`Manga Ball returned an empty page for ${url}.`);
     }
-    return load(response.data);
+    return load(html);
   }
 }
 
@@ -698,14 +705,8 @@ function titleIdOf(contentId: string): string {
   return /([0-9a-f]{24})$/i.exec(contentId)?.[1] ?? contentId;
 }
 
-function sessionCookie(headers: Record<string, unknown>): string {
-  for (const [key, value] of Object.entries(headers)) {
-    if (key.toLowerCase() !== "set-cookie") continue;
-    const raw = Array.isArray(value) ? value.join("; ") : String(value);
-    const found = /PHPSESSID=([^;,\s]+)/.exec(raw)?.[1];
-    if (found) return found;
-  }
-  return "";
+function sessionCookie(setCookie: string): string {
+  return /PHPSESSID=([^;,\s]+)/.exec(setCookie)?.[1] ?? "";
 }
 
 function searchBody(query: SearchQuery): string {
