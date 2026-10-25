@@ -3,6 +3,7 @@ import {
   ContentRating,
   ContentType,
   DefinedLanguages,
+  HttpClient,
   ReadingMode,
   SearchExcludableMultiPickerSheet,
   SectionStyle,
@@ -32,7 +33,7 @@ import {
 import { load, type Cheerio, type CheerioAPI } from "cheerio";
 import type { AnyNode } from "domhandler";
 
-import { HTML_ACCEPT, buildClient } from "./client.ts";
+import { HTML_ACCEPT, acceptStatus, buildClient } from "./client.ts";
 import {
   FilterReader,
   buildSearchForm,
@@ -68,7 +69,7 @@ import {
 const info: SourceInfo = {
   id: "weebcentral",
   name: "Weebcentral",
-  version: "1.2.3",
+  version: "1.2.4",
   description: "Pulls manga, manhwa and manhua from weebcentral.com",
   website: BASE_URL,
   rating: CatalogRating.MIXED,
@@ -90,11 +91,11 @@ class WeebcentralSource implements ChapterSource, SearchProvider, PageLinkResolv
   readonly info = info;
   readonly config = config;
 
-  private client: NetworkClient | undefined;
+  private client: HttpClient | undefined;
   /** The tail of the chapter-list queue; see `chapterListPage`. */
   private chapterListQueue: Promise<void> = Promise.resolve();
 
-  private get http(): NetworkClient {
+  private get http(): HttpClient {
     this.client ??= buildClient({
       baseUrl: BASE_URL,
       requests: 5,
@@ -424,10 +425,11 @@ class WeebcentralSource implements ChapterSource, SearchProvider, PageLinkResolv
       url,
       referer === undefined ? undefined : { headers: { referer } },
     );
-    if (!response.data) {
+    const html = await response.text();
+    if (!html) {
       throw new Error(`Weebcentral returned an empty page for ${url}.`);
     }
-    return load(response.data);
+    return load(html);
   }
 
   /**
@@ -447,16 +449,15 @@ class WeebcentralSource implements ChapterSource, SearchProvider, PageLinkResolv
   private async chapterListPage(url: string): Promise<CheerioAPI> {
     const run = async (): Promise<CheerioAPI> => {
       for (let attempt = 0; ; attempt++) {
-        const response = await this.http.get(url, {
-          // A 429 has to arrive as a reply rather than a throw, so it can be asked again.
-          validateStatus: (status: number) => (status >= 200 && status < 300) || status === 429,
-        });
+        // A 429 has to arrive as a reply rather than a throw, so it can be asked again.
+        const response = await this.http.get(url, acceptStatus(429));
 
         if (response.status !== 429) {
-          if (!response.data) {
+          const html = await response.text();
+          if (!html) {
             throw new Error(`Weebcentral returned an empty page for ${url}.`);
           }
-          return load(response.data);
+          return load(html);
         }
 
         if (attempt >= RATE_LIMIT_RETRIES) {

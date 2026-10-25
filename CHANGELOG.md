@@ -355,7 +355,11 @@ are UTC. Format loosely follows [Keep a Changelog](https://keepachangelog.com/en
 - Chapter images carry the site as referer plus the `mdx_fp`/`mdx_auth` cookies the CDN
   requires.
 
-## Weebcentral (current: v1.2.3)
+## Weebcentral (current: v1.2.4)
+
+### 2026-10-26
+
+- Rebuilt for the current Mana release, which replaced how sources talk to the network.
 
 ### 2026-09-15
 
