@@ -12,98 +12,60 @@ import {
 
 import type { PreferenceSection } from "./forms/index.ts";
 
-export const BASE_URL = "https://mangaball.net";
-export const SEARCH_API = `${BASE_URL}/api/v1/title/search-advanced/`;
-export const LISTING_API = `${BASE_URL}/api/v1/title/search/`;
-export const CHAPTERS_API = `${BASE_URL}/api/v1/chapter/chapter-listing-by-title-id/`;
+export const BASE_URL = "https://mangaball.com";
+export const API_URL = `${BASE_URL}/api/v1`;
+
+/**
+ * The site's own copy of a cover lives on this host, keyed by the `image.cover.path` the API
+ * reports (sometimes with backslashes, which are normalised). The host is Cloudflare
+ * protected and answers a challenge to a client it does not recognise, so a cover carries the
+ * MangaDex copy the API also reports wherever one exists, and this only where it does not.
+ */
+export const COVER_CDN = "https://bulbasaur.poke-black-and-white.net/covers/";
 
 export const ANY = "any";
 
-/** `pagination.limit` on every `search-advanced` reply, regardless of what is asked for. */
+/** What the site's own search page asks for; the API honours any limit up to it. */
 export const PAGE_SIZE = 24;
-
-/** `getFeatured` and `getByOrigin` ignore `search_limit` outright and always answer twelve. */
 export const FEATURED_SIZE = 12;
-
-/** `getRecommend` honours `search_limit` up to eighteen and caps there. */
 export const RECOMMEND_SIZE = 18;
+export const TOP_RATED_SIZE = 12;
+export const TOP_CHAPTERS_SIZE = 12;
+/** Several of a title's chapters rank at once, so more are asked for than the row shows. */
+export const TOP_CHAPTERS_FETCH = 48;
+export const TOP_CHAPTERS_TIMEOUT = 45_000;
 
-/** `getPopular` and `getRecentChapterRead` honour any `search_limit` they are given. */
-export const TRENDING_SIZE = 20;
-
-/**
- * `getRecentChapterRead` is the one listing served from a cache the site rebuilds on a miss,
- * and `search_limit` is part of that cache key — so the number asked for decides whether the
- * reply comes off the line the site's own home page keeps warm or off one only this source
- * ever asks for. Measured 2026-09-08: `day` cold at 13.1s, and a limit of 17 that nothing
- * else requests cold at 16.4s, both 0.4s on the next call, while every other listing answers
- * in under a second either way. The site's own page asks for twelve, so these rows show
- * twelve.
- */
-export const CHAPTER_READS_SIZE = 12;
-
-/**
- * Riding the warm line is not enough on its own: `day` goes cold again within the hour, so a
- * rebuild still has to fit inside the request or the row returns an error card while its
- * neighbours load. Given to these four calls only — the client default is right for
- * everything else, none of which has ever been seen above a second.
- */
-export const CHAPTER_READS_TIMEOUT = 30_000;
-
-/**
- * The home page's rows are all one endpoint under different `search_type` values. None of
- * them answers with a `pagination` block, so every section built on one is a single fixed
- * page and carries `viewMore: false`.
- *
- * `getRecentRead` ranks titles by views over a `search_time` window; `getRecentChapterRead`
- * ranks them by chapters opened over the same windows. Their windows overlap heavily on any
- * given day — a title that leads the week usually leads the month — but they are different
- * questions and answer differently the moment something new breaks through, so each window
- * the site offers is a row here.
- *
- * The one window that is not is `getRecentRead&search_time=week`: `getFeatured` is that
- * query reshuffled, all twelve of its titles being the weekly top twelve in another order
- * (measured again 2026-09-08, 12/12). Shipping it would be the Featured hero a second time.
- * `getLatestTable` and `getByOrigin` are likewise absent as duplicates of browse queries the
- * source already runs — see the `SORT_FIELD` note and the origin rows in `main.ts`.
- */
-export const ListingType = {
-  Featured: "getFeatured",
-  Recommend: "getRecommend",
-  Popular: "getPopular",
-  Reads: "getRecentRead",
-  ChapterReads: "getRecentChapterRead",
-} as const;
-
-/** The `search_time` windows both ranking types accept. */
-export const Window = {
+/** The windows `chapter/top-views` ranks over. */
+export const Period = {
   Day: "day",
   Week: "week",
   Month: "month",
-  Year: "year",
 } as const;
 
 export const PREFERENCE_NAMESPACE = "mangaball";
 export const CHAPTER_LANGUAGES_KEY = "chapterLanguages";
 
 export const PREFERENCE_DEFAULTS = {
-  [CHAPTER_LANGUAGES_KEY]: ["en"] as string[],
+  [CHAPTER_LANGUAGES_KEY]: [] as string[],
 };
 
 export const FilterID = {
-  Status: "publicationStatus",
+  Status: "status",
   Demographic: "demographic",
-  Origin: "originalLanguages",
-  Translated: "translatedLanguage",
-  TagMode: "tag_included_mode",
+  Origin: "original_language",
+  Translated: "chapterLanguage",
+  TagMode: "tag_mode",
   Tags: "tags",
 } as const;
 
+/** Sort ids are the API's own field names. */
 export const SortID = {
-  LatestChapters: "updated-chapters",
-  RecentlyAdded: "recently-added",
+  LatestChapters: "latest_chapter_at",
+  Updated: "updated_at",
+  RecentlyAdded: "created_at",
   Views: "views",
-  Title: "title",
+  Rating: "rating_average",
+  Title: "name",
 } as const;
 
 export const ListID = {
@@ -111,59 +73,39 @@ export const ListID = {
   Recommended: "recommended",
   Latest: "latest-updates",
   Added: "recently-added",
+  TopRated: "top-rated",
   Viewed: "most-viewed",
-  ViewedToday: "most-viewed-today",
-  ViewedMonth: "most-viewed-month",
-  ViewedYear: "most-viewed-year",
   ReadToday: "most-read-today",
   ReadWeek: "most-read-week",
   ReadMonth: "most-read-month",
-  ReadYear: "most-read-year",
-  MangaUpdates: "manga-updates",
+  Manga: "manga-updates",
   Manhwa: "manhwa-updates",
   Manhua: "manhua-updates",
   Comics: "comics-updates",
-  Manga: "popular-manga",
   Completed: "completed",
 } as const;
 
+/** `original_language` values; the site maps its four kinds of title onto these. */
 export const OriginID = {
-  Comics: "en",
-  Manga: "jp",
-  Manhwa: "kr",
+  Manga: "ja",
+  Manhwa: "ko",
   Manhua: "zh",
+  Comics: "en",
 } as const;
 
+/**
+ * Ascending is offered only where it means something: the catalogue's oldest, least-viewed
+ * and earliest-added tail is thousands of nameless placeholder entries, so those three sort
+ * one way.
+ */
 export const SORT_OPTIONS: SortOption[] = [
-  {
-    id: SortID.LatestChapters,
-    title: "Latest Chapters",
-    isDefault: true,
-    isOrderable: true,
-    defaultAscending: false,
-  },
-  {
-    id: SortID.RecentlyAdded,
-    title: "Recently Added",
-    isOrderable: true,
-    defaultAscending: false,
-  },
-  { id: SortID.Views, title: "Views", isOrderable: true, defaultAscending: false },
+  { id: SortID.LatestChapters, title: "Latest Chapters", isDefault: true },
+  { id: SortID.Updated, title: "Recently Updated" },
+  { id: SortID.RecentlyAdded, title: "Recently Added" },
+  { id: SortID.Views, title: "Views" },
+  { id: SortID.Rating, title: "Rating", isOrderable: true, defaultAscending: false },
   { id: SortID.Title, title: "Title", isOrderable: true, defaultAscending: true },
 ];
-
-/**
- * The site bakes the direction into the sort value rather than taking it separately, so
- * each option contributes a `<field>_asc` / `<field>_desc` pair. `rating_*` and
- * `updated_at_desc` are omitted: they return byte-identical listings to an unrecognised
- * sort value, which is the site falling back to its default rather than sorting.
- */
-export const SORT_FIELD: Record<string, string> = {
-  [SortID.LatestChapters]: "updated_chapters",
-  [SortID.RecentlyAdded]: "created_at",
-  [SortID.Views]: "views",
-  [SortID.Title]: "name",
-};
 
 export const STATUS_OPTIONS: Option[] = [
   { id: ANY, title: "Any" },
@@ -240,6 +182,8 @@ export const LANGUAGE_OPTIONS: Option[] = [
   { id: "sk", title: "Slovak" },
   { id: "sq", title: "Albanian" },
 ];
+
+/** The site's tag ids, as its own genre index links them (96 on 2026-10-26, unchanged since 2026-09-08). */
 export const TAG_OPTIONS: Option[] = [
   { id: "685146c5f3ed681c80f257e3", title: "Action" },
   { id: "689371f0a943baf927094f03", title: "Adult" },
@@ -370,11 +314,7 @@ export const SEARCH_FIELDS: SearchListField[] = [
   }),
 ];
 
-/**
- * Excluded tags have no matching mode control: the site accepts `tag_excluded_mode` and
- * returns the same totals for `and` and `or`, so exclusion is always "drop anything
- * carrying any of these".
- */
+/** Excluded tags always mean "drop anything carrying any of these"; the API has no mode for them. */
 export const TAGS_FIELD: SearchOptionField = SearchExcludableMultiPickerSheet({
   id: FilterID.Tags,
   title: "Tags",
@@ -385,7 +325,7 @@ export const PREFERENCE_SECTIONS: PreferenceSection[] = [
   {
     header: "Chapters",
     footer:
-      "A title on Manga Ball carries one chapter list per scanlation language. Only the languages selected here are listed; clear the selection to see every one.",
+      "A title on Manga Ball carries one chapter list per scanlation language. Only the languages selected here are listed, and Latest Updates follows the same selection; clear it to see every one.",
     fields: [
       {
         type: "multiselect",
@@ -402,18 +342,23 @@ export const STATUS_BY_NAME: Record<string, PublicationStatus> = {
   completed: PublicationStatus.COMPLETED,
   complete: PublicationStatus.COMPLETED,
   hiatus: PublicationStatus.HIATUS,
+  on_hold: PublicationStatus.HIATUS,
   cancelled: PublicationStatus.CANCELLED,
   canceled: PublicationStatus.CANCELLED,
 };
 
-/** The origin flag on a tile is the closest the site comes to naming a content type. */
-export const CONTENT_TYPE_BY_FLAG: Record<string, ContentType> = {
+/** `originalLanguage` decides the kind of title, the way the site's own front end sorts them. */
+export const CONTENT_TYPE_BY_ORIGIN: Record<string, ContentType> = {
+  ja: ContentType.MANGA,
   jp: ContentType.MANGA,
+  ko: ContentType.MANHWA,
   kr: ContentType.MANHWA,
-  cn: ContentType.MANHUA,
   zh: ContentType.MANHUA,
-  gb: ContentType.COMIC,
-  us: ContentType.COMIC,
+  cn: ContentType.MANHUA,
+  "zh-hk": ContentType.MANHUA,
+  "zh-hans": ContentType.MANHUA,
+  "zh-hant": ContentType.MANHUA,
+  en: ContentType.COMIC,
 };
 
 /**
@@ -445,72 +390,117 @@ export type SearchQuery = {
   tags?: readonly string[];
   excludeTags?: readonly string[];
   tagMode?: string;
+  adultMode?: string;
+};
+
+export type ApiCover = {
+  cdn_mangadex?: string | null;
+  cover?: { path?: string | null } | null;
+};
+
+export type ApiTag = {
+  id?: string;
+  _id?: string;
+  name?: string;
+  group?: string;
+};
+
+export type ApiPerson = {
+  id?: string;
+  _id?: string;
+  name?: string;
+};
+
+export type ApiRecentChapter = {
+  number?: number | string | null;
+  lang?: string | null;
 };
 
 export type ApiTitle = {
+  id?: string;
   _id?: string;
   name?: string;
-  alternateName?: string;
-  cover?: string;
-  tags?: string;
-  authors?: string;
-  status?: string;
-  url?: string;
-  description?: string;
-  last_chapter?: string;
-  updated_at?: string;
-  languageFlag?: string;
-  isAdult?: boolean;
+  slug?: string;
+  alternateName?: string[] | string | null;
+  image?: ApiCover | null;
+  description?: string[] | string | null;
+  originalLanguage?: string | null;
+  publicationDemographic?: string | null;
+  status?: string | null;
+  date_published?: number | string | null;
+  tags?: ApiTag[] | null;
+  authors?: ApiPerson[] | null;
+  author?: ApiPerson[] | null;
+  links?: Record<string, string | null | undefined> | null;
+  is18plus?: boolean;
+  latest_chapter?: string | number | null;
+  recent_chapters?: ApiRecentChapter[] | null;
 };
 
 export type ApiPagination = {
   total?: number;
+  page?: number;
   limit?: number;
-  current_page?: number;
-  last_page?: number;
+  total_pages?: number;
 };
 
-export type ApiSearchResponse = {
+export type ApiListing = {
   code?: number;
+  status?: string;
   message?: string;
-  data?: ApiTitle[];
-  pagination?: ApiPagination;
+  data?: ApiTitle[] | null;
+  pagination?: ApiPagination | null;
+};
+
+export type ApiDetail = {
+  code?: number;
+  status?: string;
+  message?: string;
+  data?: ApiTitle | null;
 };
 
 /**
- * `_id` is the stable key: it is an upstream site slug (`comick`, `mangadot`, `bato`) for
- * the groups the site mirrors and a 24-hex id for user-created ones. `name` is a Pokémon
- * alias the site substitutes for the real group name, and it is not stable — one id was
- * seen under two names in a single listing — so it names the provider but never keys it.
+ * `id` is stable; `name` is a Pokémon alias the site substitutes for the real group name
+ * and has been seen changing for one id within a single listing, so it names the provider
+ * but never keys it.
  */
 export type ApiGroup = {
+  id?: string;
   _id?: string;
   name?: string;
-  icon?: string;
-};
-
-export type ApiTranslation = {
-  id?: string;
-  name?: string;
-  language?: string;
-  languageName?: string;
-  group?: ApiGroup;
-  date?: string;
-  pages?: number;
-  url?: string;
-  volume?: number;
+  slug?: string;
 };
 
 export type ApiChapter = {
-  number?: string;
-  number_float?: number;
-  title?: string;
-  translations?: ApiTranslation[];
+  id?: string;
+  _id?: string;
+  lang?: string | null;
+  name?: string | null;
+  number?: number | string | null;
+  volume?: number | null;
+  created_at?: string | null;
+  group?: ApiGroup | null;
 };
 
 export type ApiChapterListing = {
-  code?: number;
+  status?: string;
   message?: string;
-  ALL_CHAPTERS?: ApiChapter[];
-  TOTAL_TRANSLATIONS?: number;
+  data?: ApiChapter[] | null;
+};
+
+export type ApiTopChapter = {
+  chapter_number?: string | number | null;
+  title_id?: string;
+  id?: string;
+  name?: string;
+  slug?: string;
+  cover?: ApiCover | null;
+  image?: ApiCover | null;
+  tags?: ApiTag[] | null;
+  is18plus?: boolean;
+};
+
+export type ApiTopChapters = {
+  status?: string;
+  data?: ApiTopChapter[] | null;
 };

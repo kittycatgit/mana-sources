@@ -126,7 +126,15 @@ are UTC. Format loosely follows [Keep a Changelog](https://keepachangelog.com/en
   newest-first.
 - Chapter images need the site as referer.
 
-## Mangaball (current: v1.3.7)
+## Mangaball (current: v1.4.0)
+
+### 2026-10-26
+
+- Follows the site to mangaball.com and reads its new API; nothing needs a session any more.
+- Home page carries Featured, Recommended, Latest Updates, Recently Added, Top Rated, Most Read Today / This Week / This Month, Most Viewed, Manga / Manhwa / Manhua / Comics Updates and Finished Series.
+- Search sorts by latest chapter, last update, date added, views, rating or title.
+- Title pages carry alternative titles, credits and the MyAnimeList id.
+- Latest Updates follows the chapter-language setting.
 
 ### 2026-10-26
 

@@ -6,7 +6,6 @@ import {
   DefinedLanguages,
   HttpClient,
   ProviderLinkType,
-  PublicationStatus,
   ReadingMode,
   SectionStyle,
   additionalInfo,
@@ -15,11 +14,12 @@ import {
   type ChapterPage,
   type ChapterSource,
   type Content,
-  type Cookie,
+  type CoverRequestHandler,
   type Form,
   type Highlight,
   type PageLink,
   type PageLinkResolver,
+  type PageRequestHandler,
   type PageSection,
   type PagedSearchResult,
   type Provider,
@@ -33,66 +33,66 @@ import {
   type StaffItem,
   type Tag,
 } from "@mana-app/types";
-import { load, type Cheerio, type CheerioAPI } from "cheerio";
-import type { AnyNode } from "domhandler";
 
-import { HTML_ACCEPT, JSON_ACCEPT, buildClient, cookieHeader } from "./client.ts";
+import { HTML_ACCEPT, JSON_ACCEPT, buildClient, buildImageClient } from "./client.ts";
 import {
   FilterReader,
   PreferenceStore,
   buildPreferenceMenu,
   buildSearchForm,
-  encodeForm,
   listResults,
   pageOf,
   resolveSortId,
   toPageSections,
+  withQuery,
+  type QueryParams,
   type SectionSpec,
 } from "./forms/index.ts";
 import {
   ANY,
+  API_URL,
   BASE_URL,
-  CHAPTERS_API,
   CHAPTER_LANGUAGES_KEY,
-  CHAPTER_READS_SIZE,
-  CHAPTER_READS_TIMEOUT,
-  CONTENT_TYPE_BY_FLAG,
+  CONTENT_TYPE_BY_ORIGIN,
+  COVER_CDN,
   FEATURED_SIZE,
   FilterID,
   LANGUAGE_ALIASES,
-  LISTING_API,
   ListID,
-  ListingType,
   OriginID,
+  PAGE_SIZE,
   PREFERENCE_DEFAULTS,
   PREFERENCE_NAMESPACE,
   PREFERENCE_SECTIONS,
+  Period,
   RECOMMEND_SIZE,
-  SEARCH_API,
   SEARCH_FIELDS,
-  SORT_FIELD,
   SORT_OPTIONS,
   STATUS_BY_NAME,
   SortID,
   TAGS_FIELD,
-  TRENDING_SIZE,
-  Window,
+  TOP_CHAPTERS_FETCH,
+  TOP_CHAPTERS_SIZE,
+  TOP_CHAPTERS_TIMEOUT,
+  TOP_RATED_SIZE,
+  type ApiChapter,
   type ApiChapterListing,
+  type ApiCover,
+  type ApiDetail,
   type ApiGroup,
-  type ApiSearchResponse,
+  type ApiListing,
+  type ApiPagination,
+  type ApiTag,
   type ApiTitle,
+  type ApiTopChapters,
   type SearchQuery,
 } from "./model.ts";
-
-/** Where the last session is kept between instances, and for how long it is trusted. */
-const SESSION_KEY = "mangaball:session";
-const SESSION_TTL_MS = 20 * 60 * 1000;
 
 const info: SourceInfo = {
   id: "mangaball",
   name: "Mangaball",
-  version: "1.3.7",
-  description: "Pulls manga, manhwa and manhua from mangaball.net",
+  version: "1.4.0",
+  description: "Pulls manga, manhwa and manhua from mangaball.com",
   website: BASE_URL,
   rating: CatalogRating.MIXED,
   supportedLanguages: [
@@ -109,31 +109,50 @@ const info: SourceInfo = {
 const config: SourceConfig = {
   disableUpdateChecks: false,
   cloudflareResolutionURL: BASE_URL,
-  owningLinks: ["mangaball.net"],
+  owningLinks: ["mangaball.com", "mangaball.net"],
 };
 
-type Session = { token: string; cookie?: Cookie };
-
-class MangaballSource implements ChapterSource, SearchProvider, PageLinkResolver {
+class MangaballSource
+  implements
+    ChapterSource,
+    SearchProvider,
+    PageLinkResolver,
+    CoverRequestHandler,
+    PageRequestHandler
+{
   readonly info = info;
   readonly config = config;
 
   private client: HttpClient | undefined;
-  private session: Session | undefined;
-  private pending: Promise<Session> | undefined;
+  private images: HttpClient | undefined;
   private readonly preferences = new PreferenceStore(PREFERENCE_NAMESPACE, PREFERENCE_DEFAULTS);
 
   private get http(): HttpClient {
     this.client ??= buildClient({
       baseUrl: BASE_URL,
-      // Eighteen rows resolve together. At four a second the last of them was not even sent
-      // until five seconds in; the site answers all eighteen at once in about two seconds,
-      // measured, with no errors and no rate limiting.
+      // The home page's rows resolve together; the API answers a dozen at once in about
+      // two seconds, measured, with no errors and no rate limiting.
       requests: 12,
       interval: 1,
-      accept: HTML_ACCEPT,
+      accept: JSON_ACCEPT,
+      json: true,
     });
     return this.client;
+  }
+
+  // Both image hosts sit behind Cloudflare and serve an <img> on the site's own pages:
+  // the referer is what they check. No origin — a browser sends none for an image.
+  private get imageHttp(): HttpClient {
+    this.images ??= buildImageClient({ referer: `${BASE_URL}/` });
+    return this.images;
+  }
+
+  getCoverTransport(): HttpClient {
+    return this.imageHttp;
+  }
+
+  getPageTransport(): HttpClient {
+    return this.imageHttp;
   }
 
   private sections(): SectionSpec[] {
@@ -141,20 +160,20 @@ class MangaballSource implements ChapterSource, SearchProvider, PageLinkResolver
       {
         id: ListID.Featured,
         title: "Featured",
-        subtitle: "The titles readers opened most this week",
+        subtitle: "The site's own front-page picks",
         style: SectionStyle.SimpleHero,
         limit: FEATURED_SIZE,
         viewMore: false,
-        load: () => this.listing(ListingType.Featured, FEATURED_SIZE),
+        load: () => this.fixed("/title/featured", { limit: FEATURED_SIZE }),
       },
       {
         id: ListID.Recommended,
         title: "Recommended Titles",
-        subtitle: "The site's own picks, newest chapter first",
+        subtitle: "What the site suggests reading next",
         style: SectionStyle.DetailedTripleRowPaged,
         limit: RECOMMEND_SIZE,
         viewMore: false,
-        load: () => this.listing(ListingType.Recommend, RECOMMEND_SIZE),
+        load: () => this.fixed("/title/recommended", { limit: RECOMMEND_SIZE }),
       },
       {
         id: ListID.Latest,
@@ -162,7 +181,7 @@ class MangaballSource implements ChapterSource, SearchProvider, PageLinkResolver
         subtitle: "Series that just gained a chapter",
         style: SectionStyle.DetailedVerticalListGrouped,
         limit: 18,
-        load: (page) => this.browse({ page, sort: SortID.LatestChapters }),
+        load: (page) => this.latest(page),
       },
       {
         id: ListID.Added,
@@ -170,84 +189,54 @@ class MangaballSource implements ChapterSource, SearchProvider, PageLinkResolver
         subtitle: "New to the catalogue",
         style: SectionStyle.DetailedTripleRowPaged,
         limit: 18,
-        load: (page) => this.browse({ page, sort: SortID.RecentlyAdded }),
+        load: (page) => this.paged("/title/recently-added", page),
+      },
+      {
+        id: ListID.TopRated,
+        title: "Top Rated",
+        subtitle: "Highest community score",
+        style: SectionStyle.DetailedTripleRowPaged,
+        limit: TOP_RATED_SIZE,
+        viewMore: false,
+        load: () => this.fixed("/title/top-rating", { limit: TOP_RATED_SIZE }),
       },
       {
         id: ListID.ReadToday,
         title: "Most Read Today",
-        subtitle: "Whose chapters were opened most in the last day",
+        subtitle: "The chapters opened most in the last day",
         style: SectionStyle.DetailedTripleRowPaged,
-        limit: CHAPTER_READS_SIZE,
+        limit: TOP_CHAPTERS_SIZE,
         viewMore: false,
-        load: () => this.listing(ListingType.ChapterReads, CHAPTER_READS_SIZE, Window.Day),
+        load: () => this.topChapters(Period.Day),
       },
       {
         id: ListID.ReadWeek,
         title: "Most Read This Week",
-        subtitle: "Whose chapters were opened most over the last seven days",
+        subtitle: "The chapters opened most over the last seven days",
         style: SectionStyle.DetailedTripleRowPaged,
-        limit: CHAPTER_READS_SIZE,
+        limit: TOP_CHAPTERS_SIZE,
         viewMore: false,
-        load: () => this.listing(ListingType.ChapterReads, CHAPTER_READS_SIZE, Window.Week),
+        load: () => this.topChapters(Period.Week),
       },
       {
         id: ListID.ReadMonth,
         title: "Most Read This Month",
-        subtitle: "Whose chapters were opened most over the last month",
+        subtitle: "The chapters opened most over the last month",
         style: SectionStyle.DetailedTripleRowPaged,
-        limit: CHAPTER_READS_SIZE,
+        limit: TOP_CHAPTERS_SIZE,
         viewMore: false,
-        load: () => this.listing(ListingType.ChapterReads, CHAPTER_READS_SIZE, Window.Month),
-      },
-      {
-        id: ListID.ReadYear,
-        title: "Most Read This Year",
-        subtitle: "Whose chapters were opened most over the last year",
-        style: SectionStyle.DetailedTripleRowPaged,
-        limit: CHAPTER_READS_SIZE,
-        viewMore: false,
-        load: () => this.listing(ListingType.ChapterReads, CHAPTER_READS_SIZE, Window.Year),
-      },
-      {
-        id: ListID.ViewedToday,
-        title: "Most Viewed Today",
-        subtitle: "The titles readers opened most in the last day",
-        style: SectionStyle.DetailedTripleRowPaged,
-        limit: TRENDING_SIZE,
-        viewMore: false,
-        load: () => this.listing(ListingType.Reads, TRENDING_SIZE, Window.Day),
-      },
-      {
-        id: ListID.ViewedMonth,
-        title: "Most Viewed This Month",
-        subtitle: "The titles readers opened most over the last month",
-        style: SectionStyle.DetailedTripleRowPaged,
-        limit: TRENDING_SIZE,
-        viewMore: false,
-        load: () => this.listing(ListingType.Reads, TRENDING_SIZE, Window.Month),
-      },
-      {
-        id: ListID.ViewedYear,
-        title: "Most Viewed This Year",
-        subtitle: "The titles readers opened most over the last year",
-        style: SectionStyle.DetailedTripleRowPaged,
-        limit: TRENDING_SIZE,
-        viewMore: false,
-        load: () => this.listing(ListingType.Reads, TRENDING_SIZE, Window.Year),
+        load: () => this.topChapters(Period.Month),
       },
       {
         id: ListID.Viewed,
-        title: "Most Viewed of All Time",
-        // The site heads this row "Popular This Season"; the query behind it is the whole
-        // catalogue by total views, so it is named for what it returns.
+        title: "Most Viewed",
         subtitle: "The whole catalogue ranked by total views",
         style: SectionStyle.DetailedTripleRowPaged,
-        limit: TRENDING_SIZE,
-        viewMore: false,
-        load: () => this.listing(ListingType.Popular, TRENDING_SIZE),
+        limit: 18,
+        load: (page) => this.browse({ page, sort: SortID.Views }),
       },
       {
-        id: ListID.MangaUpdates,
+        id: ListID.Manga,
         title: "Manga Updates",
         subtitle: "Japanese series with a fresh chapter",
         style: SectionStyle.DetailedTripleRowPaged,
@@ -279,14 +268,6 @@ class MangaballSource implements ChapterSource, SearchProvider, PageLinkResolver
         load: (page) => this.browse({ page, sort: SortID.LatestChapters, origin: OriginID.Comics }),
       },
       {
-        id: ListID.Manga,
-        title: "Most Viewed Manga",
-        subtitle: "Japanese series by total views",
-        style: SectionStyle.DetailedTripleRowPaged,
-        limit: 18,
-        load: (page) => this.browse({ page, sort: SortID.Views, origin: OriginID.Manga }),
-      },
-      {
         id: ListID.Completed,
         title: "Finished Series",
         subtitle: "Completed runs you can read end to end",
@@ -315,7 +296,6 @@ class MangaballSource implements ChapterSource, SearchProvider, PageLinkResolver
   }
 
   async getSectionsForPage(_link: PageLink): Promise<PageSection[]> {
-    await this.credentials();
     return toPageSections(this.sections());
   }
 
@@ -332,6 +312,7 @@ class MangaballSource implements ChapterSource, SearchProvider, PageLinkResolver
 
     const filters = new FilterReader(request);
     const tags = filters.excludable(FilterID.Tags);
+    const allowed = request.context?.allowedContentRatings;
 
     return this.browse({
       page: pageOf(request),
@@ -345,65 +326,55 @@ class MangaballSource implements ChapterSource, SearchProvider, PageLinkResolver
       tags: tags.included,
       excludeTags: tags.excluded,
       tagMode: filters.option(FilterID.TagMode, "and"),
+      // The host's rating policy, when it states one, is applied at the site rather than
+      // by discarding rows after the fact.
+      ...(allowed && !allowed.includes(ContentRating.EXPLICIT) ? { adultMode: "no_18" } : {}),
     });
   }
 
   async getContent(contentId: string): Promise<Content> {
-    const $ = await this.page(titleUrl(contentId));
-
-    const title = text($("#comicDetail h6").first());
-    if (!title) {
+    const id = titleIdOf(contentId);
+    const payload = await this.json<ApiDetail>(`${API_URL}/title/detail/${encodeURIComponent(id)}`);
+    const title = payload.data ?? undefined;
+    const name = clean(title?.name ?? "");
+    if (!title || !name) {
       throw new Error(
-        `Manga Ball returned no title page for "${contentId}". The id may be wrong or the series withdrawn.`,
+        `Manga Ball has no title with the id "${contentId}". It may have been withdrawn.`,
       );
     }
 
-    const tags: Tag[] = $("[data-tag-id]")
-      .toArray()
-      .map((node) => ({ id: $(node).attr("data-tag-id") ?? "", title: text($(node)) }))
+    const tags: Tag[] = (title.tags ?? [])
+      .map((tag) => ({ id: tag.id ?? tag._id ?? "", title: clean(tag.name ?? "") }))
       .filter((tag) => tag.id !== "" && tag.title !== "");
+    const type =
+      CONTENT_TYPE_BY_ORIGIN[(title.originalLanguage ?? "").toLowerCase()] ?? ContentType.MANGA;
+    const status = STATUS_BY_NAME[(title.status ?? "").toLowerCase()];
+    const year = readString(title.date_published);
+    const summary = descriptionOf(title.description);
 
-    const authors = $("[data-person-id]")
-      .toArray()
-      .map((node) => text($(node)))
-      .filter(Boolean);
-
-    const alternatives = splitAlternates($(".alternate-name-container").first().html() ?? "");
-    const summary = $("#descriptionContent .description-text p")
-      .toArray()
-      .map((node) => text($(node)))
-      .filter(Boolean)
-      .join("\n\n");
-
-    const year = text(
-      $("#comicDetail span.badge")
-        .filter((_, node) => text($(node)).startsWith("Published"))
-        .first()
-        .find("b"),
+    const alternatives = uniqueNames(title.alternateName).filter((other) => other !== name);
+    const staff: StaffItem[] = uniqueNames(
+      (title.authors ?? title.author ?? []).map((person) => person.name ?? ""),
+    ).map((person) =>
+      additionalInfo.staff.item({ id: person, title: person, subtitle: "Author / Artist" }),
     );
-    const flag = flagCode($("img[src*='/storage/flags/']").first().attr("src"));
-    const type = CONTENT_TYPE_BY_FLAG[flag] ?? ContentType.MANGA;
-    const badge = $(".badge-status").first();
-    const status = statusFrom(badge.attr("class"), text(badge));
-
-    const staff: StaffItem[] = authors.map((name) =>
-      additionalInfo.staff.item({ id: name, title: name, subtitle: "Author / Artist" }),
-    );
+    const trackers = trackersFrom(title.links);
 
     return {
-      title,
-      cover: absolute($('meta[property="og:image"]').attr("content") ?? ""),
-      summary: summary || `${title}${year ? ` (${year})` : ""} on Manga Ball.`,
+      title: name,
+      cover: coverOf(title.image),
+      summary: summary || `${name}${year ? ` (${year})` : ""} on Manga Ball.`,
       tags,
       contentType: type,
       contentRating: ratingFor(
-        false,
+        title.is18plus === true,
         tags.map((tag) => tag.title),
       ),
       recommendedPanelMode: panelModeFor(type),
       webUrl: titleUrl(contentId),
       ...(status === undefined ? {} : { status }),
       ...(alternatives.length === 0 ? {} : { additionalTitles: alternatives }),
+      ...(Object.keys(trackers).length === 0 ? {} : { trackerInfo: trackers }),
       ...(staff.length === 0
         ? {}
         : {
@@ -421,43 +392,41 @@ class MangaballSource implements ChapterSource, SearchProvider, PageLinkResolver
 
   async getChapters(contentId: string): Promise<Chapter[]> {
     const titleId = titleIdOf(contentId);
-    const payload = await this.api<ApiChapterListing>(
-      CHAPTERS_API,
-      encodeForm({ title_id: titleId, userSettingsEnabled: false }),
+    const response = await this.http.post(
+      `${API_URL}/chapter/chapter-listing-by-title-id`,
+      Body.json({ title_id: titleId }),
     );
+    const payload = await response.json<ApiChapterListing>();
+    const entries = payload.data ?? [];
 
     const wanted = new Set(await this.chapterLanguages());
-    const entries = payload.ALL_CHAPTERS ?? [];
+    const listed = entries.filter((entry) => {
+      const code = (entry.lang ?? "").toLowerCase();
+      return (entry.id ?? entry._id) !== undefined && (wanted.size === 0 || wanted.has(code));
+    });
 
-    // The listing is newest-first and `index` has to run from the first chapter, so every
-    // translation is collected in site order and the whole flattened list reversed once.
-    const flattened: Omit<Chapter, "index">[] = [];
-    for (const entry of entries) {
-      const translations = (entry.translations ?? []).filter((translation) => {
-        const code = (translation.language ?? "").toLowerCase();
-        return translation.id !== undefined && (wanted.size === 0 || wanted.has(code));
+    // The listing is newest-first and `index` has to run from the first chapter, so the
+    // whole list is reversed once before anything is assigned an index.
+    const chapters: Chapter[] = [];
+    const seen = new Set<string>();
+    for (const entry of [...listed].reverse()) {
+      const chapterId = entry.id ?? entry._id ?? "";
+      if (seen.has(chapterId)) continue;
+      seen.add(chapterId);
+      const volume = entry.volume ?? 0;
+      const provider = providerFrom(entry.group ?? undefined);
+      chapters.push({
+        chapterId,
+        number: chapterNumber(entry, chapters.length + 1),
+        index: chapters.length,
+        date: parsePublishDate(entry.created_at ?? undefined) ?? new Date(0),
+        language: languageOf(entry.lang ?? undefined),
+        title: chapterTitle(entry),
+        webUrl: chapterUrl(chapterId),
+        ...(volume > 0 ? { volume } : {}),
+        ...(provider === undefined ? {} : { provider }),
       });
-
-      for (const translation of translations) {
-        const chapterId = translation.id ?? "";
-        const volume = translation.volume ?? 0;
-        const provider = providerFrom(translation.group);
-        flattened.push({
-          chapterId,
-          number: chapterNumber(entry, entries.length - flattened.length),
-          date: parsePublishDate(translation.date) ?? new Date(0),
-          language: languageOf(translation.language),
-          title: chapterTitle(entry, translation),
-          webUrl: chapterUrl(chapterId),
-          ...(volume > 0 ? { volume } : {}),
-          ...(provider === undefined ? {} : { provider }),
-        });
-      }
     }
-
-    const chapters: Chapter[] = flattened
-      .reverse()
-      .map((chapter, index) => ({ ...chapter, index }));
 
     if (chapters.length === 0) {
       throw new Error(
@@ -470,15 +439,12 @@ class MangaballSource implements ChapterSource, SearchProvider, PageLinkResolver
   }
 
   async getChapterData(contentId: string, chapterId: string): Promise<ChapterData> {
-    const response = await this.http.get(chapterUrl(chapterId));
-    const raw = /const\s+chapterImages\s*=\s*JSON\.parse\(`([\s\S]*?)`\)/.exec(
-      await response.text(),
-    )?.[1];
-
-    const pages: ChapterPage[] = (parseImageList(raw) ?? [])
-      .map((page) => absolute(page))
-      .filter(Boolean)
-      .map((url) => ({ url }));
+    const response = await this.http.get(chapterUrl(chapterId), {
+      headers: { accept: HTML_ACCEPT },
+    });
+    const pages: ChapterPage[] = pagesFrom(await response.text(), chapterId).map((url) => ({
+      url,
+    }));
 
     if (pages.length === 0) {
       throw new Error(
@@ -488,277 +454,225 @@ class MangaballSource implements ChapterSource, SearchProvider, PageLinkResolver
     return { pages };
   }
 
-  /**
-   * The home page's own rows. `search_time` is only read by the windowed types and is left
-   * off everything else; no reply carries a `pagination` block, so each is one fixed page.
-   */
-  private async listing(type: string, limit: number, time?: string): Promise<PagedSearchResult> {
-    const payload = await this.api<ApiSearchResponse>(
-      LISTING_API,
-      encodeForm({ search_type: type, search_limit: limit, search_time: time }),
-      type === ListingType.ChapterReads ? CHAPTER_READS_TIMEOUT : undefined,
-    );
-    // `getRecentChapterRead` answers with the same `updated_at` on every row — a stats-table
-    // stamp rather than the title's — which would put "updated 10mo ago" under a title the
-    // next row over correctly reports as updated 16 hours ago.
-    return {
-      results: highlightsFrom(payload.data, type !== ListingType.ChapterReads),
-      isLastPage: true,
-    };
+  // -- listings ----------------------------------------------------------------
+
+  /** A row the site serves whole, with no page behind it. */
+  private async fixed(path: string, params: QueryParams): Promise<PagedSearchResult> {
+    const payload = await this.json<ApiListing>(withQuery(`${API_URL}${path}`, params));
+    return { results: highlightsFrom(payload.data), isLastPage: true };
   }
 
-  private async browse(query: SearchQuery): Promise<PagedSearchResult> {
-    const payload = await this.api<ApiSearchResponse>(SEARCH_API, searchBody(query));
+  private async paged(
+    path: string,
+    page: number,
+    params: QueryParams = {},
+  ): Promise<PagedSearchResult> {
+    const payload = await this.json<ApiListing>(
+      withQuery(`${API_URL}${path}`, { page, limit: PAGE_SIZE, ...params }),
+    );
     const results = highlightsFrom(payload.data);
+    return { results, isLastPage: lastPage(payload.pagination ?? undefined, page, results.length) };
+  }
 
-    const pagination = payload.pagination ?? {};
-    const current = pagination.current_page ?? query.page;
-    const last = pagination.last_page ?? current;
-    return { results, isLastPage: results.length === 0 || current >= last };
+  private async latest(page: number): Promise<PagedSearchResult> {
+    const languages = await this.chapterLanguages();
+    return this.paged("/title/recently-updated", page, {
+      chapterLanguage: languages.length === 0 ? undefined : languages.join(","),
+    });
+  }
+
+  private async topChapters(period: string): Promise<PagedSearchResult> {
+    const payload = await this.json<ApiTopChapters>(
+      withQuery(`${API_URL}/chapter/top-views`, { period, limit: TOP_CHAPTERS_FETCH }),
+      // The month window is aggregated on demand and has taken seventeen seconds cold.
+      TOP_CHAPTERS_TIMEOUT,
+    );
+    const results: Highlight[] = [];
+    const seen = new Set<string>();
+    for (const entry of payload.data ?? []) {
+      if (results.length >= TOP_CHAPTERS_SIZE) break;
+      const id = contentIdOf({ id: entry.title_id ?? entry.id, slug: entry.slug });
+      const title = clean(entry.name ?? "");
+      if (!id || !title || seen.has(id)) continue;
+      seen.add(id);
+      const chapter = readString(entry.chapter_number);
+      results.push({
+        id,
+        title,
+        cover: coverOf(entry.image ?? entry.cover),
+        webUrl: titleUrl(id),
+        contentRating: ratingFor(entry.is18plus === true, tagNames(entry.tags)),
+        ...(chapter === "" ? {} : { subtitle: `Chapter ${chapter}` }),
+      });
+    }
+    return { results, isLastPage: true };
+  }
+
+  private browse(query: SearchQuery): Promise<PagedSearchResult> {
+    return this.paged("/title/search-advanced", query.page, {
+      keyword: query.text || undefined,
+      sort: query.sort,
+      order: query.ascending ? "asc" : "desc",
+      status: chosen(query.status),
+      demographic: chosen(query.demographic),
+      original_language: chosen(query.origin),
+      chapterLanguage: joined(query.translated),
+      included_tags: joined(query.tags),
+      excluded_tags: joined(query.excludeTags),
+      tag_mode: query.tags?.length ? query.tagMode : undefined,
+      adult_mode: query.adultMode,
+    });
+  }
+
+  private async json<T>(url: string, timeoutMs?: number): Promise<T> {
+    const response = await this.http.get(url, timeoutMs === undefined ? undefined : { timeoutMs });
+    return response.json<T>();
   }
 
   private async chapterLanguages(): Promise<string[]> {
     const selected = await this.preferences.get(CHAPTER_LANGUAGES_KEY);
     return selected.map((code) => code.toLowerCase());
   }
-
-  /**
-   * The API rejects a request whose CSRF token no longer matches its session with a 403,
-   * which `client.ts` cannot tell apart from a Cloudflare block. A cached session that
-   * fails is therefore discarded and the call retried once against a fresh one; a session
-   * minted for this very call is not retried, because nothing about it is stale.
-   */
-  private async api<T>(url: string, body: string, timeout?: number): Promise<T> {
-    const cached = this.session !== undefined;
-    try {
-      return await this.post<T>(url, body, timeout);
-    } catch (error) {
-      if (!cached) throw error;
-      this.invalidate();
-      return await this.post<T>(url, body, timeout);
-    }
-  }
-
-  private async post<T>(url: string, body: string, timeout?: number): Promise<T> {
-    const session = await this.credentials();
-    const response = await this.http.post(
-      url,
-      Body.text(body, "application/x-www-form-urlencoded; charset=UTF-8"),
-      {
-        headers: {
-          accept: JSON_ACCEPT,
-          "x-csrf-token": session.token,
-          "x-requested-with": "XMLHttpRequest",
-          ...(session.cookie === undefined ? {} : { cookie: cookieHeader([session.cookie]) }),
-        },
-        ...(timeout === undefined ? {} : { timeoutMs: timeout }),
-      },
-    );
-
-    let payload: unknown;
-    try {
-      payload = JSON.parse(await response.text());
-    } catch {
-      throw new Error(`Manga Ball answered ${url} with something that was not JSON.`);
-    }
-
-    const envelope = payload as { code?: number; message?: string };
-    if (envelope.code !== undefined && envelope.code !== 200) {
-      throw new Error(`Manga Ball refused ${url}: ${envelope.message ?? `code ${envelope.code}`}.`);
-    }
-    return payload as T;
-  }
-
-  /**
-   * Every API route needs the `csrf-token` meta from a rendered page and the `PHPSESSID`
-   * it was minted against: the token alone is a 403, and so is the token paired with a
-   * different session's cookie. The token is read once and reused for the life of the
-   * source instance.
-   *
-   * The in-flight request is held rather than the result: a home page carries eighteen rows
-   * that resolve together, and without this each one saw an empty `session` and bootstrapped
-   * for itself — eighteen fetches of a 300 KB page for one token.
-   */
-  private async credentials(): Promise<Session> {
-    if (this.session) return this.session;
-
-    this.pending ??= this.bootstrap().catch((error: unknown) => {
-      this.pending = undefined;
-      throw error;
-    });
-    return this.pending;
-  }
-
-  /**
-   * Only the token has to come out of the page. Where the client keeps a cookie jar the
-   * home page fetch already arrives carrying `PHPSESSID`, so PHP does not re-issue it and
-   * there is no `Set-Cookie` to read — but the same jar puts that cookie on the API call,
-   * which is the session the token belongs to. Requiring a cookie here failed every row
-   * the moment the app had loaded the home page once.
-   *
-   * A cookie is still attached when the reply offers one, because a jar is not guaranteed.
-   * Only the freshly offered one: it is the only cookie certain to pair with this token,
-   * and an explicit cookie would override whatever the jar holds.
-   */
-  private async bootstrap(): Promise<Session> {
-    // A token outlives a source instance. Keep the last one, so opening the source again
-    // does not spend a 377 KB page fetch before the first row can be asked for.
-    const kept = (await ObjectStore.get(SESSION_KEY)) as (Session & { at?: number }) | null;
-    if (kept?.token && typeof kept.at === "number" && Date.now() - kept.at < SESSION_TTL_MS) {
-      const { at: _at, ...session } = kept;
-      this.session = session;
-      return this.session;
-    }
-
-    const response = await this.http.get(`${BASE_URL}/`);
-    const token = /name="csrf-token"\s+content="([^"]+)"/.exec(await response.text())?.[1] ?? "";
-    if (!token) {
-      throw new Error(
-        "Manga Ball served no CSRF token. Its home page has to load before any of its API routes will answer.",
-      );
-    }
-
-    const value = sessionCookie(response.headers.get("set-cookie") ?? "");
-    this.session = { token, ...(value ? { cookie: { name: "PHPSESSID", value } } : {}) };
-    await ObjectStore.set(SESSION_KEY, { ...this.session, at: Date.now() });
-    return this.session;
-  }
-
-  /** Drops the cached session and any settled bootstrap, so the next call mints a fresh one. */
-  private invalidate(): void {
-    this.session = undefined;
-    this.pending = undefined;
-    void ObjectStore.remove(SESSION_KEY);
-  }
-
-  private async page(url: string): Promise<CheerioAPI> {
-    const response = await this.http.get(url);
-    const html = await response.text();
-    if (!html) {
-      throw new Error(`Manga Ball returned an empty page for ${url}.`);
-    }
-    return load(html);
-  }
 }
 
-// -- parsing -----------------------------------------------------------------
+// -- urls and ids ------------------------------------------------------------
 
-function text(node: Cheerio<AnyNode>): string {
-  return node.text().replace(/\s+/g, " ").trim();
+/**
+ * A content id is `<slug>-<24-hex id>`, the shape the site's URLs had when the source
+ * shipped, so a library built then still resolves; a listing without a slug carries the
+ * bare id. `titleIdOf` takes the id from either, or from the `<id>-<slug>` form the site's
+ * URLs have now.
+ */
+function contentIdOf(item: { id?: string | undefined; slug?: string | undefined }): string {
+  const id = clean(item.id ?? "");
+  const slug = clean(item.slug ?? "");
+  if (!id) return "";
+  return slug ? `${slug}-${id}` : id;
 }
+
+function titleIdOf(contentId: string): string {
+  return (
+    /([0-9a-f]{24})$/i.exec(contentId)?.[1] ??
+    /^([0-9a-f]{24})(?:-|$)/i.exec(contentId)?.[1] ??
+    contentId
+  );
+}
+
+/** The site redirects a bare id to its slugged URL, so nothing has to remember the slug. */
+function titleUrl(contentId: string): string {
+  return `${BASE_URL}/title-detail/${encodeURIComponent(titleIdOf(contentId))}`;
+}
+
+function chapterUrl(chapterId: string): string {
+  return `${BASE_URL}/chapter-detail/${encodeURIComponent(chapterId)}`;
+}
+
+function groupUrl(groupId: string): string {
+  return `${BASE_URL}/group-detail/${encodeURIComponent(groupId)}`;
+}
+
+function coverOf(image: ApiCover | null | undefined): string {
+  const mangadex = clean(image?.cdn_mangadex ?? "");
+  if (mangadex.startsWith("http")) return mangadex;
+  const path = clean(image?.cover?.path ?? "")
+    .replace(/\\/g, "/")
+    .replace(/^\/+/, "");
+  return path ? `${COVER_CDN}${path}` : "";
+}
+
+// -- query shapes ------------------------------------------------------------
+
+function chosen(value: string | undefined): string | undefined {
+  return !value || value === ANY ? undefined : value;
+}
+
+function joined(values: readonly string[] | undefined): string | undefined {
+  const kept = (values ?? []).map((value) => value.trim()).filter(Boolean);
+  return kept.length === 0 ? undefined : kept.join(",");
+}
+
+function lastPage(pagination: ApiPagination | undefined, page: number, count: number): boolean {
+  const pages = pagination?.total_pages;
+  if (typeof pages === "number" && Number.isFinite(pages)) return page >= pages;
+  return count < PAGE_SIZE;
+}
+
+// -- readers -----------------------------------------------------------------
 
 function clean(value: string): string {
   return value.replace(/\s+/g, " ").trim();
 }
 
-function absolute(raw: string): string {
-  const value = raw.replace(/\\\//g, "/").trim();
-  if (!value) return "";
-  // Listings hand back `http://mangaball.net/...` while every page is served over TLS.
-  if (/^http:\/\/mangaball\.net/i.test(value)) return value.replace(/^http:/i, "https:");
-  if (/^https?:\/\//i.test(value)) return value;
-  if (value.startsWith("//")) return `https:${value}`;
-  if (value.startsWith("/")) return `${BASE_URL}${value}`;
-  return `${BASE_URL}/${value}`;
+function readString(value: unknown): string {
+  if (typeof value === "string") return clean(value);
+  if (typeof value === "number" && Number.isFinite(value)) return String(value);
+  return "";
 }
 
-function titleUrl(contentId: string): string {
-  return `${BASE_URL}/title-detail/${encodeURIComponent(contentId)}/`;
+function uniqueNames(value: readonly string[] | string | null | undefined): string[] {
+  const list = Array.isArray(value) ? value : typeof value === "string" ? [value] : [];
+  const seen = new Set<string>();
+  const names: string[] = [];
+  for (const raw of list) {
+    const name = clean(raw);
+    const key = name.toLowerCase();
+    if (!name || seen.has(key)) continue;
+    seen.add(key);
+    names.push(name);
+  }
+  return names;
 }
 
-function chapterUrl(chapterId: string): string {
-  return `${BASE_URL}/chapter-detail/${encodeURIComponent(chapterId)}/`;
+function tagNames(tags: readonly ApiTag[] | null | undefined): string[] {
+  return (tags ?? []).map((tag) => clean(tag.name ?? "")).filter(Boolean);
 }
 
-function groupUrl(groupId: string): string {
-  return `${BASE_URL}/group/${encodeURIComponent(groupId)}`;
+/** The API's descriptions are Markdown paragraphs; the reader wants prose. */
+function descriptionOf(value: string[] | string | null | undefined): string {
+  const parts = Array.isArray(value) ? value : typeof value === "string" ? [value] : [];
+  return parts
+    .map((part) =>
+      part
+        .replace(/\[([^\]]*)\]\([^)]*\)/g, "$1")
+        .replace(/^\s*[-*_]{3,}\s*$/gm, "")
+        .replace(/(\*\*|__|~~|`)/g, "")
+        .replace(/^\s{0,3}#{1,6}\s+/gm, "")
+        .replace(/[ \t]+\n/g, "\n")
+        .replace(/\n{3,}/g, "\n\n")
+        .trim(),
+    )
+    .filter(Boolean)
+    .join("\n\n");
 }
 
-/**
- * Manga Ball aggregates, so one chapter number arrives once per language *per group* — a
- * busy title carries twenty-odd groups and the same English chapter from five of them.
- * Reporting the group is what lets the app show those as versions of one chapter and keep
- * a reader on the group they started with; deciding between them is the app's to make.
- *
- * The only link the site offers for a group is its own page, which is server-rendered for
- * every id the listing hands out. A group's external site, where it has one, is on that
- * page rather than in this reply and is not worth a 367 KB fetch per group per listing —
- * see `recon/mangaball.md`.
- */
-function providerFrom(group: ApiGroup | undefined): Provider | undefined {
-  const id = clean(group?._id ?? "");
-  const name = clean(group?.name ?? "");
-  if (!id || !name) return undefined;
-  return { id, name, links: [{ url: groupUrl(id), type: ProviderLinkType.WEBSITE }] };
+function trackersFrom(
+  links: Record<string, string | null | undefined> | null | undefined,
+): Record<string, string> {
+  const trackers: Record<string, string> = {};
+  const mal = readString(links?.["myanimelist"]);
+  if (/^\d+$/.test(mal)) trackers["mal"] = mal;
+  const anilist = readString(links?.["anilist"]);
+  if (/^\d+$/.test(anilist)) trackers["anilist"] = anilist;
+  return trackers;
 }
 
-/**
- * A title is only reachable at `/title-detail/<slug>-<id>/` — the id alone redirects — so
- * the whole slug is the content id and the record id is cut back out of its tail for the
- * chapter API.
- */
-function contentIdOf(url: string | undefined): string {
-  return /\/title-detail\/([^/?#]+)/.exec(url ?? "")?.[1] ?? "";
-}
-
-function titleIdOf(contentId: string): string {
-  return /([0-9a-f]{24})$/i.exec(contentId)?.[1] ?? contentId;
-}
-
-function sessionCookie(setCookie: string): string {
-  return /PHPSESSID=([^;,\s]+)/.exec(setCookie)?.[1] ?? "";
-}
-
-function searchBody(query: SearchQuery): string {
-  const body = encodeForm({
-    search_input: query.text ?? "",
-    "filters[page]": query.page,
-    "filters[sort]": sortValue(query),
-    "filters[publicationStatus]": query.status ?? ANY,
-    "filters[demographic]": query.demographic ?? ANY,
-    "filters[originalLanguages]": query.origin ?? ANY,
-    "filters[tag_included_mode]": query.tagMode ?? "and",
-  });
-
-  // Three of the facets are PHP array parameters, which repeat rather than taking a
-  // delimited value and so cannot be expressed as keys of one object.
-  const repeated = [
-    ...(query.translated ?? []).map((value) => pair("filters[translatedLanguage][]", value)),
-    ...(query.tags ?? []).map((value) => pair("filters[tag_included_ids][]", value)),
-    ...(query.excludeTags ?? []).map((value) => pair("filters[tag_excluded_ids][]", value)),
-  ];
-  return repeated.length === 0 ? body : `${body}&${repeated.join("&")}`;
-}
-
-function pair(key: string, value: string): string {
-  return `${encodeURIComponent(key)}=${encodeURIComponent(value)}`;
-}
-
-/** The site bakes the direction into the sort value: `views_desc`, `name_asc`, and so on. */
-function sortValue(query: SearchQuery): string {
-  const field =
-    SORT_FIELD[query.sort ?? SortID.LatestChapters] ?? SORT_FIELD[SortID.LatestChapters];
-  return `${field}_${query.ascending ? "asc" : "desc"}`;
-}
-
-function highlightsFrom(items: ApiTitle[] | undefined, updated = true): Highlight[] {
+function highlightsFrom(items: readonly ApiTitle[] | null | undefined): Highlight[] {
   const results: Highlight[] = [];
   const seen = new Set<string>();
 
   for (const item of items ?? []) {
-    const id = contentIdOf(item.url);
+    const id = contentIdOf({ id: item.id ?? item._id, slug: item.slug });
     const title = clean(item.name ?? "");
     if (!id || !title || seen.has(id)) continue;
     seen.add(id);
 
-    const tags = labelsFrom(item.tags);
-    const subtitle = subtitleFor(item, updated);
+    const subtitle = subtitleFor(item);
     results.push({
       id,
       title,
-      cover: absolute(item.cover ?? ""),
+      cover: coverOf(item.image),
       webUrl: titleUrl(id),
-      contentRating: ratingFor(item.isAdult === true, tags),
+      contentRating: ratingFor(item.is18plus === true, tagNames(item.tags)),
       ...(subtitle === "" ? {} : { subtitle }),
     });
   }
@@ -766,64 +680,24 @@ function highlightsFrom(items: ApiTitle[] | undefined, updated = true): Highligh
   return results;
 }
 
-/**
- * `tags`, `authors` and `status` arrive as rendered HTML fragments rather than values. The
- * shapes are fixed and only the label is wanted, so they are read with a regex instead of
- * loading cheerio once per tile.
- */
-function labelsFrom(html: string | undefined): string[] {
-  const labels: string[] = [];
-  const pattern = /<span[^>]*data-tag-id="[^"]*"[^>]*>([^<]*)<\/span>/g;
-  let match = pattern.exec(html ?? "");
-  while (match) {
-    const label = clean(match[1] ?? "");
-    if (label) labels.push(label);
-    match = pattern.exec(html ?? "");
-  }
-  return labels;
-}
-
-/**
- * `updated_at` is "5m ago" on every listing route but a raw `2026-08-17 09:30:53` on
- * `getFeatured`, which reads as a stray database field beside the other rows. The absolute
- * form is cut back to its date so the whole home page carries the same kind of subtitle.
- */
-function subtitleFor(item: ApiTitle, updated: boolean): string {
-  const status = clean(stripTags(item.status ?? ""));
-  const raw = updated ? clean(item.updated_at ?? "") : "";
-  const stamp = /^\d{4}-\d{2}-\d{2}/.exec(raw)?.[0] ?? raw;
-  return [status, stamp ? `updated ${stamp}` : ""].filter(Boolean).join(" · ");
-}
-
-function stripTags(html: string): string {
-  return html.replace(/<[^>]*>/g, " ");
-}
-
-/**
- * The badge carries the status twice — as a `status-<name>-title` class and as its own
- * text. The class is the stabler of the two because it is not translated.
- */
-function statusFrom(className: string | undefined, label: string): PublicationStatus | undefined {
-  const fromClass = /status-([a-z_-]+)-title/i.exec(className ?? "")?.[1]?.toLowerCase() ?? "";
-  return STATUS_BY_NAME[fromClass] ?? STATUS_BY_NAME[label.toLowerCase()];
-}
-
-function flagCode(src: string | undefined): string {
-  return /\/flags\/([a-z-]+)\./i.exec(src ?? "")?.[1]?.toLowerCase() ?? "";
-}
-
-/** Alternate titles are one run of text per name, separated by a muted slash. */
-function splitAlternates(html: string): string[] {
-  return html
-    .split(/<span[^>]*class="text-muted"[^>]*>\s*\/\s*<\/span>/i)
-    .map((part) => clean(stripTags(part)))
-    .filter(Boolean);
+function subtitleFor(item: ApiTitle): string {
+  const chapter = readString(item.latest_chapter) || readString(item.recent_chapters?.[0]?.number);
+  const status = clean(item.status ?? "").replace(/_/g, " ");
+  return [chapter ? `Chapter ${chapter}` : "", status].filter(Boolean).join(" · ");
 }
 
 function ratingFor(adult: boolean, tags: readonly string[]): ContentRating {
   const names = tags.map((tag) => tag.toLowerCase());
-  if (adult || names.includes("pornographic")) return ContentRating.EXPLICIT;
-  if (names.includes("adult") || names.includes("gore") || names.includes("sexual violence")) {
+  if (adult || names.includes("pornographic") || names.includes("hentai")) {
+    return ContentRating.EXPLICIT;
+  }
+  if (
+    names.includes("adult") ||
+    names.includes("mature") ||
+    names.includes("smut") ||
+    names.includes("gore") ||
+    names.includes("sexual violence")
+  ) {
     return ContentRating.MATURE;
   }
   if (names.includes("ecchi")) return ContentRating.SUGGESTIVE;
@@ -842,37 +716,28 @@ function languageOf(code: string | undefined): string {
   return LANGUAGE_ALIASES[value] ?? value;
 }
 
-function chapterNumber(
-  entry: { number?: string; number_float?: number },
-  fallback: number,
-): number {
-  if (typeof entry.number_float === "number" && Number.isFinite(entry.number_float)) {
-    return entry.number_float;
-  }
-  const parsed = /(\d+(?:\.\d+)?)/.exec(entry.number ?? "")?.[1];
+function providerFrom(group: ApiGroup | undefined): Provider | undefined {
+  const id = clean(group?.id ?? group?._id ?? "");
+  const name = clean(group?.name ?? "");
+  if (!id || !name) return undefined;
+  return { id, name, links: [{ url: groupUrl(id), type: ProviderLinkType.WEBSITE }] };
+}
+
+function chapterNumber(entry: ApiChapter, fallback: number): number {
+  if (typeof entry.number === "number" && Number.isFinite(entry.number)) return entry.number;
+  const parsed = /(\d+(?:\.\d+)?)/.exec(readString(entry.number) || readString(entry.name))?.[1];
   return parsed === undefined ? fallback : Number.parseFloat(parsed);
 }
 
-/**
- * One chapter number can carry several translations, each named by whoever uploaded it —
- * sometimes "Chapter 202", sometimes the group's own banner. The number is prefixed when
- * the name does not already carry it.
- *
- * The group is deliberately not appended. It used to be, as the only way to tell two scans
- * of one chapter apart in a flat list; `provider` now carries it as a field, so repeating
- * it here would print the group's name twice in the same row.
- */
-function chapterTitle(entry: { number?: string }, translation: { name?: string }): string {
-  const number = clean(entry.number ?? "");
-  const name = clean(translation.name ?? "");
-  const digits = /\d+(?:\.\d+)?/.exec(number)?.[0] ?? "";
-
-  return name === "" || (digits !== "" && name.includes(digits))
-    ? name || number
-    : [number, name].filter(Boolean).join(" · ");
+/** `name` repeats the number on most chapters and names a special on the rest. */
+function chapterTitle(entry: ApiChapter): string {
+  const number = readString(entry.number);
+  const name = clean(entry.name ?? "");
+  const label = number === "" ? "" : `Chapter ${number}`;
+  if (name === "" || name === number || /^(chapter|ch\.?)\s*\d/i.test(name)) return label || name;
+  return label === "" || number === "0" ? name : `${label} · ${name}`;
 }
 
-/** `2026-01-10 04:11:41`, read as UTC so the day does not shift with the device timezone. */
 function parsePublishDate(raw: string | undefined): Date | undefined {
   const parts = /^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2}):(\d{2})/.exec(raw ?? "");
   if (!parts) return undefined;
@@ -888,13 +753,43 @@ function parsePublishDate(raw: string | undefined): Date | undefined {
   return Number.isNaN(stamp) ? undefined : new Date(stamp);
 }
 
-function parseImageList(raw: string | undefined): string[] | undefined {
-  if (!raw) return undefined;
+// -- the chapter page --------------------------------------------------------
+
+/**
+ * The reader is a Next.js page: its data arrives as the React flight payload, pushed to
+ * `self.__next_f` as JSON string literals, and the page list is the `pages` array inside
+ * the chapter object there. There is no page endpoint behind it, so the literals are
+ * decoded and the array read out by key.
+ */
+function flightText(html: string): string {
+  const parts: string[] = [];
+  const pattern = /self\.__next_f\.push\(\[1,("(?:[^"\\]|\\.)*")\]\)/g;
+  let match = pattern.exec(html);
+  while (match) {
+    try {
+      const decoded: unknown = JSON.parse(match[1] ?? '""');
+      if (typeof decoded === "string") parts.push(decoded);
+    } catch {
+      // A literal the page itself could not have parsed is not data.
+    }
+    match = pattern.exec(html);
+  }
+  return parts.join("");
+}
+
+function pagesFrom(html: string, chapterId: string): string[] {
+  const text = flightText(html);
+  const from = text.indexOf(`"chapter":{"id":"${chapterId}"`);
+  const match = /"pages":\[((?:"[^"]*",?)*)\]/.exec(from < 0 ? text : text.slice(from));
+  if (!match) return [];
   try {
-    const parsed: unknown = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed.filter((page) => typeof page === "string") : undefined;
+    const parsed: unknown = JSON.parse(`[${match[1] ?? ""}]`);
+    if (!Array.isArray(parsed)) return [];
+    return parsed.filter(
+      (page): page is string => typeof page === "string" && page.startsWith("http"),
+    );
   } catch {
-    return undefined;
+    return [];
   }
 }
 

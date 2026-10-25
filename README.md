@@ -21,7 +21,7 @@ from there.
 | Imhentai | 1.1.1 | Multi-language | Explicit |
 | Madaradex | 1.1.3 | English | Explicit |
 | Manga18fx | 1.2.3 | English | Explicit |
-| Mangaball | 1.3.7 | Multi-language | Mixed |
+| Mangaball | 1.4.0 | Multi-language | Mixed |
 | Mangafire | 1.2.3 | Multi-language | Mixed |
 | Mkissa | 1.0.2 | Multi-language | Mixed |
 | Mangak | 1.0.1 | English | Mixed |
