@@ -422,7 +422,11 @@ are UTC. Format loosely follows [Keep a Changelog](https://keepachangelog.com/en
   status picker adds "Releasing", which the site's own panel omits.
 - Covers and chapter images carry the site as referer.
 
-## Tailspace (current: v1.1.3)
+## Tailspace (current: v1.1.4)
+
+### 2026-10-26
+
+- Rebuilt for the current Mana release, which replaced how sources talk to the network.
 
 ### 2026-09-09
 

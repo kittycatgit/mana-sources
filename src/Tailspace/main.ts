@@ -3,6 +3,7 @@ import {
   ContentRating,
   ContentType,
   DefinedLanguages,
+  HttpClient,
   PublicationStatus,
   ReadingMode,
   SearchExcludableMultiPickerSheet,
@@ -59,7 +60,7 @@ import {
 const info: SourceInfo = {
   id: "tailspace",
   name: "Tailspace",
-  version: "1.1.3",
+  version: "1.1.4",
   description: "Pulls furry comics from tailspace.com",
   website: BASE_URL,
   rating: CatalogRating.EXPLICIT,
@@ -78,10 +79,10 @@ class TailspaceSource implements ChapterSource, SearchProvider, PageLinkResolver
   readonly info = info;
   readonly config = config;
 
-  private client: NetworkClient | undefined;
+  private client: HttpClient | undefined;
   private tagOptions: Option[] | undefined;
 
-  private get http(): NetworkClient {
+  private get http(): HttpClient {
     this.client ??= buildClient({
       baseUrl: BASE_URL,
       requests: 5,
@@ -254,7 +255,7 @@ class TailspaceSource implements ChapterSource, SearchProvider, PageLinkResolver
     if (this.tagOptions) return this.tagOptions;
 
     const response = await this.http.get(`${BASE_URL}/api/tags`);
-    const envelope = readRecord(safeParse(response.data));
+    const envelope = readRecord(safeParse(await response.text()));
     if (envelope["success"] !== true) {
       throw new Error(`Tailspace rejected the tag list request: ${readString(envelope["error"])}`);
     }
@@ -280,7 +281,7 @@ class TailspaceSource implements ChapterSource, SearchProvider, PageLinkResolver
 
   private async route(url: string, routeId: string): Promise<Record<string, unknown>> {
     const response = await this.http.get(url);
-    const payload = readRecord(decodeTurboStream(response.data));
+    const payload = readRecord(decodeTurboStream(await response.text()));
     const route = readRecord(payload[routeId]);
     const data = route["data"];
     if (data === undefined) {
