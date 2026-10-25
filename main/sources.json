@@ -5,7 +5,7 @@
     {
       "id": "ehentai",
       "name": "Ehentai",
-      "version": "1.2.2",
+      "version": "1.2.3",
       "description": "Reads the doujinshi, manga and image galleries hosted on e-hentai.org",
       "website": "https://e-hentai.org",
       "rating": 2,
@@ -25,13 +25,13 @@
       ],
       "path": "Ehentai",
       "environment": "source",
-      "intents": 6294541,
-      "hash": "568539be568539be568539be568539be568539be568539be568539be568539be"
+      "intents": 106957833,
+      "hash": "668a3aa6668a3aa6668a3aa6668a3aa6668a3aa6668a3aa6668a3aa6668a3aa6"
     },
     {
       "id": "hiperdex",
       "name": "Hiperdex",
-      "version": "1.2.2",
+      "version": "1.2.3",
       "description": "Pulls manga, manhwa and manhua from hiperdex.com",
       "website": "https://hiperdex.com",
       "rating": 2,
@@ -47,13 +47,13 @@
       ],
       "path": "Hiperdex",
       "environment": "source",
-      "intents": 2104332,
-      "hash": "2ad3df782ad3df782ad3df782ad3df782ad3df782ad3df782ad3df782ad3df78"
+      "intents": 102767624,
+      "hash": "187fbd0c187fbd0c187fbd0c187fbd0c187fbd0c187fbd0c187fbd0c187fbd0c"
     },
     {
       "id": "hitomi",
       "name": "Hitomi",
-      "version": "1.5.4",
+      "version": "1.5.5",
       "description": "Reads doujinshi, manga and CG sets from hitomi.la",
       "website": "https://hitomi.la",
       "rating": 2,
@@ -75,13 +75,13 @@
       ],
       "path": "Hitomi",
       "environment": "source",
-      "intents": 2104333,
-      "hash": "134201e7134201e7134201e7134201e7134201e7134201e7134201e7134201e7"
+      "intents": 102767625,
+      "hash": "4703522a4703522a4703522a4703522a4703522a4703522a4703522a4703522a"
     },
     {
       "id": "imhentai",
       "name": "Imhentai",
-      "version": "1.1.0",
+      "version": "1.1.1",
       "description": "Browses the doujinshi, manga and artist CG galleries on imhentai.xxx",
       "website": "https://imhentai.xxx",
       "rating": 2,
@@ -104,12 +104,12 @@
       "path": "Imhentai",
       "environment": "source",
       "intents": 2104329,
-      "hash": "0222b8650222b8650222b8650222b8650222b8650222b8650222b8650222b865"
+      "hash": "096bab43096bab43096bab43096bab43096bab43096bab43096bab43096bab43"
     },
     {
       "id": "madaradex",
       "name": "Madaradex",
-      "version": "1.1.2",
+      "version": "1.1.3",
       "description": "Pulls manga, manhwa and manhua from madaradex.org",
       "website": "https://madaradex.org",
       "rating": 2,
@@ -125,13 +125,13 @@
       ],
       "path": "Madaradex",
       "environment": "source",
-      "intents": 2104332,
-      "hash": "6282d2676282d2676282d2676282d2676282d2676282d2676282d2676282d267"
+      "intents": 102767624,
+      "hash": "418358f0418358f0418358f0418358f0418358f0418358f0418358f0418358f0"
     },
     {
       "id": "manga18fx",
       "name": "Manga18fx",
-      "version": "1.2.2",
+      "version": "1.2.3",
       "description": "Pulls adult manhwa, manhua and manga from manga18fx.com",
       "website": "https://manga18fx.com",
       "rating": 2,
@@ -148,12 +148,12 @@
       "path": "Manga18fx",
       "environment": "source",
       "intents": 2100233,
-      "hash": "1de4f2501de4f2501de4f2501de4f2501de4f2501de4f2501de4f2501de4f250"
+      "hash": "2fca45282fca45282fca45282fca45282fca45282fca45282fca45282fca4528"
     },
     {
       "id": "mangaball",
       "name": "Mangaball",
-      "version": "1.3.6",
+      "version": "1.3.7",
       "description": "Pulls manga, manhwa and manhua from mangaball.net",
       "website": "https://mangaball.net",
       "rating": 1,
@@ -174,12 +174,12 @@
       "path": "Mangaball",
       "environment": "source",
       "intents": 2104329,
-      "hash": "532a00c8532a00c8532a00c8532a00c8532a00c8532a00c8532a00c8532a00c8"
+      "hash": "51484b5951484b5951484b5951484b5951484b5951484b5951484b5951484b59"
     },
     {
       "id": "mangafire",
       "name": "Mangafire",
-      "version": "1.2.2",
+      "version": "1.2.3",
       "description": "Reads manga, manhwa and manhua from mangafire.to",
       "website": "https://mangafire.to",
       "rating": 1,
@@ -199,13 +199,13 @@
       ],
       "path": "Mangafire",
       "environment": "source",
-      "intents": 6298637,
-      "hash": "5ee9d8fc5ee9d8fc5ee9d8fc5ee9d8fc5ee9d8fc5ee9d8fc5ee9d8fc5ee9d8fc"
+      "intents": 106961929,
+      "hash": "38d6f23838d6f23838d6f23838d6f23838d6f23838d6f23838d6f23838d6f238"
     },
     {
       "id": "mangak",
       "name": "Mangak",
-      "version": "1.0.0",
+      "version": "1.0.1",
       "description": "Reads manga, manhwa and manhua from mangak.io",
       "website": "https://mangak.io",
       "rating": 1,
@@ -221,13 +221,13 @@
       ],
       "path": "Mangak",
       "environment": "source",
-      "intents": 6298636,
-      "hash": "340a4a42340a4a42340a4a42340a4a42340a4a42340a4a42340a4a42340a4a42"
+      "intents": 106961928,
+      "hash": "797f2314797f2314797f2314797f2314797f2314797f2314797f2314797f2314"
     },
     {
       "id": "mkissa",
       "name": "Mkissa",
-      "version": "1.0.1",
+      "version": "1.0.2",
       "description": "Reads the manga catalogue behind mkissa.to",
       "website": "https://mkissa.to",
       "rating": 1,
@@ -246,13 +246,13 @@
       ],
       "path": "Mkissa",
       "environment": "source",
-      "intents": 2104333,
-      "hash": "780f47de780f47de780f47de780f47de780f47de780f47de780f47de780f47de"
+      "intents": 102767625,
+      "hash": "3f62e8783f62e8783f62e8783f62e8783f62e8783f62e8783f62e8783f62e878"
     },
     {
       "id": "nhentai",
       "name": "Nhentai",
-      "version": "1.2.2",
+      "version": "1.2.3",
       "description": "Reads doujinshi and manga galleries from nhentai.net",
       "website": "https://nhentai.net",
       "rating": 2,
@@ -271,12 +271,12 @@
       "path": "Nhentai",
       "environment": "source",
       "intents": 2104329,
-      "hash": "76f56c2176f56c2176f56c2176f56c2176f56c2176f56c2176f56c2176f56c21"
+      "hash": "59e58f9359e58f9359e58f9359e58f9359e58f9359e58f9359e58f9359e58f93"
     },
     {
       "id": "tailspace",
       "name": "Tailspace",
-      "version": "1.1.3",
+      "version": "1.1.4",
       "description": "Pulls furry comics from tailspace.com",
       "website": "https://tailspace.com",
       "rating": 2,
@@ -293,12 +293,12 @@
       "path": "Tailspace",
       "environment": "source",
       "intents": 2104328,
-      "hash": "47f6adfc47f6adfc47f6adfc47f6adfc47f6adfc47f6adfc47f6adfc47f6adfc"
+      "hash": "3827e85f3827e85f3827e85f3827e85f3827e85f3827e85f3827e85f3827e85f"
     },
     {
       "id": "weebcentral",
       "name": "Weebcentral",
-      "version": "1.2.3",
+      "version": "1.2.4",
       "description": "Pulls manga, manhwa and manhua from weebcentral.com",
       "website": "https://weebcentral.com",
       "rating": 1,
@@ -315,7 +315,7 @@
       "path": "Weebcentral",
       "environment": "source",
       "intents": 2104328,
-      "hash": "1da571341da571341da571341da571341da571341da571341da571341da57134"
+      "hash": "2fdfaaee2fdfaaee2fdfaaee2fdfaaee2fdfaaee2fdfaaee2fdfaaee2fdfaaee"
     }
   ]
 }
