@@ -1,5 +1,21 @@
 {
   "query": "succubus",
   "contentId": "678886",
-  "chapterId": "678886"
+  "chapterId": "678886",
+  "searches": [
+    {
+      "label": "english reader, keyword",
+      "query": "succubus",
+      "preferences": {
+        "nhentai.language": "english"
+      },
+      "expect": "succub"
+    },
+    {
+      "label": "keyword typed inside a listing",
+      "query": "yuri",
+      "listId": "recent",
+      "expect": "yuri"
+    }
+  ]
 }

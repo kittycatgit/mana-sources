@@ -1,5 +1,27 @@
 {
   "query": "yuri",
   "contentId": "2674908",
-  "chapterId": "2674908"
+  "chapterId": "2674908",
+  "searches": [
+    {
+      "label": "english reader, keyword",
+      "query": "yuri",
+      "preferences": {
+        "hitomi.language": "english"
+      }
+    },
+    {
+      "label": "english reader, type filter page 2",
+      "query": "type:manga",
+      "page": 2,
+      "preferences": {
+        "hitomi.language": "english"
+      }
+    },
+    {
+      "label": "latest, page 2",
+      "listId": "latest",
+      "page": 2
+    }
+  ]
 }

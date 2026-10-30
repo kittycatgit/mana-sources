@@ -81,6 +81,34 @@ const ALGORITHM = { AesCtr: 0, AesCbc: 1, AesGcm: 2, Xor: 3, EvpBytesToKey: 4, P
 const PADDING = { Pkcs7: 0, Zero: 1, None: 2 };
 const HASHES = ["sha1", "sha256", "sha512"];
 
+/**
+ * A byte range of a compressed representation is not decodable on its own: URLSession gives
+ * up on it with "cannot decode raw data", while Node's zlib quietly returns whatever it
+ * managed to inflate before the stream ran out — a handful of ids where a page of 25 was
+ * expected, or none. Hitomi's CDN keeps a gzip copy of every listing and serves ranges of
+ * that copy to a client that accepts gzip. The device's outcome is the one to report.
+ */
+function rejectCompressedRange(response, url) {
+  const encoding = response.headers.get("content-encoding") ?? "";
+  if (response.status !== 206 || encoding === "" || encoding === "identity") return;
+  const error = new Error(
+    `${url}: the server answered a byte range with content-encoding ${encoding}, which the device cannot decode (URLSessionTask "cannot decode raw data"). Ask for accept-encoding: identity on ranged requests.`,
+  );
+  error.name = "NetworkError";
+  throw error;
+}
+
+/**
+ * URLSession asks for `gzip, deflate, br` on every request, a ranged one included, and
+ * Node's fetch leaves the header off whenever `range` is set. The difference decides what
+ * a CDN with a precompressed copy of the file sends back: a slice of the compressed bytes,
+ * which the device then fails to decode. The source's own header, when it sets one, wins.
+ */
+function withAcceptEncoding(headers) {
+  const named = Object.keys(headers).some((key) => key.toLowerCase() === "accept-encoding");
+  return named ? headers : { ...headers, "accept-encoding": "gzip, deflate, br" };
+}
+
 function headersObject(headers) {
   const out = {};
   for (const [key, value] of headers.entries()) {
@@ -242,11 +270,12 @@ export function createHttpHost() {
               : String(message.body ?? "");
         const response = await fetch(message.url, {
           method,
-          headers: message.headers ?? {},
+          headers: withAcceptEncoding(message.headers ?? {}),
           body,
           redirect: "follow",
           signal: controller.signal,
         });
+        rejectCompressedRange(response, message.url);
         let data = new Uint8Array(await response.arrayBuffer());
         let status = response.status;
         let headers = headersObject(response.headers);

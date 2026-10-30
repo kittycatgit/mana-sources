@@ -133,10 +133,11 @@ function loadTarget(bundlePath) {
   const code = fs.readFileSync(bundlePath, "utf-8");
   const host = createHttpHost();
 
+  const stores = { object: new ManaStore(), secure: new ManaStore() };
   const sandbox = {
     __manaHTTPBridge: host.bridge,
-    ObjectStore: new ManaStore(),
-    SecureStore: new ManaStore(),
+    ObjectStore: stores.object,
+    SecureStore: stores.secure,
     WebViewPage: webViewPageFor(() => sandbox.__manaSerializedFunctionPrelude),
     console,
     setTimeout,
@@ -168,6 +169,7 @@ function loadTarget(bundlePath) {
   return {
     target,
     host,
+    stores,
     run: (callback) => ManaHTTP.runHttpOperation(callback),
     loadImage: (request) => ManaHTTP.runHttpOperation(() => ManaHTTP.loadImage(target, request)),
   };
@@ -316,7 +318,7 @@ async function verify(name, probe, verbose) {
   }
 
   const loaded = loadTarget(bundlePath);
-  const { target, run } = loaded;
+  const { target, run, stores } = loaded;
   if (target.onEnvironmentLoaded) await run(() => target.onEnvironmentLoaded());
 
   const results = [];
@@ -414,6 +416,38 @@ async function verify(name, probe, verbose) {
     preview.search = page.results ?? [];
     return checkHighlights(page.results, "search");
   });
+
+  // A search the probe names under another setting or past the first page. A reader's
+  // settings change which files a source reads — Hitomi walks a language's own listing
+  // once one is chosen — and page two of a listing is a different byte range from page
+  // one, so a check that only ever runs the default search on page one proves neither.
+  for (const variant of Array.isArray(probe.searches) ? probe.searches : []) {
+    const label = variant.label ?? variant.query ?? variant.listId ?? "variant";
+    await step(results, `search(${label})`, async () => {
+      const preferences = Object.entries(variant.preferences ?? {});
+      for (const [key, value] of preferences) await stores.object.set(key, value);
+      try {
+        const request = {
+          page: variant.page ?? 1,
+          query: variant.query ?? "",
+          ...(variant.listId ? { listId: variant.listId } : {}),
+        };
+        const page = await run(() => target.search(request));
+        assert(typeof page?.isLastPage === "boolean", "isLastPage missing");
+        const summary = checkHighlights(page.results, `search(${label})`);
+        // A listing handed back in place of a search has the right shape and the wrong
+        // titles, so a variant can say what at least one title must contain.
+        if (variant.expect) {
+          const pattern = new RegExp(variant.expect, "i");
+          const hit = (page.results ?? []).some((item) => pattern.test(String(item?.title ?? "")));
+          assert(hit, `no title matches /${variant.expect}/i — the keyword was not searched`);
+        }
+        return summary;
+      } finally {
+        for (const [key] of preferences) await stores.object.remove(key);
+      }
+    });
+  }
 
   const contentId = probe.contentId;
   if (!contentId) {
