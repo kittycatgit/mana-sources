@@ -46,11 +46,20 @@ export const PREFERENCE_NAMESPACE = "nhentai";
 
 export const PreferenceID = {
   Language: "language",
+  ApiKey: "api-key",
 } as const;
 
 export const PREFERENCE_DEFAULTS: Record<string, PreferenceValue> = {
   [PreferenceID.Language]: ANY,
+  [PreferenceID.ApiKey]: "",
 };
+
+/** Where the site issues the key its API doubles the per-minute limits for. */
+export const API_KEY_URL = `${BASE_URL}/user/settings#apikeys`;
+
+/** How long a page of results is answered from memory before the site is asked again. */
+export const RESULT_CACHE_TTL = 5 * 60 * 1000;
+export const RESULT_CACHE_SIZE = 40;
 
 export const FilterID = {
   Language: "language",
@@ -220,6 +229,22 @@ export const PREFERENCE_SECTIONS: readonly PreferenceSection[] = [
         key: PreferenceID.Language,
         title: "Language",
         options: LANGUAGE_OPTIONS,
+      },
+    ],
+  },
+  {
+    header: "API key",
+    footer:
+      "The site allows ten searches a minute per connection without a key and twenty with " +
+      `one. Generate a key in your nhentai account under Settings → API keys (${API_KEY_URL}) ` +
+      "and paste it here.",
+    fields: [
+      {
+        type: "text",
+        key: PreferenceID.ApiKey,
+        title: "API key",
+        placeholder: "Paste a key from your account settings",
+        secure: true,
       },
     ],
   },

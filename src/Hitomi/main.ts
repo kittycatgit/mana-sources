@@ -92,7 +92,7 @@ import { indexVersion, wordIds } from "./search-index.ts";
 const info: SourceInfo = {
   id: "hitomi",
   name: "Hitomi",
-  version: "1.5.5",
+  version: "1.5.6",
   description: "Reads doujinshi, manga and CG sets from hitomi.la",
   website: BASE_URL,
   rating: CatalogRating.EXPLICIT,

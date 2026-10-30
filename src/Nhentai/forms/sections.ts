@@ -54,10 +54,19 @@ export async function resolveSection(
   return { items: spec.limit === undefined ? results : results.slice(0, spec.limit) };
 }
 
+/**
+ * The listing behind a home row's "view more", or undefined when the request is a search.
+ *
+ * The app opens that listing in its search view, which has a search box, and a keyword
+ * typed there arrives with the row's `listId` still set. Routing on the id alone handed the
+ * row back unchanged for any keyword — the source read as ignoring what was typed — so a
+ * request that carries a query is left to `search`.
+ */
 export function listResults(
   specs: readonly SectionSpec[],
   request: SearchRequest,
 ): Promise<PagedSearchResult> | undefined {
+  if ((request.query ?? "").trim() !== "") return undefined;
   const spec = sectionById(specs, request.listId);
   return spec ? spec.load(pageOf(request)) : undefined;
 }

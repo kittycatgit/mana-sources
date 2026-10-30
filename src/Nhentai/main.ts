@@ -4,6 +4,7 @@ import {
   ContentType,
   DefinedLanguages,
   HttpClient,
+  type HttpResponse,
   PublicationStatus,
   ReadingMode,
   SectionStyle,
@@ -31,7 +32,7 @@ import {
   type Tag,
 } from "@mana-app/types";
 
-import { buildClient, JSON_ACCEPT } from "./client.ts";
+import { acceptStatus, buildClient, JSON_ACCEPT } from "./client.ts";
 import {
   FilterReader,
   PreferenceStore,
@@ -60,6 +61,8 @@ import {
   PREFERENCE_DEFAULTS,
   PREFERENCE_NAMESPACE,
   PREFERENCE_SECTIONS,
+  RESULT_CACHE_SIZE,
+  RESULT_CACHE_TTL,
   PreferenceID,
   SEARCH_FIELDS,
   SORT_OPTIONS,
@@ -77,7 +80,7 @@ import {
 const info: SourceInfo = {
   id: "nhentai",
   name: "Nhentai",
-  version: "1.2.3",
+  version: "1.3.0",
   description: "Reads doujinshi and manga galleries from nhentai.net",
   website: BASE_URL,
   rating: CatalogRating.EXPLICIT,
@@ -98,6 +101,9 @@ const config: SourceConfig = {
 
 type Servers = { images: readonly string[]; thumbs: readonly string[] };
 
+/** The API asks that a client name itself and where it comes from. */
+const USER_AGENT = `Mana-Nhentai/${info.version} (https://github.com/kittycatgit/mana-sources)`;
+
 class NhentaiSource implements ChapterSource, SearchProvider, PageLinkResolver {
   readonly info = info;
   readonly config = config;
@@ -107,18 +113,29 @@ class NhentaiSource implements ChapterSource, SearchProvider, PageLinkResolver {
   private client: HttpClient | undefined;
   private servers: Servers | undefined;
   private tagOptions: Option[] | undefined;
+  private readonly recent = new Map<string, { at: number; page: PagedSearchResult }>();
 
   private get http(): HttpClient {
-    this.client ??= buildClient({
+    if (this.client) return this.client;
+    const client = buildClient({
       baseUrl: BASE_URL,
       // The API documents per-endpoint anonymous limits as low as 8/min on
       // /galleries/popular, which backs the home hero. Going wider earns a 429.
       requests: 3,
       interval: 1,
       accept: JSON_ACCEPT,
+      headers: { "user-agent": USER_AGENT },
       json: true,
     });
-    return this.client;
+    // A key is read per request rather than once: the reader pastes it in settings while
+    // the source is already running, and the next request should carry it.
+    client.addRequestInterceptor(async (request) => {
+      const key = await this.apiKey();
+      if (key !== "") request.headers.set("authorization", `Key ${key}`);
+      return request;
+    });
+    this.client = client;
+    return client;
   }
 
   /**
@@ -353,11 +370,13 @@ class NhentaiSource implements ChapterSource, SearchProvider, PageLinkResolver {
   }
 
   private async popular(): Promise<PagedSearchResult> {
+    const url = `${API_URL}/galleries/popular`;
+    const cached = this.recall(url);
+    if (cached) return cached;
     // Alone among the listing endpoints this one answers with a bare JSON array rather than
     // the {result, num_pages, ...} envelope, and it is not paginated.
-    const response = await this.http.get(`${API_URL}/galleries/popular`);
-    const results = await this.highlights(readArray(safeParse(await response.text())));
-    return { results, isLastPage: true };
+    const results = await this.highlights(readArray(await this.api(url)));
+    return this.remember(url, { results, isLastPage: true });
   }
 
   private async galleries(page: number): Promise<PagedSearchResult> {
@@ -392,13 +411,65 @@ class NhentaiSource implements ChapterSource, SearchProvider, PageLinkResolver {
   }
 
   private async listing(url: string, page: number): Promise<PagedSearchResult> {
-    const envelope = readRecord(safeParse(await (await this.http.get(url)).text()));
+    const cached = this.recall(url);
+    if (cached) return cached;
+
+    const envelope = readRecord(await this.api(url));
     const results = await this.highlights(readArray(envelope["result"]));
 
     // `total` is null on /galleries/tagged even though the listing paginates correctly, and
     // the popular sorts cap the depth at 20 pages. `num_pages` is honest in every case.
     const lastPage = readNumber(envelope["num_pages"]) ?? page;
-    return { results, isLastPage: page >= lastPage };
+    return this.remember(url, { results, isLastPage: page >= lastPage });
+  }
+
+  /**
+   * A page the site answered a few minutes ago. The API allows ten searches a minute per
+   * connection, and the app asks for the same page again whenever a reader steps back into
+   * a list, so every repeat answered here is one the site does not have to refuse.
+   */
+  private recall(url: string): PagedSearchResult | undefined {
+    const held = this.recent.get(url);
+    if (held === undefined) return undefined;
+    if (Date.now() - held.at < RESULT_CACHE_TTL) return held.page;
+    this.recent.delete(url);
+    return undefined;
+  }
+
+  private remember(url: string, page: PagedSearchResult): PagedSearchResult {
+    if (this.recent.size >= RESULT_CACHE_SIZE) this.recent.clear();
+    this.recent.set(url, { at: Date.now(), page });
+    return page;
+  }
+
+  /** One API reply, parsed, with the site's per-minute refusal turned into a sentence. */
+  private async api(url: string): Promise<unknown> {
+    const response = await this.http.get(url, acceptStatus(429));
+    if (response.status === 429) throw await this.rateLimited(response);
+    return safeParse(await response.text());
+  }
+
+  private async rateLimited(response: HttpResponse): Promise<Error> {
+    const limit = readNumber(response.headers.get("x-ratelimit-limit"));
+    const wait = readNumber(response.headers.get("retry-after"));
+    const allowance =
+      limit === undefined
+        ? "only so many requests a minute"
+        : `${limit} requests a minute to this part of the site`;
+    const when =
+      wait === undefined ? "Try again shortly." : `Try again in ${Math.ceil(wait)} seconds.`;
+    const remedy =
+      (await this.apiKey()) === ""
+        ? " An API key from your nhentai account, entered in this source's settings, doubles the allowance."
+        : "";
+    return new Error(
+      `nhentai allows ${allowance} per connection, and this one has used them. ${when}${remedy}`,
+    );
+  }
+
+  private async apiKey(): Promise<string> {
+    const stored = await this.preferences.get(PreferenceID.ApiKey);
+    return typeof stored === "string" ? stored.trim() : "";
   }
 
   private async highlights(entries: readonly unknown[]): Promise<Highlight[]> {
@@ -415,8 +486,7 @@ class NhentaiSource implements ChapterSource, SearchProvider, PageLinkResolver {
       throw new Error(`"${contentId}" is not an nhentai gallery id — they are numeric.`);
     }
 
-    const response = await this.http.get(`${API_URL}/galleries/${id}`);
-    const gallery = readRecord(safeParse(await response.text()));
+    const gallery = readRecord(await this.api(`${API_URL}/galleries/${id}`));
     if (readNumber(gallery["id"]) === undefined) {
       throw new Error(`nhentai has no gallery ${id}. It may have been removed.`);
     }
@@ -431,7 +501,7 @@ class NhentaiSource implements ChapterSource, SearchProvider, PageLinkResolver {
       per_page: TAG_OPTION_COUNT,
       page: 1,
     });
-    const envelope = readRecord(safeParse(await (await this.http.get(url)).text()));
+    const envelope = readRecord(await this.api(url));
 
     const options = readArray(envelope["result"])
       .map(readRecord)
@@ -465,7 +535,7 @@ class NhentaiSource implements ChapterSource, SearchProvider, PageLinkResolver {
 
   private async cdnConfig(): Promise<Record<string, unknown>> {
     try {
-      return readRecord(safeParse(await (await this.http.get(`${API_URL}/cdn`)).text()));
+      return readRecord(await this.api(`${API_URL}/cdn`));
     } catch {
       // The published list is an optimisation over the constants in model.ts; a failed
       // config call must not take every cover and page down with it.

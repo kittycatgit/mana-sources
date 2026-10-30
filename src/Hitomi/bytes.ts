@@ -35,10 +35,24 @@ export async function readRange(
     // A range that starts past the end of the file is 416, which is "no more listing"
     // rather than a failure — it is how the last page of a listing announces itself.
     ...acceptStatus(416),
-    ...(ranged ? { headers: { range: `bytes=${first}-${last}` } } : {}),
+    headers: {
+      // The CDN keeps a gzip copy of every listing and, asked for gzip, answers a range
+      // with a slice of that copy. A slice of a gzip stream cannot be decoded on its own:
+      // the device fails every page but the first and reads a handful of ids out of that
+      // one. Identity makes a range a range of the listing, and `content-range` its length.
+      "accept-encoding": "identity",
+      ...(ranged ? { range: `bytes=${first}-${last}` } : {}),
+    },
   });
 
   if (response.status === 416) return { bytes: new Uint8Array(0), total: undefined };
+
+  const encoding = response.headers.get("content-encoding") ?? "";
+  if (ranged && encoding !== "" && encoding !== "identity") {
+    throw new Error(
+      `Hitomi's CDN compressed a slice of ${url} (${encoding}), which cannot be read as part of the listing.`,
+    );
+  }
 
   const bytes = await response.bytes();
   const range = response.headers.get("content-range") ?? "";
