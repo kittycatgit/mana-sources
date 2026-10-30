@@ -60,7 +60,7 @@ import {
 const info: SourceInfo = {
   id: "tailspace",
   name: "Tailspace",
-  version: "1.1.4",
+  version: "1.1.5",
   description: "Pulls furry comics from tailspace.com",
   website: BASE_URL,
   rating: CatalogRating.EXPLICIT,

@@ -77,7 +77,7 @@ import {
 const info: SourceInfo = {
   id: "imhentai",
   name: "Imhentai",
-  version: "1.1.1",
+  version: "1.1.2",
   description: "Browses the doujinshi, manga and artist CG galleries on imhentai.xxx",
   website: BASE_URL,
   rating: CatalogRating.EXPLICIT,

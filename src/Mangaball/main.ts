@@ -91,7 +91,7 @@ import {
 const info: SourceInfo = {
   id: "mangaball",
   name: "Mangaball",
-  version: "1.4.0",
+  version: "1.4.1",
   description: "Pulls manga, manhwa and manhua from mangaball.com",
   website: BASE_URL,
   rating: CatalogRating.MIXED,

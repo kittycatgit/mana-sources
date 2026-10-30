@@ -75,7 +75,7 @@ import {
 const info: SourceInfo = {
   id: "manga18fx",
   name: "Manga18fx",
-  version: "1.2.3",
+  version: "1.2.4",
   description: "Pulls adult manhwa, manhua and manga from manga18fx.com",
   website: BASE_URL,
   rating: CatalogRating.EXPLICIT,

@@ -84,7 +84,7 @@ import {
 const info: SourceInfo = {
   id: "hiperdex",
   name: "Hiperdex",
-  version: "1.2.3",
+  version: "1.2.4",
   description: "Pulls manga, manhwa and manhua from hiperdex.com",
   website: BASE_URL,
   rating: CatalogRating.EXPLICIT,

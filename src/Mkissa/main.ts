@@ -82,7 +82,7 @@ import { postGraphql } from "./page-fetch.ts";
 const info: SourceInfo = {
   id: "mkissa",
   name: "Mkissa",
-  version: "1.0.2",
+  version: "1.0.3",
   description: "Reads the manga catalogue behind mkissa.to",
   website: BASE_URL,
   rating: CatalogRating.MIXED,

@@ -68,7 +68,7 @@ import {
 const info: SourceInfo = {
   id: "mangak",
   name: "Mangak",
-  version: "1.0.1",
+  version: "1.0.2",
   description: "Reads manga, manhwa and manhua from mangak.io",
   website: BASE_URL,
   rating: CatalogRating.MIXED,

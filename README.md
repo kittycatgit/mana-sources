@@ -15,19 +15,19 @@ from there.
 
 | Source | Version | Language | Rating |
 | ------ | ------- | -------- | ------ |
-| Ehentai | 1.2.3 | Multi-language | Explicit |
-| Hiperdex | 1.2.3 | English | Explicit |
-| Hitomi | 1.5.5 | Multi-language | Explicit |
-| Imhentai | 1.1.1 | Multi-language | Explicit |
-| Madaradex | 1.1.3 | English | Explicit |
-| Manga18fx | 1.2.3 | English | Explicit |
-| Mangaball | 1.4.0 | Multi-language | Mixed |
-| Mangafire | 1.2.3 | Multi-language | Mixed |
-| Mkissa | 1.0.2 | Multi-language | Mixed |
-| Mangak | 1.0.1 | English | Mixed |
-| Nhentai | 1.2.3 | Multi-language | Explicit |
-| Tailspace | 1.1.4 | English | Explicit |
-| Weebcentral | 1.2.5 | English | Mixed |
+| Ehentai | 1.2.4 | Multi-language | Explicit |
+| Hiperdex | 1.2.4 | English | Explicit |
+| Hitomi | 1.5.6 | Multi-language | Explicit |
+| Imhentai | 1.1.2 | Multi-language | Explicit |
+| Madaradex | 1.1.4 | English | Explicit |
+| Manga18fx | 1.2.4 | English | Explicit |
+| Mangaball | 1.4.1 | Multi-language | Mixed |
+| Mangafire | 1.2.4 | Multi-language | Mixed |
+| Mkissa | 1.0.3 | Multi-language | Mixed |
+| Mangak | 1.0.2 | English | Mixed |
+| Nhentai | 1.3.0 | Multi-language | Explicit |
+| Tailspace | 1.1.5 | English | Explicit |
+| Weebcentral | 1.2.6 | English | Mixed |
 
 See [CHANGELOG.md](CHANGELOG.md) for what changed and when.
 
