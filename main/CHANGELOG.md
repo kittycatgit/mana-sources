@@ -4,7 +4,10 @@ Notable changes to the extensions in this repository, grouped by extension —
 each one versions independently (see `info.version` in its `main.ts`). Dates
 are UTC. Format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## Mkissa (current: v1.0.2)
+## Mkissa (current: v1.0.3)
+
+### 2026-10-30
+- Typing a keyword inside a home row's listing now searches for it instead of showing the row again.
 
 ### 2026-10-26
 
@@ -22,7 +25,10 @@ are UTC. Format loosely follows [Keep a Changelog](https://keepachangelog.com/en
 - Home page carries Trending, Latest Updates, Popular, Top Rated, Most Saved, Latest Manhwa and Latest Manhua.
 - Search filters by genre (include and exclude), origin and release year, and sorts eight ways.
 - A setting picks the translated or the untranslated run of a series.
-## Mangak (current: v1.0.1)
+## Mangak (current: v1.0.2)
+
+### 2026-10-30
+- Typing a keyword inside a home row's listing now searches for it instead of showing the row again.
 
 ### 2026-10-26
 
@@ -35,7 +41,13 @@ are UTC. Format loosely follows [Keep a Changelog](https://keepachangelog.com/en
 - Home: Trending Today, Latest Updates, Recently Added, Most Followed, Most Read This Week, Highest Rated and Longest Series.
 - Search filters by genre, status, type, content rating, demographic, format and chapter count, and sorts ten ways.
 - Opening a mangak.io link goes straight to the title.
-## Hitomi (current: v1.5.5)
+## Hitomi (current: v1.5.6)
+
+### 2026-10-30
+- Typing a keyword inside a home row's listing now searches for it instead of showing the row again.
+- Fixed keyword search returning an error when a language is set in settings.
+- Fixed the home rows and the browse listings stopping after a handful of titles.
+- Fixed page two of any listing failing with "cannot decode raw data".
 
 ### 2026-10-26
 
@@ -126,7 +138,10 @@ are UTC. Format loosely follows [Keep a Changelog](https://keepachangelog.com/en
   newest-first.
 - Chapter images need the site as referer.
 
-## Mangaball (current: v1.4.0)
+## Mangaball (current: v1.4.1)
+
+### 2026-10-30
+- Typing a keyword inside a home row's listing now searches for it instead of showing the row again.
 
 ### 2026-10-26
 
@@ -144,7 +159,12 @@ are UTC. Format loosely follows [Keep a Changelog](https://keepachangelog.com/en
 
 - Home rows load one at a time again, as the app asks for them.
 
-## Nhentai (current: v1.2.3)
+## Nhentai (current: v1.3.0)
+
+### 2026-10-30
+- Added an API key setting; a key from your nhentai account doubles how many requests the site allows a minute.
+- When the site refuses a request for asking too often, the error now says so and how long to wait.
+- Typing a keyword inside a home row's listing now searches for it instead of showing the row again.
 
 ### 2026-10-26
 
@@ -154,7 +174,10 @@ are UTC. Format loosely follows [Keep a Changelog](https://keepachangelog.com/en
 
 - Home rows load one at a time again, as the app asks for them.
 
-## Mangafire (current: v1.2.3)
+## Mangafire (current: v1.2.4)
+
+### 2026-10-30
+- Typing a keyword inside a home row's listing now searches for it instead of showing the row again.
 
 ### 2026-10-26
 
@@ -231,7 +254,10 @@ are UTC. Format loosely follows [Keep a Changelog](https://keepachangelog.com/en
   include/exclude across the 100 most used tags, minimum page and favourite counts.
 - Each gallery is one chapter, with a summary composed from its metadata.
 
-## Ehentai (current: v1.2.3)
+## Ehentai (current: v1.2.4)
+
+### 2026-10-30
+- Typing a keyword inside a home row's listing now searches for it instead of showing the row again.
 
 ### 2026-10-26
 
@@ -270,7 +296,10 @@ are UTC. Format loosely follows [Keep a Changelog](https://keepachangelog.com/en
 - Each gallery is one chapter.
 - Pages served under HTTP 451 are accepted, so age-notice regions still work.
 
-## Manga18fx (current: v1.2.3)
+## Manga18fx (current: v1.2.4)
+
+### 2026-10-30
+- Typing a keyword inside a home row's listing now searches for it instead of showing the row again.
 
 ### 2026-10-26
 
@@ -304,7 +333,10 @@ are UTC. Format loosely follows [Keep a Changelog](https://keepachangelog.com/en
 - Content type comes from the genre tags; the site's own Type row reads Manhwa on
   everything.
 
-## Imhentai (current: v1.1.1)
+## Imhentai (current: v1.1.2)
+
+### 2026-10-30
+- Typing a keyword inside a home row's listing now searches for it instead of showing the row again.
 
 ### 2026-10-26
 
@@ -337,7 +369,10 @@ are UTC. Format loosely follows [Keep a Changelog](https://keepachangelog.com/en
 - `getContent`, `getChapters` and `getChapterData` SKIP under `npm run verify` — they read
   a challenged route. All three were checked against gallery HTML captured from a browser.
 
-## Madaradex (current: v1.1.3)
+## Madaradex (current: v1.1.4)
+
+### 2026-10-30
+- Typing a keyword inside a home row's listing now searches for it instead of showing the row again.
 
 ### 2026-10-26
 
@@ -363,7 +398,10 @@ are UTC. Format loosely follows [Keep a Changelog](https://keepachangelog.com/en
 - Chapter images carry the site as referer plus the `mdx_fp`/`mdx_auth` cookies the CDN
   requires.
 
-## Weebcentral (current: v1.2.5)
+## Weebcentral (current: v1.2.6)
+
+### 2026-10-30
+- Typing a keyword inside a home row's listing now searches for it instead of showing the row again.
 
 ### 2026-10-26
 
@@ -401,7 +439,10 @@ are UTC. Format loosely follows [Keep a Changelog](https://keepachangelog.com/en
   Translation / Anime Adaptation / Adult Content toggles, six sort orders either way.
 - Asks the site for non-adult results when the app's content rating requires it.
 
-## Hiperdex (current: v1.2.3)
+## Hiperdex (current: v1.2.4)
+
+### 2026-10-30
+- Typing a keyword inside a home row's listing now searches for it instead of showing the row again.
 
 ### 2026-10-26
 
@@ -438,7 +479,10 @@ are UTC. Format loosely follows [Keep a Changelog](https://keepachangelog.com/en
   status picker adds "Releasing", which the site's own panel omits.
 - Covers and chapter images carry the site as referer.
 
-## Tailspace (current: v1.1.4)
+## Tailspace (current: v1.1.5)
+
+### 2026-10-30
+- Typing a keyword inside a home row's listing now searches for it instead of showing the row again.
 
 ### 2026-10-26
 
